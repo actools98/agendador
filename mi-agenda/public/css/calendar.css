@@ -1,1 +1,54 @@
+#calendar {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 10px 0;
+}
 
+/* Ajustes de FullCalendar con paleta */
+.fc .fc-toolbar-title {
+  color: #1a3a4a;
+  font-weight: 600;
+}
+
+.fc .fc-button-primary {
+  background-color: #1a3a4a;
+  border-color: #1a3a4a;
+  color: white;
+}
+.fc .fc-button-primary:hover {
+  background-color: #0f2938;
+  border-color: #0f2938;
+}
+.fc .fc-button-primary:focus {
+  box-shadow: 0 0 0 0.2rem rgba(26, 58, 74, 0.5);
+}
+.fc .fc-button-primary:disabled {
+  background-color: #6c8a9a;
+  border-color: #6c8a9a;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+  background-color: #f0f6fa;
+}
+.fc .fc-col-header-cell {
+  background: #f5f7f9;
+  color: #333;
+  font-weight: 600;
+}
+.fc .fc-daygrid-day-number {
+  color: #1a1a1a;
+}
+.fc .fc-event {
+  border-radius: 6px;
+  font-size: 0.9rem;
+  padding: 2px 4px;
+  border: none;
+  font-weight: 500;
+}
+.fc .fc-event .fc-event-title {
+  font-weight: 500;
+}
+/* Festivos: fondo gris */
+.fc-daygrid-day.fc-day-holiday {
+  background-color: #f0f0f0;
+}
