@@ -6,6 +6,12 @@ document.addEventListener('DOMContentLoaded', function() {
   if (typeof FullCalendar === 'undefined') {
     if (debugEl) debugEl.textContent = '❌ Error: FullCalendar no cargado. Revisa la red.';
     console.error('FullCalendar no definido');
+    document.getElementById('calendar').innerHTML = `
+      <div class="text-danger text-center p-5">
+        <h5>No se pudo cargar el calendario</h5>
+        <p>Verifica tu conexión a internet o recarga la página.</p>
+      </div>
+    `;
     return;
   }
 
