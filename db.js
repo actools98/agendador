@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-// Asegurar que el directorio data existe (por si acaso)
+// Crear directorio data si no existe (para persistencia en Coolify)
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -11,7 +11,6 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'calendar.db');
 const db = new Database(dbPath);
 
-// El resto del código (creación de tablas) se mantiene igual...
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
