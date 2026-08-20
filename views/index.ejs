@@ -14,7 +14,7 @@
 <div class="container-fluid vh-100 d-flex flex-column p-0">
   <div class="row flex-grow-1 g-0">
 
-    <!-- ========== COLUMNA IZQUIERDA (ÚNICA) ========== -->
+    <!-- ========== COLUMNA IZQUIERDA ========== -->
     <div class="col-12 col-md-3 col-lg-2 sidebar p-3">
       <h4 class="mb-4">📅 Calendario</h4>
       <p class="text-muted small">Bienvenido, <strong><%= username %></strong></p>
@@ -28,13 +28,21 @@
 
     <!-- ========== COLUMNA DERECHA (CALENDARIO) ========== -->
     <div class="col-12 col-md-9 col-lg-10 p-3 calendar-container">
-      <!-- Cabecera del calendario -->
-      <div id="calendarHeader" class="d-flex justify-content-between align-items-center mb-3">
-        <button id="prevMonth" class="btn btn-secondary">‹</button>
-        <h3 id="currentMonthYear" class="m-0"></h3>
-        <button id="nextMonth" class="btn btn-secondary">›</button>
+      <!-- Cabecera con controles -->
+      <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+        <div>
+          <button id="prevView" class="btn btn-secondary">‹</button>
+          <button id="nextView" class="btn btn-secondary">›</button>
+          <span id="viewTitle" class="ms-2 h5 mb-0"></span>
+        </div>
+        <div class="btn-group" role="group" aria-label="Vistas">
+          <button class="btn btn-outline-primary view-btn" data-view="day">Día</button>
+          <button class="btn btn-outline-primary view-btn" data-view="week">Semana</button>
+          <button class="btn btn-outline-primary view-btn active" data-view="month">Mes</button>
+          <button class="btn btn-outline-primary view-btn" data-view="year">Año</button>
+        </div>
       </div>
-      <!-- Grid del calendario (se genera con JavaScript) -->
+      <!-- Grid del calendario -->
       <div id="calendarGrid" class="calendar-grid"></div>
       <!-- Mensaje de depuración -->
       <div id="debug-message" style="color: #88aadd; font-size: 0.9rem; text-align: center; margin-top: 10px;">
