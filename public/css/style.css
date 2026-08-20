@@ -1,0 +1,126 @@
+/* Estilos generales oscuros */
+body {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+.sidebar {
+  background-color: #1e1e2e;
+  border-right: 1px solid #2a2a3a;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.calendar-container {
+  background-color: #1a1a2e;
+  height: 100vh;
+  padding: 20px;
+}
+
+/* Personalización de FullCalendar */
+.fc {
+  --fc-border-color: #2a2a3a;
+  --fc-button-bg-color: #3b3b5c;
+  --fc-button-border-color: #3b3b5c;
+  --fc-button-hover-bg-color: #4a4a6e;
+  --fc-button-hover-border-color: #4a4a6e;
+  --fc-button-active-bg-color: #5a5a7e;
+  --fc-button-active-border-color: #5a5a7e;
+  --fc-today-bg-color: rgba(255, 255, 255, 0.05);
+  --fc-neutral-bg-color: #1e1e2e;
+  --fc-page-bg-color: #1a1a2e;
+  --fc-event-bg-color: #3788d8;
+  --fc-event-border-color: #3788d8;
+  --fc-event-text-color: #fff;
+}
+
+.fc .fc-toolbar-title {
+  color: #fff;
+}
+.fc .fc-col-header-cell-cushion {
+  color: #ccc;
+}
+.fc .fc-daygrid-day-number {
+  color: #ccc;
+}
+.fc .fc-daygrid-day.fc-day-today {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+.fc .fc-daygrid-day-events {
+  padding: 2px;
+}
+.fc .fc-list-day-cushion {
+  background-color: #2a2a3a;
+  color: #fff;
+}
+.fc .fc-list-event td {
+  background-color: #1e1e2e;
+  color: #ddd;
+}
+.fc .fc-list-event:hover td {
+  background-color: #2a2a3a;
+}
+
+/* Lista de eventos en sidebar */
+.list-group-item {
+  background-color: transparent;
+  color: #e0e0e0;
+  border-color: #2a2a3a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.25rem;
+}
+.list-group-item .event-title {
+  cursor: pointer;
+  flex: 1;
+}
+.list-group-item .event-actions button {
+  background: none;
+  border: none;
+  color: #aaa;
+  margin-left: 6px;
+}
+.list-group-item .event-actions button:hover {
+  color: #fff;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1e1e2e;
+}
+::-webkit-scrollbar-thumb {
+  background: #3b3b5c;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5a5a7e;
+}
+
+/* Ajustes para el modal */
+.modal-content {
+  background-color: #1e1e2e;
+  color: #e0e0e0;
+}
+.form-control, .form-control-color {
+  background-color: #121212 !important;
+  color: #e0e0e0 !important;
+  border-color: #2a2a3a !important;
+}
+.form-control:focus, .form-control-color:focus {
+  background-color: #121212 !important;
+  color: #e0e0e0 !important;
+  border-color: #5a5a7e !important;
+  box-shadow: 0 0 0 0.25rem rgba(90, 90, 126, 0.25);
+}
+.form-check-input {
+  background-color: #121212;
+  border-color: #2a2a3a;
+}
+.form-check-input:checked {
+  background-color: #3788d8;
+  border-color: #3788d8;
+}
