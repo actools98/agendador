@@ -1,7 +1,7 @@
 /* Estilos generales oscuros */
 body {
   background-color: #121212;
-  color: #f0f0f0; /* más claro */
+  color: #f0f0f0;
 }
 
 /* Forzar colores claros en elementos comunes */
@@ -26,6 +26,15 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   background-color: #1a1a2e;
   height: 100vh;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ¡IMPORTANTE! Asegura que el calendario tenga altura */
+#calendar {
+  flex: 1;
+  min-height: 500px;
+  height: 100%;
 }
 
 /* Personalización de inputs y formularios */
