@@ -1,23 +1,20 @@
 document.addEventListener('DOMContentLoaded', function() {
-  const debugEl = document.getElementById('debug-message');
-  if (debugEl) debugEl.textContent = '⏳ Inicializando...';
-
-  // Verificar si FullCalendar está disponible
-  if (typeof FullCalendar === 'undefined') {
-    if (debugEl) debugEl.textContent = '❌ Error: FullCalendar no cargado. Revisa la red.';
-    console.error('FullCalendar no definido');
-    document.getElementById('calendar').innerHTML = `
-      <div class="text-danger text-center p-5">
-        <h5>No se pudo cargar el calendario</h5>
-        <p>Verifica tu conexión a internet o recarga la página.</p>
-      </div>
-    `;
-    return;
-  }
+  // Estado
+  let currentDate = new Date();
+  let currentYear = currentDate.getFullYear();
+  let currentMonth = currentDate.getMonth();
+  let events = [];
+  let selectedDate = null;
 
   // Elementos
-  const calendarEl = document.getElementById('calendar');
+  const grid = document.getElementById('calendarGrid');
+  const monthYear = document.getElementById('currentMonthYear');
+  const prevBtn = document.getElementById('prevMonth');
+  const nextBtn = document.getElementById('nextMonth');
   const newEventBtn = document.getElementById('newEventBtn');
+  const eventListEl = document.getElementById('eventList');
+
+  // Modal
   const modalElement = document.getElementById('eventModal');
   const modal = new bootstrap.Modal(modalElement);
   const modalTitle = document.getElementById('modalTitle');
@@ -31,42 +28,89 @@ document.addEventListener('DOMContentLoaded', function() {
   const colorInput = document.getElementById('color');
   const saveBtn = document.getElementById('saveEventBtn');
   const deleteBtn = document.getElementById('deleteEventBtn');
-  const eventListEl = document.getElementById('eventList');
 
   let currentEventId = null;
-  let calendar = null;
 
-  // Funciones CRUD
-  async function loadEvents() {
+  // Cargar eventos desde el servidor
+  async function loadEventsFromServer() {
     try {
       const res = await fetch('/api/events');
       if (!res.ok) throw new Error('Error al cargar eventos');
-      const events = await res.json();
-      if (calendar) {
-        calendar.removeAllEvents();
-        calendar.addEventSource(events.map(e => ({
-          id: String(e.id),
-          title: e.title,
-          start: e.start,
-          end: e.end,
-          allDay: e.all_day === 1,
-          color: e.color || '#3788d8',
-          description: e.description
-        })));
-      }
-      renderEventList(events);
+      events = await res.json();
+      renderCalendar();
+      renderEventList();
     } catch (error) {
       console.error('Error cargando eventos:', error);
     }
   }
 
-  function renderEventList(events) {
+  // Renderizar el calendario
+  function renderCalendar() {
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay(); // 0=domingo
+
+    // Actualizar título
+    monthYear.textContent = `${firstDay.toLocaleString('es', { month: 'long' })} ${currentYear}`;
+
+    // Construir grid
+    let html = '<div class="calendar-weekdays">';
+    const weekdays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    weekdays.forEach(day => html += `<div class="weekday">${day}</div>`);
+    html += '</div><div class="calendar-days">';
+
+    // Días vacíos al inicio
+    for (let i = 0; i < startDayOfWeek; i++) {
+      html += '<div class="day empty"></div>';
+    }
+
+    // Días del mes
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateObj = new Date(currentYear, currentMonth, day);
+      const dateStr = dateObj.toISOString().split('T')[0];
+      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+      const isToday = (new Date().toISOString().split('T')[0] === dateStr);
+      html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
+      html += `<span class="day-number">${day}</span>`;
+      if (dayEvents.length > 0) {
+        html += `<div class="day-dots">`;
+        dayEvents.slice(0, 3).forEach(e => {
+          html += `<span class="dot" style="background-color: ${e.color || '#3788d8'}"></span>`;
+        });
+        if (dayEvents.length > 3) html += `<span class="dot-more">+${dayEvents.length - 3}</span>`;
+        html += `</div>`;
+      }
+      html += '</div>';
+    }
+
+    // Completar última semana
+    const totalCells = startDayOfWeek + daysInMonth;
+    const remaining = (7 - (totalCells % 7)) % 7;
+    for (let i = 0; i < remaining; i++) {
+      html += '<div class="day empty"></div>';
+    }
+
+    html += '</div>';
+    grid.innerHTML = html;
+
+    // Event listeners en días
+    document.querySelectorAll('.day:not(.empty)').forEach(el => {
+      el.addEventListener('click', function() {
+        const date = this.dataset.date;
+        openCreateModal(date);
+      });
+    });
+  }
+
+  // Renderizar lista de eventos en sidebar
+  function renderEventList() {
     if (!eventListEl) return;
     if (events.length === 0) {
       eventListEl.innerHTML = '<div class="text-muted small p-2">No hay eventos</div>';
       return;
     }
-    const sorted = events.sort((a, b) => new Date(a.start) - new Date(b.start));
+    const sorted = [...events].sort((a, b) => new Date(a.start) - new Date(b.start));
     let html = '';
     sorted.forEach(ev => {
       const startDate = new Date(ev.start);
@@ -86,6 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     eventListEl.innerHTML = html;
 
+    // Listeners
     document.querySelectorAll('.edit-event').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -110,7 +155,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  function openCreateModal(startDate, endDate) {
+  // Abrir modal para nuevo evento (con fecha sugerida)
+  function openCreateModal(dateStr) {
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
     form.reset();
@@ -118,24 +164,27 @@ document.addEventListener('DOMContentLoaded', function() {
     deleteBtn.style.display = 'none';
     currentEventId = null;
 
-    const formatLocal = (date) => {
-      const offset = date.getTimezoneOffset();
-      const local = new Date(date.getTime() - offset * 60000);
-      return local.toISOString().slice(0, 16);
-    };
-
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setMinutes(0, 0, 0);
-      const end = new Date(start);
-      end.setHours(end.getHours() + 1);
-      startInput.value = formatLocal(start);
+    if (dateStr) {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+      const formatLocal = (d) => {
+        const offset = d.getTimezoneOffset();
+        const local = new Date(d.getTime() - offset * 60000);
+        return local.toISOString().slice(0, 16);
+      };
+      startInput.value = formatLocal(date);
       endInput.value = formatLocal(end);
     } else {
       const now = new Date();
-      now.setMinutes(0, 0, 0);
       const later = new Date(now);
       later.setHours(later.getHours() + 1);
+      const formatLocal = (d) => {
+        const offset = d.getTimezoneOffset();
+        const local = new Date(d.getTime() - offset * 60000);
+        return local.toISOString().slice(0, 16);
+      };
       startInput.value = formatLocal(now);
       endInput.value = formatLocal(later);
     }
@@ -143,10 +192,9 @@ document.addEventListener('DOMContentLoaded', function() {
     modal.show();
   }
 
+  // Abrir modal para editar evento
   async function openEditModal(id) {
     try {
-      const res = await fetch('/api/events');
-      const events = await res.json();
       const ev = events.find(e => e.id === id);
       if (!ev) {
         alert('Evento no encontrado');
@@ -174,6 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // Guardar evento
   async function saveEvent() {
     const id = eventIdInput.value;
     const title = titleInput.value.trim();
@@ -204,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       if (res.ok) {
         modal.hide();
-        loadEvents();
+        loadEventsFromServer();
       } else {
         const err = await res.json();
         alert('Error: ' + (err.error || 'desconocido'));
@@ -215,11 +264,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // Eliminar evento
   async function deleteEvent(id) {
     try {
       const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        loadEvents();
+        loadEventsFromServer();
         modal.hide();
       } else {
         const err = await res.json();
@@ -231,101 +281,40 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Inicializar calendario
-  try {
-    calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: 'dayGridMonth',
-      locale: 'es',
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listMonth'
-      },
-      buttonText: {
-        today: 'Hoy',
-        month: 'Mes',
-        week: 'Semana',
-        list: 'Lista'
-      },
-      events: [],
-      dateClick: function(info) {
-        openCreateModal(info.dateStr);
-      },
-      eventClick: function(info) {
-        const id = parseInt(info.event.id);
-        openEditModal(id);
-      },
-      eventDrop: function(info) {
-        const event = info.event;
-        const id = parseInt(event.id);
-        const payload = {
-          title: event.title,
-          description: event.extendedProps.description || '',
-          start: event.start.toISOString(),
-          end: event.end ? event.end.toISOString() : event.start.toISOString(),
-          allDay: event.allDay,
-          color: event.backgroundColor || '#3788d8'
-        };
-        fetch(`/api/events/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).then(res => {
-          if (!res.ok) console.error('Error al actualizar por arrastre');
-          loadEvents();
-        }).catch(console.error);
-      },
-      eventResize: function(info) {
-        const event = info.event;
-        const id = parseInt(event.id);
-        const payload = {
-          title: event.title,
-          description: event.extendedProps.description || '',
-          start: event.start.toISOString(),
-          end: event.end ? event.end.toISOString() : event.start.toISOString(),
-          allDay: event.allDay,
-          color: event.backgroundColor || '#3788d8'
-        };
-        fetch(`/api/events/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).then(res => {
-          if (!res.ok) console.error('Error al actualizar por redimension');
-          loadEvents();
-        }).catch(console.error);
-      }
-    });
-
-    calendar.render();
-    if (debugEl) debugEl.textContent = '✅ Calendario visible';
-    console.log('Calendario renderizado correctamente');
-  } catch (error) {
-    console.error('Error al inicializar FullCalendar:', error);
-    if (debugEl) debugEl.textContent = '❌ Error al renderizar: ' + error.message;
-    calendarEl.innerHTML = '<p class="text-danger">Error al cargar el calendario.</p>';
+  // Navegación meses
+  function prevMonth() {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    renderCalendar();
   }
 
-  // Cargar eventos
-  loadEvents();
+  function nextMonth() {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar();
+  }
 
   // Event listeners
-  if (newEventBtn) {
-    newEventBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      openCreateModal();
-    });
-  }
-
+  prevBtn.addEventListener('click', prevMonth);
+  nextBtn.addEventListener('click', nextMonth);
+  newEventBtn.addEventListener('click', () => openCreateModal(null));
   saveBtn.addEventListener('click', saveEvent);
   deleteBtn.addEventListener('click', function() {
     if (currentEventId && confirm('¿Eliminar este evento?')) {
       deleteEvent(currentEventId);
     }
   });
-
   modalElement.addEventListener('hidden.bs.modal', function () {
     currentEventId = null;
     deleteBtn.style.display = 'none';
   });
+
+  // Inicializar
+  loadEventsFromServer();
 });
