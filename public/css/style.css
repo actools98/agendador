@@ -1,27 +1,21 @@
-/* Estilos generales oscuros */
 body {
   background-color: #121212;
   color: #f0f0f0;
 }
-
-/* Forzar colores claros en elementos comunes */
 body, .card, .modal-content, .sidebar, .fc, 
 .list-group-item, .text-muted, .form-label, label,
 h1, h2, h3, h4, h5, h6, p, span, a {
   color: #f0f0f0 !important;
 }
-
 .text-muted {
   color: #cccccc !important;
 }
-
 .sidebar {
   background-color: #1e1e2e;
   border-right: 1px solid #2a2a3a;
   overflow-y: auto;
   height: 100vh;
 }
-
 .calendar-container {
   background-color: #1a1a2e;
   height: 100vh;
@@ -29,15 +23,12 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   display: flex;
   flex-direction: column;
 }
-
-/* ¡IMPORTANTE! Asegura que el calendario tenga altura */
 #calendar {
   flex: 1;
-  min-height: 500px;
+  min-height: 400px;
   height: 100%;
+  background-color: #1a1a2e;
 }
-
-/* Personalización de inputs y formularios */
 .form-control, .form-control-color, .form-select {
   background-color: #2a2a3a !important;
   color: #ffffff !important;
@@ -53,8 +44,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   color: #aaaaaa !important;
   opacity: 1;
 }
-
-/* Personalización de FullCalendar */
 .fc {
   --fc-border-color: #2a2a3a;
   --fc-button-bg-color: #3b3b5c;
@@ -70,35 +59,14 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   --fc-event-border-color: #3788d8;
   --fc-event-text-color: #fff;
 }
-
-.fc .fc-toolbar-title {
-  color: #fff;
-}
-.fc .fc-col-header-cell-cushion {
-  color: #ccc;
-}
-.fc .fc-daygrid-day-number {
-  color: #ccc;
-}
-.fc .fc-daygrid-day.fc-day-today {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-.fc .fc-daygrid-day-events {
-  padding: 2px;
-}
-.fc .fc-list-day-cushion {
-  background-color: #2a2a3a;
-  color: #fff;
-}
-.fc .fc-list-event td {
-  background-color: #1e1e2e;
-  color: #ddd;
-}
-.fc .fc-list-event:hover td {
-  background-color: #2a2a3a;
-}
-
-/* Lista de eventos en sidebar */
+.fc .fc-toolbar-title { color: #fff; }
+.fc .fc-col-header-cell-cushion { color: #ccc; }
+.fc .fc-daygrid-day-number { color: #ccc; }
+.fc .fc-daygrid-day.fc-day-today { background-color: rgba(255, 255, 255, 0.05); }
+.fc .fc-daygrid-day-events { padding: 2px; }
+.fc .fc-list-day-cushion { background-color: #2a2a3a; color: #fff; }
+.fc .fc-list-event td { background-color: #1e1e2e; color: #ddd; }
+.fc .fc-list-event:hover td { background-color: #2a2a3a; }
 .list-group-item {
   background-color: transparent;
   color: #f0f0f0 !important;
@@ -121,8 +89,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 .list-group-item .event-actions button:hover {
   color: #fff;
 }
-
-/* Scrollbar personalizada */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -136,8 +102,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 ::-webkit-scrollbar-thumb:hover {
   background: #5a5a7e;
 }
-
-/* Ajustes para el modal */
 .modal-content {
   background-color: #1e1e2e;
   color: #f0f0f0;
@@ -160,4 +124,10 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 .form-check-input:checked {
   background-color: #3788d8;
   border-color: #3788d8;
+}
+#debug-message {
+  color: #88aadd;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 10px;
 }
