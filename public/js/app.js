@@ -1,7 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
+  console.log('app.js cargado correctamente'); // Para depuración
+
   const calendarEl = document.getElementById('calendar');
   const eventListEl = document.getElementById('eventList');
-  const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+  const modalElement = document.getElementById('eventModal');
+  const modal = new bootstrap.Modal(modalElement);
   const modalTitle = document.getElementById('modalTitle');
   const form = document.getElementById('eventForm');
   const eventIdInput = document.getElementById('eventId');
@@ -14,6 +17,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const saveBtn = document.getElementById('saveEventBtn');
   const deleteBtn = document.getElementById('deleteEventBtn');
   const newEventBtn = document.getElementById('newEventBtn');
+
+  console.log('Botón nuevo evento:', newEventBtn); // Ver si existe
 
   let currentEventId = null;
   let calendar = null;
@@ -96,8 +101,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Abrir modal para crear nuevo evento (fecha sugerida)
+  // Abrir modal para nuevo evento
   function openCreateModal(startDate, endDate) {
+    console.log('Abriendo modal para nuevo evento');
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
     form.reset();
@@ -108,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Si se pasa startDate, ajustar campos
     if (startDate) {
       const start = new Date(startDate);
-      // Redondear a la hora actual o al siguiente bloque de 30 minutos
       start.setMinutes(0, 0, 0);
       const end = new Date(start);
       end.setHours(end.getHours() + 1);
@@ -121,7 +126,6 @@ document.addEventListener('DOMContentLoaded', function () {
       startInput.value = formatLocal(start);
       endInput.value = formatLocal(end);
     } else {
-      // Por defecto: ahora + 1 hora
       const now = new Date();
       now.setMinutes(0, 0, 0);
       const later = new Date(now);
@@ -202,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       if (res.ok) {
         modal.hide();
-        loadEvents(); // Recargar
+        loadEvents();
       } else {
         const err = await res.json();
         alert('Error: ' + (err.error || 'desconocido'));
@@ -245,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function () {
       week: 'Semana',
       list: 'Lista'
     },
-    events: [], // Se cargarán dinámicamente
+    events: [],
     dateClick: function(info) {
       openCreateModal(info.dateStr);
     },
@@ -254,7 +258,6 @@ document.addEventListener('DOMContentLoaded', function () {
       openEditModal(id);
     },
     eventDrop: function(info) {
-      // Al arrastrar, actualizar fechas
       const event = info.event;
       const id = parseInt(event.id);
       const payload = {
@@ -271,11 +274,10 @@ document.addEventListener('DOMContentLoaded', function () {
         body: JSON.stringify(payload)
       }).then(res => {
         if (!res.ok) console.error('Error al actualizar por arrastre');
-        loadEvents(); // recargar para sincronizar lista
+        loadEvents();
       }).catch(console.error);
     },
     eventResize: function(info) {
-      // Similar a eventDrop
       const event = info.event;
       const id = parseInt(event.id);
       const payload = {
@@ -298,21 +300,26 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   calendar.render();
-
-  // Cargar eventos al inicio
   loadEvents();
 
   // Event listeners del modal
-  newEventBtn.addEventListener('click', () => openCreateModal());
+  if (newEventBtn) {
+    newEventBtn.addEventListener('click', function() {
+      console.log('Click en botón nuevo evento');
+      openCreateModal();
+    });
+  } else {
+    console.error('No se encontró el botón #newEventBtn');
+  }
+
   saveBtn.addEventListener('click', saveEvent);
-  deleteBtn.addEventListener('click', () => {
+  deleteBtn.addEventListener('click', function() {
     if (currentEventId && confirm('¿Eliminar este evento?')) {
       deleteEvent(currentEventId);
     }
   });
 
-  // Al cerrar el modal, limpiar
-  document.getElementById('eventModal').addEventListener('hidden.bs.modal', function () {
+  modalElement.addEventListener('hidden.bs.modal', function () {
     currentEventId = null;
     deleteBtn.style.display = 'none';
   });
