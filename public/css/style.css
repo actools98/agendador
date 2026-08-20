@@ -1,8 +1,9 @@
+/* ====== ESTILOS BASE ====== */
 body {
   background-color: #121212;
   color: #f0f0f0;
 }
-body, .card, .modal-content, .sidebar, 
+body, .card, .modal-content, .sidebar,
 .list-group-item, .text-muted, .form-label, label,
 h1, h2, h3, h4, h5, h6, p, span, a {
   color: #f0f0f0 !important;
@@ -29,8 +30,11 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   flex-direction: column;
   background-color: #1a1a2e;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: auto;
+  min-height: 400px;
 }
+
+/* ====== VISTA MES ====== */
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -91,7 +95,139 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   padding: 0 2px;
 }
 
-/* Resto de estilos igual que antes */
+/* ====== VISTA DÍA ====== */
+.day-view {
+  padding: 10px;
+}
+.day-view-header {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #2a2a3a;
+  padding-bottom: 8px;
+}
+.day-view-empty {
+  color: #aaa;
+  text-align: center;
+  padding: 30px 0;
+}
+.day-event-item {
+  padding: 10px;
+  margin-bottom: 8px;
+  background: #2a2a3a;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.day-event-item:hover {
+  background: #3a3a4a;
+}
+
+/* ====== VISTA SEMANA ====== */
+.week-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.week-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background-color: #2a2a3a;
+  font-weight: bold;
+  text-align: center;
+  padding: 8px 0;
+}
+.week-day-header {
+  padding: 5px;
+}
+.week-day-header.today {
+  color: #3788d8;
+}
+.week-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
+}
+.week-day-col {
+  border: 1px solid #2a2a3a;
+  padding: 6px;
+  min-height: 100px;
+  cursor: pointer;
+  transition: background 0.2s;
+  overflow-y: auto;
+}
+.week-day-col:hover {
+  background-color: #252535;
+}
+.week-day-empty {
+  color: #666;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 10px 0;
+}
+.week-event-item {
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  background: #2a2a3a;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+.week-event-item:hover {
+  background: #3a3a4a;
+}
+
+/* ====== VISTA AÑO ====== */
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  padding: 10px;
+}
+.year-month {
+  background: #1e1e2e;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.year-month:hover {
+  background: #2a2a3a;
+}
+.year-month-title {
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 8px;
+  color: #ccc;
+}
+.year-month-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+}
+.year-day {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #aaa;
+  border-radius: 3px;
+}
+.year-day.has-event {
+  background-color: #3788d8;
+  color: #fff;
+  font-weight: bold;
+}
+.year-day.has-event:hover {
+  background-color: #4a9af0;
+}
+
+/* ====== FORMULARIOS Y LISTAS ====== */
 .form-control, .form-control-color, .form-select {
   background-color: #2a2a3a !important;
   color: #ffffff !important;
