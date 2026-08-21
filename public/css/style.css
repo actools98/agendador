@@ -583,7 +583,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-color: #3788d8;
 }
 
-/* Input group (para los campos de hora en configuración) */
 .input-group-text {
   background-color: #2a2a3a !important;
   color: #ffffff !important;
