@@ -20,11 +20,16 @@
       <p class="text-muted small">Bienvenido, <strong><%= username %></strong></p>
       <hr class="border-light" />
       <button id="newEventBtn" class="btn btn-primary w-100 mb-3">+ Nuevo evento</button>
-      <!-- Botón de configuración -->
-      <button id="settingsBtn" class="btn btn-outline-secondary w-100 mb-3">⚙️ Configuración</button>
-      <h6 class="mt-3">Mis eventos</h6>
+      
+      <!-- Botón para eventos terminados -->
+      <button id="toggleFinishedBtn" class="btn btn-outline-secondary w-100 mb-2">📋 Eventos terminados</button>
+      <!-- Lista de eventos terminados (oculta por defecto) -->
+      <div id="finishedEventsList" class="list-group list-group-flush mt-2" style="display:none;"></div>
+
+      <h6 class="mt-3">Mis eventos activos</h6>
       <div id="eventList" class="list-group list-group-flush mt-2"></div>
       <hr class="border-light" />
+      <button id="settingsBtn" class="btn btn-outline-secondary w-100 mb-3">⚙️ Configuración</button>
       <a href="/logout" class="btn btn-outline-danger w-100">Cerrar sesión</a>
     </div>
 
@@ -91,6 +96,16 @@
           <div class="mb-3">
             <label for="color" class="form-label">Color</label>
             <input type="color" class="form-control form-control-color bg-dark border-secondary" id="color" value="#3788d8" />
+          </div>
+          <!-- Selector de estado -->
+          <div class="mb-3">
+            <label for="eventStatus" class="form-label">Estado</label>
+            <select id="eventStatus" class="form-select bg-dark text-light border-secondary">
+              <option value="active">Activo</option>
+              <option value="completed">Completado</option>
+              <option value="postponed">Pospuesto</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
           </div>
         </form>
       </div>
