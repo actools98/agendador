@@ -852,3 +852,80 @@ document.addEventListener('DOMContentLoaded', function() {
   // ========== INICIO ==========
   loadEventsFromServer();
 });
+// ========== FUNCIONES DE CONFIGURACIÓN ==========
+function populateHourSelects(format) {
+  const workStartSelect = document.getElementById('workStart');
+  const workEndSelect = document.getElementById('workEnd');
+  
+  // Guardar valores actuales antes de llenar
+  const currentStart = parseInt(workStartSelect.value) || 8;
+  const currentEnd = parseInt(workEndSelect.value) || 17;
+
+  workStartSelect.innerHTML = '';
+  workEndSelect.innerHTML = '';
+
+  for (let hour = 0; hour < 24; hour++) {
+    let label;
+    if (format === '12') {
+      const hour12 = hour % 12 || 12;
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      label = `${hour12}:00 ${ampm}`;
+    } else {
+      label = `${String(hour).padStart(2, '0')}:00`;
+    }
+    const optionStart = document.createElement('option');
+    optionStart.value = hour;
+    optionStart.textContent = label;
+    workStartSelect.appendChild(optionStart);
+
+    const optionEnd = document.createElement('option');
+    optionEnd.value = hour;
+    optionEnd.textContent = label;
+    workEndSelect.appendChild(optionEnd);
+  }
+
+  // Restaurar valores
+  workStartSelect.value = currentStart;
+  workEndSelect.value = currentEnd;
+}
+
+// Al abrir configuración
+settingsBtn.addEventListener('click', function() {
+  timeFormatSelect.value = timeFormat;
+  populateHourSelects(timeFormat);
+  settingsModal.show();
+});
+
+// Al cambiar formato de hora
+timeFormatSelect.addEventListener('change', function() {
+  const format = this.value;
+  populateHourSelects(format);
+  // Guardar preferencia
+  localStorage.setItem('calendar_time_format', format);
+  timeFormat = format;
+});
+
+// Al cambiar inicio o fin
+workStartInput.addEventListener('change', function() {
+  const start = parseInt(this.value);
+  const end = parseInt(workEndInput.value);
+  if (start >= end) {
+    alert('La hora de inicio debe ser anterior a la hora de fin.');
+    this.value = workStart;
+    return;
+  }
+  workStart = start;
+  localStorage.setItem('work_start', start);
+});
+
+workEndInput.addEventListener('change', function() {
+  const start = parseInt(workStartInput.value);
+  const end = parseInt(this.value);
+  if (end <= start) {
+    alert('La hora de fin debe ser posterior a la hora de inicio.');
+    this.value = workEnd;
+    return;
+  }
+  workEnd = end;
+  localStorage.setItem('work_end', end);
+});
