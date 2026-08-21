@@ -690,7 +690,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   min-height: 0;
 }
 
-/* Asegurar que el contenedor de semana tenga altura definida */
 .week-time-grid {
   display: flex;
   flex-direction: column;
@@ -703,14 +702,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   flex: 1;
   display: flex;
   min-height: 0;
-}
-/* Ajuste para que las columnas de semana respeten el scroll */
-.week-time-grid {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
 }
 
 /* ============================================================
@@ -755,7 +746,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   opacity: 0.85;
 }
 
-/* ====== SEMANA ====== */
 .week-all-day-row {
   display: flex;
   background-color: #1a1a2e;
