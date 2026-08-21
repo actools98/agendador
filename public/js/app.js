@@ -208,15 +208,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== VISTA DÍA ==========
+  // ========== VISTA DÍA (con separación de "todo el día") ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
 
+    // Separar eventos todo el día y con hora
+    const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
+    const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
+
     viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     let html = `<div class="day-time-grid">`;
+
+    // ---- Sección de eventos "todo el día" ----
+    if (allDayEvents.length > 0) {
+      html += `<div class="day-all-day-section">`;
+      html += `<div class="day-all-day-label">📌 Todo el día</div>`;
+      html += `<div class="day-all-day-events">`;
+      allDayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+      allDayEvents.forEach(e => {
+        const color = e.color || '#3788d8';
+        html += `
+          <div class="day-all-day-event" style="background-color: ${color}66; border-left: 4px solid ${color};" data-id="${e.id}">
+            <span>${e.title}</span>
+          </div>
+        `;
+      });
+      html += `</div></div>`;
+    }
+
+    // ---- Línea de tiempo con horas ----
+    html += `<div class="day-time-grid-inner">`;
     html += `<div class="day-time-column">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -235,8 +259,9 @@ document.addEventListener('DOMContentLoaded', function() {
     for (let hour = 0; hour < 24; hour++) {
       html += `<div class="day-hour-slot" data-hour="${hour}" style="flex: 1; border-bottom: 1px solid #2a2a3a;"></div>`;
     }
-    if (dayEvents.length > 0) {
-      const sorted = [...dayEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
+    // Eventos con hora específica
+    if (timedEvents.length > 0) {
+      const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
       sorted.forEach(e => {
         const startHour = new Date(e.start).getHours();
@@ -271,9 +296,11 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
       });
     }
-    html += `</div></div>`;
+    html += `</div></div></div>`; // cierra day-time-grid-inner y day-time-grid
+
     grid.innerHTML = html;
 
+    // Event listeners para slots horarios (crear evento)
     document.querySelectorAll('.day-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
@@ -283,7 +310,8 @@ document.addEventListener('DOMContentLoaded', function() {
         openCreateModal(dateStrForModal, hour);
       });
     });
-    document.querySelectorAll('.day-event-block').forEach(el => {
+    // Click en eventos (normales y todo el día) para editar
+    document.querySelectorAll('.day-event-block, .day-all-day-event').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
         const id = parseInt(this.dataset.id);
@@ -292,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA ==========
+  // ========== VISTA SEMANA (con separación de "todo el día") ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -302,6 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
     let html = `<div class="week-time-grid">`;
+    // Cabecera con días
     html += `<div class="week-header">`;
     html += `<div class="week-header-empty"></div>`;
     for (let i = 0; i < 7; i++) {
@@ -312,7 +341,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
+    // Cuerpo: ahora separamos la sección "todo el día" y la línea de tiempo
     html += `<div class="week-body-wrapper">`;
+    // Columna de horas (vacía en la sección de todo el día)
     html += `<div class="week-hours-column">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -327,18 +358,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
+    // Columnas de días (cada una con su sección "todo el día" y su línea de tiempo)
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
 
-      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; display: flex; flex-direction: column;">`;
-      for (let hour = 0; hour < 24; hour++) {
-        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="flex: 1; border-bottom: 1px solid #2a2a3a;"></div>`;
+      const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
+      const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
+
+      html += `<div class="week-day-column" data-date="${dateStr}" style="display: flex; flex-direction: column;">`;
+
+      // ---- Subsección de eventos "todo el día" para este día ----
+      if (allDayEvents.length > 0) {
+        html += `<div class="week-all-day-section">`;
+        allDayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+        allDayEvents.forEach(e => {
+          const color = e.color || '#3788d8';
+          html += `
+            <div class="week-all-day-event" style="background-color: ${color}66; border-left: 4px solid ${color};" data-id="${e.id}">
+              <span>${e.title}</span>
+            </div>
+          `;
+        });
+        html += `</div>`;
       }
-      if (dayEvents.length > 0) {
-        const sorted = [...dayEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
+
+      // ---- Línea de tiempo (slots horarios) ----
+      html += `<div style="position: relative; flex: 1;">`;
+      for (let hour = 0; hour < 24; hour++) {
+        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${100/24}%; border-bottom: 1px solid #2a2a3a;"></div>`;
+      }
+      // Eventos con hora específica
+      if (timedEvents.length > 0) {
+        const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
         const hourCounts = {};
         sorted.forEach(e => {
           const startHour = new Date(e.start).getHours();
@@ -373,11 +427,15 @@ document.addEventListener('DOMContentLoaded', function() {
           `;
         });
       }
-      html += `</div>`;
+      html += `</div>`; // cierra el contenedor relativo
+      html += `</div>`; // cierra week-day-column
     }
-    html += `</div></div>`;
+
+    html += `</div></div>`; // cierra week-body-wrapper y week-time-grid
+
     grid.innerHTML = html;
 
+    // Event listeners
     document.querySelectorAll('.week-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
@@ -385,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
         openCreateModal(dateStr, hour);
       });
     });
-    document.querySelectorAll('.week-event-block').forEach(el => {
+    document.querySelectorAll('.week-event-block, .week-all-day-event').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
         const id = parseInt(this.dataset.id);
@@ -394,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES ==========
+  // ========== VISTA MES (sin cambios, pero la incluimos) ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -454,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (MEJORADA CON PUNTOS DE COLORES) ==========
+  // ========== VISTA AÑO (con puntos de colores) ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
@@ -478,7 +536,6 @@ document.addEventListener('DOMContentLoaded', function() {
         html += `<span class="year-day-number">${d}</span>`;
         if (hasEvent) {
           html += `<div class="year-day-dots">`;
-          // Mostrar hasta 3 puntos
           const maxDots = Math.min(dayEvents.length, 3);
           for (let i = 0; i < maxDots; i++) {
             const color = dayEvents[i].color || '#3788d8';
@@ -496,10 +553,8 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</div>`;
     grid.innerHTML = html;
 
-    // Click en un mes para cambiar a vista mes
     document.querySelectorAll('.year-month').forEach(el => {
       el.addEventListener('click', function(e) {
-        // Evitar que el click en el mes se propague al día si se hace clic en el título
         const month = parseInt(this.dataset.month);
         currentDate = new Date(year, month, 1);
         currentView = 'month';
@@ -507,11 +562,9 @@ document.addEventListener('DOMContentLoaded', function() {
         renderView();
       });
     });
-
-    // Click en un día para cambiar a vista día
     document.querySelectorAll('.year-day').forEach(el => {
       el.addEventListener('click', function(e) {
-        e.stopPropagation(); // Evitar que se active el click del mes
+        e.stopPropagation();
         const date = this.dataset.date;
         if (date) {
           currentDate = new Date(date);
