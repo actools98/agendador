@@ -491,3 +491,103 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   text-align: center;
   margin-top: 10px;
 }
+/* ============================================================
+   EVENTOS "TODO EL DÍA" - VISTA DÍA
+   ============================================================ */
+.day-all-day-section {
+  background-color: #1a1a2e;
+  border-bottom: 1px solid #2a2a3a;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-all-day-label {
+  font-size: 0.8rem;
+  color: #aaa;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.day-all-day-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.day-all-day-event {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  background-color: rgba(55, 136, 216, 0.4); /* fallback */
+}
+
+.day-all-day-event:hover {
+  opacity: 0.85;
+}
+
+/* Ajuste para la vista día con sección de todo el día */
+.day-time-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.day-time-grid-inner {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ============================================================
+   EVENTOS "TODO EL DÍA" - VISTA SEMANA
+   ============================================================ */
+.week-all-day-section {
+  background-color: #1a1a2e;
+  border-bottom: 1px solid #2a2a3a;
+  padding: 4px 6px;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 28px;
+}
+
+.week-all-day-event {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  background-color: rgba(55, 136, 216, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.week-all-day-event:hover {
+  opacity: 0.85;
+}
+
+/* Ajuste para la columna de semana */
+.week-day-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  position: relative;
+  background: #121212;
+  border-left: 1px solid #2a2a3a;
+  overflow: hidden;
+}
