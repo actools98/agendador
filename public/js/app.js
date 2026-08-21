@@ -75,6 +75,10 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
     renderEventList();
     renderFinishedList();
+    // Después de renderizar, enfocar (si es día o semana)
+    if (currentView === 'day' || currentView === 'week') {
+      setTimeout(focusWorkHours, 250);
+    }
   }
 
   function setWorkHours(start, end) {
@@ -86,41 +90,38 @@ document.addEventListener('DOMContentLoaded', function() {
     if (workEndInput) workEndInput.value = end;
     if (currentView === 'day' || currentView === 'week') {
       renderView();
-      setTimeout(focusWorkHours, 150);
+      setTimeout(focusWorkHours, 250);
     }
   }
 
-  // ========== ENFOQUE EN FRANJA LABORAL ==========
+  // ========== ENFOQUE EN FRANJA LABORAL (MEJORADO) ==========
   function focusWorkHours() {
-    let container;
-    if (currentView === 'day') {
-      container = document.querySelector('.day-time-grid');
-    } else if (currentView === 'week') {
-      container = document.querySelector('.week-body-wrapper');
-    } else {
-      return;
-    }
-    if (!container) return;
+    setTimeout(() => {
+      let container;
+      let targetSelector;
 
-    let targetElement;
-    if (currentView === 'day') {
-      targetElement = container.querySelector(`.day-hour-label[data-hour="${workStart}"]`);
-    } else if (currentView === 'week') {
-      targetElement = container.querySelector(`.week-hour-label[data-hour="${workStart}"]`);
-    }
-    if (!targetElement) {
       if (currentView === 'day') {
-        targetElement = container.querySelector(`.day-hour-slot[data-hour="${workStart}"]`);
+        container = document.querySelector('.day-time-grid');
+        targetSelector = `.day-hour-label[data-hour="${workStart}"], .day-hour-slot[data-hour="${workStart}"]`;
+      } else if (currentView === 'week') {
+        container = document.querySelector('.week-body-wrapper');
+        targetSelector = `.week-hour-label[data-hour="${workStart}"], .week-hour-slot[data-hour="${workStart}"]`;
       } else {
-        targetElement = container.querySelector(`.week-hour-slot[data-hour="${workStart}"]`);
+        return;
       }
-    }
-    if (targetElement) {
-      const containerRect = container.getBoundingClientRect();
-      const targetRect = targetElement.getBoundingClientRect();
-      const offset = targetRect.top - containerRect.top;
-      container.scrollTop = offset;
-    }
+
+      if (!container) {
+        console.warn('Contenedor no encontrado para enfocar');
+        return;
+      }
+
+      const target = container.querySelector(targetSelector);
+      if (target) {
+        target.scrollIntoView({ block: 'start', behavior: 'auto' });
+      } else {
+        console.warn('No se encontró la hora de inicio', workStart);
+      }
+    }, 250);
   }
 
   // ========== CARGAR EVENTOS ==========
@@ -258,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
       default: renderMonthView();
     }
     if (currentView === 'day' || currentView === 'week') {
-      setTimeout(focusWorkHours, 100);
+      setTimeout(focusWorkHours, 250);
     }
   }
 
