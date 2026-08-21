@@ -326,3 +326,148 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   text-align: center;
   margin-top: 10px;
 }
+/* ====== VISTA DÍA CON HORARIO ====== */
+.day-time-grid {
+  display: flex;
+  height: 100%;
+  min-height: 500px;
+  overflow-y: auto;
+}
+.day-time-column {
+  width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e2e;
+}
+.day-hour-label {
+  height: 60px;
+  border-bottom: 1px solid #2a2a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #aaa;
+  border-right: 1px solid #2a2a3a;
+}
+.day-events-column {
+  flex: 1;
+  position: relative;
+  background: #121212;
+}
+.day-hour-slot {
+  height: 60px;
+  border-bottom: 1px solid #2a2a3a;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.day-hour-slot:hover {
+  background: #1a1a2e;
+}
+.day-event-block {
+  position: absolute;
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 0.7rem;
+  color: #fff;
+  cursor: pointer;
+  border-left: 2px solid rgba(255,255,255,0.3);
+  transition: opacity 0.2s;
+  min-height: 18px;
+}
+.day-event-block:hover {
+  opacity: 0.85;
+}
+.event-title-inline {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: bold;
+}
+
+/* ====== VISTA SEMANA CON HORARIO ====== */
+.week-time-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+}
+.week-header {
+  display: flex;
+  border-bottom: 2px solid #2a2a3a;
+  background: #1e1e2e;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.week-header-empty {
+  width: 60px;
+  flex-shrink: 0;
+}
+.week-header-day {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  font-weight: bold;
+  border-left: 1px solid #2a2a3a;
+}
+.week-header-day.today {
+  color: #3788d8;
+}
+.week-body-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+.week-body {
+  display: flex;
+  height: 100%;
+}
+.week-hours-column {
+  width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e2e;
+}
+.week-hour-label {
+  height: 60px;
+  border-bottom: 1px solid #2a2a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #aaa;
+  border-right: 1px solid #2a2a3a;
+}
+.week-day-column {
+  flex: 1;
+  position: relative;
+  background: #121212;
+  border-left: 1px solid #2a2a3a;
+}
+.week-hour-slot {
+  height: 60px;
+  border-bottom: 1px solid #2a2a3a;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.week-hour-slot:hover {
+  background: #1a1a2e;
+}
+.week-event-block {
+  position: absolute;
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 0.65rem;
+  color: #fff;
+  cursor: pointer;
+  border-left: 2px solid rgba(255,255,255,0.3);
+  transition: opacity 0.2s;
+  min-height: 16px;
+}
+.week-event-block:hover {
+  opacity: 0.85;
+}
