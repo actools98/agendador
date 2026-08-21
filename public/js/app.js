@@ -504,3 +504,315 @@ document.addEventListener('DOMContentLoaded', function() {
   // ========== INICIO ==========
   loadEventsFromServer();
 });
+document.addEventListener('DOMContentLoaded', function() {
+  // ========== ESTADO ==========
+  let currentDate = new Date();
+  let currentView = 'month'; // 'day', 'week', 'month', 'year'
+  let events = [];
+
+  // ========== ELEMENTOS DOM ==========
+  const grid = document.getElementById('calendarGrid');
+  const viewTitle = document.getElementById('viewTitle');
+  const prevBtn = document.getElementById('prevView');
+  const nextBtn = document.getElementById('nextView');
+  const viewBtns = document.querySelectorAll('.view-btn');
+  const newEventBtn = document.getElementById('newEventBtn');
+  const eventListEl = document.getElementById('eventList');
+
+  // Modal
+  const modalElement = document.getElementById('eventModal');
+  const modal = new bootstrap.Modal(modalElement);
+  const modalTitle = document.getElementById('modalTitle');
+  const form = document.getElementById('eventForm');
+  const eventIdInput = document.getElementById('eventId');
+  const titleInput = document.getElementById('title');
+  const descriptionInput = document.getElementById('description');
+  const startInput = document.getElementById('start');
+  const endInput = document.getElementById('end');
+  const allDayInput = document.getElementById('allDay');
+  const colorInput = document.getElementById('color');
+  const saveBtn = document.getElementById('saveEventBtn');
+  const deleteBtn = document.getElementById('deleteEventBtn');
+
+  let currentEventId = null;
+
+  // ========== CARGAR EVENTOS ==========
+  async function loadEventsFromServer() {
+    try {
+      const res = await fetch('/api/events');
+      if (!res.ok) throw new Error('Error al cargar eventos');
+      events = await res.json();
+      renderView();
+      renderEventList();
+    } catch (error) {
+      console.error('Error cargando eventos:', error);
+    }
+  }
+
+  // ========== RENDERIZADO SEGÚN VISTA ==========
+  function renderView() {
+    switch (currentView) {
+      case 'day':   renderDayView(); break;
+      case 'week':  renderWeekView(); break;
+      case 'month': renderMonthView(); break;
+      case 'year':  renderYearView(); break;
+      default: renderMonthView();
+    }
+  }
+
+  // ========== VISTA DÍA (CON HORARIO 00-24) ==========
+  function renderDayView() {
+    const date = currentDate;
+    const dateStr = date.toISOString().split('T')[0];
+    const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+
+    viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Contenedor con estructura de horas
+    let html = `<div class="day-time-grid">`;
+    html += `<div class="day-time-column">`;
+    
+    // Horas de 00:00 a 23:59
+    for (let hour = 0; hour < 24; hour++) {
+      const label = `${String(hour).padStart(2, '0')}:00`;
+      html += `<div class="day-hour-label" data-hour="${hour}">${label}</div>`;
+    }
+    html += `</div>`;
+
+    // Columna de eventos
+    html += `<div class="day-events-column" style="position: relative;">`;
+    // Fondo con franjas horarias (para referencia)
+    for (let hour = 0; hour < 24; hour++) {
+      html += `<div class="day-hour-slot" data-hour="${hour}"></div>`;
+    }
+    // Ahora los eventos: se posicionan absolutos
+    if (dayEvents.length > 0) {
+      // Ordenar por inicio
+      const sorted = [...dayEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
+      // Para cada hora, llevar un contador de cuántos eventos se superponen (para ancho)
+      const hourCounts = {};
+      sorted.forEach(e => {
+        const startHour = new Date(e.start).getHours();
+        if (!hourCounts[startHour]) hourCounts[startHour] = [];
+        hourCounts[startHour].push(e);
+      });
+
+      // Asignar ancho y offset por hora
+      sorted.forEach(e => {
+        const start = new Date(e.start);
+        const end = new Date(e.end);
+        const startMinutes = start.getHours() * 60 + start.getMinutes();
+        const endMinutes = end.getHours() * 60 + end.getMinutes();
+        const duration = endMinutes - startMinutes;
+        const top = (startMinutes / (24 * 60)) * 100; // % desde 0
+        const height = (duration / (24 * 60)) * 100; // % altura
+
+        // Calcular cuántos eventos coinciden en esta hora de inicio (para apilar)
+        const hour = start.getHours();
+        const eventsInHour = hourCounts[hour] || [];
+        const index = eventsInHour.indexOf(e);
+        const totalInHour = eventsInHour.length;
+        const width = totalInHour > 1 ? 80 / totalInHour : 100;
+        const left = index * (80 / totalInHour);
+
+        html += `
+          <div class="day-event-block" 
+               style="top: ${Math.max(0, top)}%; 
+                      height: ${Math.max(2, height)}%; 
+                      left: ${left}%; 
+                      width: ${width}%; 
+                      background-color: ${e.color || '#3788d8'};"
+               data-id="${e.id}"
+               title="${e.title} (${start.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})})">
+            <span class="event-title-inline">${e.title}</span>
+          </div>
+        `;
+      });
+    }
+    html += `</div>`;
+    html += `</div>`;
+
+    grid.innerHTML = html;
+
+    // Click en celda horaria para crear evento (con hora sugerida)
+    document.querySelectorAll('.day-hour-slot').forEach(slot => {
+      slot.addEventListener('click', function() {
+        const hour = parseInt(this.dataset.hour);
+        const dateObj = new Date(currentDate);
+        dateObj.setHours(hour, 0, 0, 0);
+        const dateStrForModal = dateObj.toISOString().split('T')[0];
+        openCreateModal(dateStrForModal, hour);
+      });
+    });
+
+    // Click en evento para editar
+    document.querySelectorAll('.day-event-block').forEach(el => {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const id = parseInt(this.dataset.id);
+        openEditModal(id);
+      });
+    });
+  }
+
+  // ========== VISTA SEMANA (CON HORARIO 00-24) ==========
+  function renderWeekView() {
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Domingo
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+    viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+    let html = `<div class="week-time-grid">`;
+    // Cabecera con días
+    html += `<div class="week-header">`;
+    html += `<div class="week-header-empty"></div>`; // esquina superior izquierda
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const isToday = d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+      html += `<div class="week-header-day ${isToday ? 'today' : ''}">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
+    }
+    html += `</div>`;
+
+    // Cuerpo: horas y eventos
+    html += `<div class="week-body-scroll">`;
+    html += `<div class="week-body">`;
+
+    // Columna de horas
+    html += `<div class="week-hours-column">`;
+    for (let hour = 0; hour < 24; hour++) {
+      const label = `${String(hour).padStart(2, '0')}:00`;
+      html += `<div class="week-hour-label" data-hour="${hour}">${label}</div>`;
+    }
+    html += `</div>`;
+
+    // Columnas de días (7)
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+
+      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative;">`;
+      // Fondo con slots horarios
+      for (let hour = 0; hour < 24; hour++) {
+        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}"></div>`;
+      }
+      // Eventos
+      if (dayEvents.length > 0) {
+        const sorted = [...dayEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
+        const hourCounts = {};
+        sorted.forEach(e => {
+          const startHour = new Date(e.start).getHours();
+          if (!hourCounts[startHour]) hourCounts[startHour] = [];
+          hourCounts[startHour].push(e);
+        });
+
+        sorted.forEach(e => {
+          const start = new Date(e.start);
+          const end = new Date(e.end);
+          const startMinutes = start.getHours() * 60 + start.getMinutes();
+          const endMinutes = end.getHours() * 60 + end.getMinutes();
+          const duration = endMinutes - startMinutes;
+          const top = (startMinutes / (24 * 60)) * 100;
+          const height = (duration / (24 * 60)) * 100;
+
+          const hour = start.getHours();
+          const eventsInHour = hourCounts[hour] || [];
+          const index = eventsInHour.indexOf(e);
+          const totalInHour = eventsInHour.length;
+          const width = totalInHour > 1 ? 80 / totalInHour : 100;
+          const left = index * (80 / totalInHour);
+
+          html += `
+            <div class="week-event-block" 
+                 style="top: ${Math.max(0, top)}%; 
+                        height: ${Math.max(2, height)}%; 
+                        left: ${left}%; 
+                        width: ${width}%; 
+                        background-color: ${e.color || '#3788d8'};"
+                 data-id="${e.id}"
+                 title="${e.title} (${start.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})})">
+              <span class="event-title-inline">${e.title}</span>
+            </div>
+          `;
+        });
+      }
+      html += `</div>`;
+    }
+
+    html += `</div>`; // week-body
+    html += `</div>`; // week-body-scroll
+    html += `</div>`; // week-time-grid
+
+    grid.innerHTML = html;
+
+    // Click en slot horario para crear evento
+    document.querySelectorAll('.week-hour-slot').forEach(slot => {
+      slot.addEventListener('click', function() {
+        const hour = parseInt(this.dataset.hour);
+        const dateStr = this.dataset.date;
+        const dateObj = new Date(dateStr);
+        dateObj.setHours(hour, 0, 0, 0);
+        openCreateModal(dateStr, hour);
+      });
+    });
+
+    // Click en evento para editar
+    document.querySelectorAll('.week-event-block').forEach(el => {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const id = parseInt(this.dataset.id);
+        openEditModal(id);
+      });
+    });
+  }
+
+  // ========== VISTA MES (CON BARRAS, SIN CAMBIOS) ==========
+  function renderMonthView() {
+    // ... (código anterior, sin cambios) ...
+  }
+
+  // ========== VISTA AÑO (SIN CAMBIOS) ==========
+  function renderYearView() {
+    // ... (código anterior, sin cambios) ...
+  }
+
+  // ========== LISTA DE EVENTOS (SIDEBAR) ==========
+  function renderEventList() {
+    // ... (código anterior, sin cambios) ...
+  }
+
+  // ========== MODAL: CREAR / EDITAR ==========
+  function openCreateModal(dateStr, hour) {
+    // ... (código anterior, con pequeña mejora para prellenar hora) ...
+    // Si se pasa hour, usarlo
+    if (hour !== undefined) {
+      const date = new Date(dateStr);
+      date.setHours(hour, 0, 0, 0);
+      const end = new Date(date);
+      end.setHours(end.getHours() + 1);
+      const formatLocal = (d) => {
+        const offset = d.getTimezoneOffset();
+        const local = new Date(d.getTime() - offset * 60000);
+        return local.toISOString().slice(0, 16);
+      };
+      startInput.value = formatLocal(date);
+      endInput.value = formatLocal(end);
+    } else {
+      // ... (código anterior)
+    }
+    // Resto del modal
+    modalTitle.textContent = 'Nuevo evento';
+    eventIdInput.value = '';
+    form.reset();
+    colorInput.value = '#3788d8';
+    deleteBtn.style.display = 'none';
+    currentEventId = null;
+    modal.show();
+  }
+
+  // ... (resto de funciones como openEditModal, saveEvent, deleteEvent sin cambios) ...
+});
