@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentView = 'month';
   let events = [];
 
+  // Preferencias (desde localStorage)
+  let timeFormat = localStorage.getItem('calendar_time_format') || '24';
+
   // ========== ELEMENTOS DOM ==========
   const grid = document.getElementById('calendarGrid');
   const viewTitle = document.getElementById('viewTitle');
@@ -11,8 +14,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const nextBtn = document.getElementById('nextView');
   const viewBtns = document.querySelectorAll('.view-btn');
   const newEventBtn = document.getElementById('newEventBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
   const eventListEl = document.getElementById('eventList');
 
+  // Modal de configuración
+  const settingsModalElement = document.getElementById('settingsModal');
+  const settingsModal = new bootstrap.Modal(settingsModalElement);
+  const timeFormatSelect = document.getElementById('timeFormatSelect');
+
+  // Modal de eventos
   const modalElement = document.getElementById('eventModal');
   const modal = new bootstrap.Modal(modalElement);
   const modalTitle = document.getElementById('modalTitle');
@@ -28,6 +38,39 @@ document.addEventListener('DOMContentLoaded', function() {
   const deleteBtn = document.getElementById('deleteEventBtn');
 
   let currentEventId = null;
+
+  // ========== FUNCIONES DE FORMATO DE HORA ==========
+  function formatTime(date, format = timeFormat) {
+    if (format === '12') {
+      let hours = date.getHours();
+      const minutes = date.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // 12 en lugar de 0
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+    } else {
+      // 24h
+      return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+  }
+
+  function formatTimeRange(start, end, format = timeFormat) {
+    if (format === '12') {
+      return `${formatTime(start, '12')} - ${formatTime(end, '12')}`;
+    } else {
+      return `${formatTime(start, '24')} - ${formatTime(end, '24')}`;
+    }
+  }
+
+  // Actualizar preferencia y refrescar vista
+  function setTimeFormat(format) {
+    timeFormat = format;
+    localStorage.setItem('calendar_time_format', format);
+    // Actualizar el select en el modal si está abierto
+    if (timeFormatSelect) timeFormatSelect.value = format;
+    renderView();
+    renderEventList();
+  }
 
   // ========== CARGAR EVENTOS ==========
   async function loadEventsFromServer() {
@@ -52,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== VISTA DÍA (SIN SCROLL, FLEX 100%) ==========
+  // ========== VISTA DÍA ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
@@ -60,22 +103,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-    // Contenedor flex que ocupa todo el alto
     let html = `<div class="day-time-grid">`;
-    // Columna de horas
     html += `<div class="day-time-column">`;
     for (let hour = 0; hour < 24; hour++) {
-      html += `<div class="day-hour-label" data-hour="${hour}">${String(hour).padStart(2,'0')}:00</div>`;
+      let label;
+      if (timeFormat === '12') {
+        const hour12 = hour % 12 || 12;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
+      } else {
+        label = `${String(hour).padStart(2, '0')}:00`;
+      }
+      html += `<div class="day-hour-label" data-hour="${hour}">${label}</div>`;
     }
     html += `</div>`;
 
-    // Columna de eventos (flex)
     html += `<div class="day-events-column" style="position: relative; display: flex; flex-direction: column;">`;
-    // Slots de horas (cada uno flex:1)
     for (let hour = 0; hour < 24; hour++) {
       html += `<div class="day-hour-slot" data-hour="${hour}" style="flex: 1; border-bottom: 1px solid #2a2a3a;"></div>`;
     }
-    // Eventos (posicionados absolutos sobre el contenedor)
     if (dayEvents.length > 0) {
       const sorted = [...dayEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -100,11 +146,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const width = totalInHour > 1 ? 80 / totalInHour : 100;
         const left = index * (80 / totalInHour);
 
+        const timeStr = formatTimeRange(start, end);
+
         html += `
           <div class="day-event-block" 
                style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
                data-id="${e.id}"
-               title="${e.title} (${start.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})})">
+               title="${e.title} (${timeStr})">
             <span class="event-title-inline">${e.title}</span>
           </div>
         `;
@@ -113,7 +161,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</div></div>`;
     grid.innerHTML = html;
 
-    // Click en slot horario para crear evento
     document.querySelectorAll('.day-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
@@ -123,7 +170,6 @@ document.addEventListener('DOMContentLoaded', function() {
         openCreateModal(dateStrForModal, hour);
       });
     });
-    // Click en evento para editar
     document.querySelectorAll('.day-event-block').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -133,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA (SIN SCROLL, FLEX 100%) ==========
+  // ========== VISTA SEMANA ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -143,7 +189,6 @@ document.addEventListener('DOMContentLoaded', function() {
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
     let html = `<div class="week-time-grid">`;
-    // Cabecera
     html += `<div class="week-header">`;
     html += `<div class="week-header-empty"></div>`;
     for (let i = 0; i < 7; i++) {
@@ -154,16 +199,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    // Cuerpo (horas + días)
     html += `<div class="week-body-wrapper">`;
-    // Columna de horas
     html += `<div class="week-hours-column">`;
     for (let hour = 0; hour < 24; hour++) {
-      html += `<div class="week-hour-label" data-hour="${hour}">${String(hour).padStart(2,'0')}:00</div>`;
+      let label;
+      if (timeFormat === '12') {
+        const hour12 = hour % 12 || 12;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
+      } else {
+        label = `${String(hour).padStart(2, '0')}:00`;
+      }
+      html += `<div class="week-hour-label" data-hour="${hour}">${label}</div>`;
     }
     html += `</div>`;
 
-    // Columnas de días (cada una con slots flex)
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
@@ -174,7 +224,6 @@ document.addEventListener('DOMContentLoaded', function() {
       for (let hour = 0; hour < 24; hour++) {
         html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="flex: 1; border-bottom: 1px solid #2a2a3a;"></div>`;
       }
-      // Eventos (absolutos)
       if (dayEvents.length > 0) {
         const sorted = [...dayEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
         const hourCounts = {};
@@ -199,11 +248,13 @@ document.addEventListener('DOMContentLoaded', function() {
           const width = totalInHour > 1 ? 80 / totalInHour : 100;
           const left = index * (80 / totalInHour);
 
+          const timeStr = formatTimeRange(start, end);
+
           html += `
             <div class="week-event-block" 
                  style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
                  data-id="${e.id}"
-                 title="${e.title} (${start.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})})">
+                 title="${e.title} (${timeStr})">
               <span class="event-title-inline">${e.title}</span>
             </div>
           `;
@@ -211,8 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       html += `</div>`;
     }
-    html += `</div></div>`; // week-body-wrapper y week-time-grid
-
+    html += `</div></div>`;
     grid.innerHTML = html;
 
     document.querySelectorAll('.week-hour-slot').forEach(slot => {
@@ -231,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES (CON BARRAS) ==========
+  // ========== VISTA MES (sin cambios) ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -291,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO ==========
+  // ========== VISTA AÑO (sin cambios) ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
@@ -337,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== LISTA DE EVENTOS ==========
+  // ========== LISTA DE EVENTOS (SIDEBAR) ==========
   function renderEventList() {
     if (!eventListEl) return;
     if (events.length === 0) {
@@ -349,11 +399,13 @@ document.addEventListener('DOMContentLoaded', function() {
     sorted.forEach(ev => {
       const startDate = new Date(ev.start);
       const dateStr = startDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+      // Mostrar hora en el tooltip o en el título
+      const timeStr = formatTime(startDate);
       html += `
         <div class="list-group-item" data-id="${ev.id}">
-          <span class="event-title" style="border-left: 4px solid ${ev.color || '#3788d8'}; padding-left: 8px;">
+          <span class="event-title" style="border-left: 4px solid ${ev.color || '#3788d8'}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
             <strong>${ev.title}</strong><br>
-            <small class="text-muted">${dateStr}</small>
+            <small class="text-muted">${dateStr} ${timeStr}</small>
           </span>
           <span class="event-actions">
             <button class="edit-event" data-id="${ev.id}" title="Editar">✏️</button>
@@ -388,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== MODAL ==========
+  // ========== MODAL: CREAR / EDITAR ==========
   function openCreateModal(dateStr, hour) {
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
@@ -556,6 +608,17 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   newEventBtn.addEventListener('click', () => openCreateModal(null));
+
+  // Configuración
+  settingsBtn.addEventListener('click', () => {
+    // Sincronizar el select con la preferencia actual
+    timeFormatSelect.value = timeFormat;
+    settingsModal.show();
+  });
+
+  timeFormatSelect.addEventListener('change', function() {
+    setTimeFormat(this.value);
+  });
 
   saveBtn.addEventListener('click', saveEvent);
   deleteBtn.addEventListener('click', function() {
