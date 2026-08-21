@@ -10,6 +10,7 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'calendar.db');
 const db = new Database(dbPath);
 
+// Crear tablas si no existen
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,9 +28,18 @@ db.exec(`
     end DATETIME NOT NULL,
     all_day INTEGER DEFAULT 0,
     color TEXT DEFAULT '#3788d8',
+    status TEXT DEFAULT 'active',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `);
+
+// Migración: añadir columna status si no existe
+const tableInfo = db.prepare("PRAGMA table_info(events)").all();
+const hasStatus = tableInfo.some(col => col.name === 'status');
+if (!hasStatus) {
+  db.exec(`ALTER TABLE events ADD COLUMN status TEXT DEFAULT 'active';`);
+  console.log('✅ Columna "status" añadida a la tabla events');
+}
 
 module.exports = db;
