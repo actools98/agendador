@@ -118,13 +118,20 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA DÍA (con horario, SIN SCROLL)
+   VISTA DÍA (con horario, scroll y "todo el día")
    ============================================================ */
 .day-time-grid {
+  overflow-y: auto;
+  flex: 1;
   display: flex;
-  height: 100%;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.day-time-grid-inner {
+  flex: 1;
+  display: flex;
   min-height: 0;
-  overflow: hidden;
 }
 
 .day-time-column {
@@ -192,8 +199,48 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   font-weight: bold;
 }
 
+/* Sección "Todo el día" en vista día */
+.day-all-day-section {
+  background-color: #1a1a2e;
+  border-bottom: 1px solid #2a2a3a;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-all-day-label {
+  font-size: 0.8rem;
+  color: #aaa;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.day-all-day-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.day-all-day-event {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  background-color: rgba(55, 136, 216, 0.4);
+}
+
+.day-all-day-event:hover {
+  opacity: 0.85;
+}
+
 /* ============================================================
-   VISTA SEMANA (con horario, SIN SCROLL)
+   VISTA SEMANA (con horario, scroll y "todo el día")
    ============================================================ */
 .week-time-grid {
   display: flex;
@@ -228,10 +275,10 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .week-body-wrapper {
-  display: flex;
+  overflow-y: auto;
   flex: 1;
+  display: flex;
   min-height: 0;
-  overflow: hidden;
 }
 
 .week-hours-column {
@@ -289,6 +336,60 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .week-event-block:hover {
+  opacity: 0.85;
+}
+
+/* Fila "Todo el día" en vista semana */
+.week-all-day-row {
+  display: flex;
+  background-color: #1a1a2e;
+  border-bottom: 1px solid #2a2a3a;
+  flex-shrink: 0;
+  min-height: 40px;
+  align-items: stretch;
+}
+
+.week-all-day-label {
+  width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #aaa;
+  font-weight: bold;
+  background-color: #1e1e2e;
+  border-right: 1px solid #2a2a3a;
+  padding: 4px;
+}
+
+.week-all-day-cell {
+  flex: 1;
+  padding: 4px 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  border-left: 1px solid #2a2a3a;
+  min-height: 40px;
+  background-color: #121212;
+}
+
+.week-all-day-event {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  background-color: rgba(55, 136, 216, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.week-all-day-event:hover {
   opacity: 0.85;
 }
 
@@ -452,7 +553,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   MODAL
+   MODALES
    ============================================================ */
 .modal-content {
   background-color: #1e1e2e;
@@ -482,6 +583,13 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-color: #3788d8;
 }
 
+/* Input group (para los campos de hora en configuración) */
+.input-group-text {
+  background-color: #2a2a3a !important;
+  color: #ffffff !important;
+  border-color: #3b3b5c !important;
+}
+
 /* ============================================================
    MENSAJE DE DEPURACIÓN
    ============================================================ */
@@ -490,370 +598,4 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   font-size: 0.9rem;
   text-align: center;
   margin-top: 10px;
-}
-/* ============================================================
-   EVENTOS "TODO EL DÍA" - VISTA DÍA
-   ============================================================ */
-.day-all-day-section {
-  background-color: #1a1a2e;
-  border-bottom: 1px solid #2a2a3a;
-  padding: 6px 10px;
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.day-all-day-label {
-  font-size: 0.8rem;
-  color: #aaa;
-  font-weight: bold;
-  margin-right: 8px;
-}
-
-.day-all-day-events {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: 1;
-}
-
-.day-all-day-event {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  background-color: rgba(55, 136, 216, 0.4); /* fallback */
-}
-
-.day-all-day-event:hover {
-  opacity: 0.85;
-}
-
-/* Ajuste para la vista día con sección de todo el día */
-.day-time-grid {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.day-time-grid-inner {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* ============================================================
-   EVENTOS "TODO EL DÍA" - VISTA SEMANA
-   ============================================================ */
-.week-all-day-section {
-  background-color: #1a1a2e;
-  border-bottom: 1px solid #2a2a3a;
-  padding: 4px 6px;
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  min-height: 28px;
-}
-
-.week-all-day-event {
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-size: 0.65rem;
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  background-color: rgba(55, 136, 216, 0.4);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.week-all-day-event:hover {
-  opacity: 0.85;
-}
-
-/* Ajuste para la columna de semana */
-.week-day-column {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  position: relative;
-  background: #121212;
-  border-left: 1px solid #2a2a3a;
-  overflow: hidden;
-}
-/* ============================================================
-   FILA DE EVENTOS "TODO EL DÍA" - VISTA SEMANA
-   ============================================================ */
-.week-all-day-row {
-  display: flex;
-  background-color: #1a1a2e;
-  border-bottom: 1px solid #2a2a3a;
-  flex-shrink: 0;
-  min-height: 40px;
-  align-items: stretch;
-}
-
-.week-all-day-label {
-  width: 60px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  color: #aaa;
-  font-weight: bold;
-  background-color: #1e1e2e;
-  border-right: 1px solid #2a2a3a;
-  padding: 4px;
-}
-
-.week-all-day-cell {
-  flex: 1;
-  padding: 4px 6px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  border-left: 1px solid #2a2a3a;
-  min-height: 40px;
-  background-color: #121212;
-}
-
-.week-all-day-event {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  background-color: rgba(55, 136, 216, 0.4);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.week-all-day-event:hover {
-  opacity: 0.85;
-}
-/* ============================================================
-   SCROLL EN VISTAS DE DÍA Y SEMANA
-   ============================================================ */
-.day-time-grid {
-  overflow-y: auto;  /* Permitir scroll vertical */
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.week-body-wrapper {
-  overflow-y: auto;  /* Permitir scroll vertical */
-  flex: 1;
-  display: flex;
-}
-
-/* Ajuste para que las horas ocupen todo el alto disponible */
-.day-time-grid-inner {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.week-body-wrapper {
-  min-height: 0;
-}
-/* ============================================================
-   SCROLL EN VISTAS DE DÍA Y SEMANA
-   ============================================================ */
-.day-time-grid {
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-height: 100%;
-}
-
-.week-body-wrapper {
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.week-time-grid {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.day-time-grid-inner {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-/* ============================================================
-   EVENTOS "TODO EL DÍA" - VISTA DÍA Y SEMANA
-   ============================================================ */
-.day-all-day-section {
-  background-color: #1a1a2e;
-  border-bottom: 1px solid #2a2a3a;
-  padding: 6px 10px;
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.day-all-day-label {
-  font-size: 0.8rem;
-  color: #aaa;
-  font-weight: bold;
-  margin-right: 8px;
-}
-
-.day-all-day-events {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: 1;
-}
-
-.day-all-day-event {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  background-color: rgba(55, 136, 216, 0.4);
-}
-
-.day-all-day-event:hover {
-  opacity: 0.85;
-}
-
-.week-all-day-row {
-  display: flex;
-  background-color: #1a1a2e;
-  border-bottom: 1px solid #2a2a3a;
-  flex-shrink: 0;
-  min-height: 40px;
-  align-items: stretch;
-}
-
-.week-all-day-label {
-  width: 60px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  color: #aaa;
-  font-weight: bold;
-  background-color: #1e1e2e;
-  border-right: 1px solid #2a2a3a;
-  padding: 4px;
-}
-
-.week-all-day-cell {
-  flex: 1;
-  padding: 4px 6px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  border-left: 1px solid #2a2a3a;
-  min-height: 40px;
-  background-color: #121212;
-}
-
-.week-all-day-event {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  background-color: rgba(55, 136, 216, 0.4);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.week-all-day-event:hover {
-  opacity: 0.85;
-}
-/* ============================================================
-   SCROLL EN VISTAS DE DÍA Y SEMANA (para enfoque de franja)
-   ============================================================ */
-.day-time-grid {
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-height: 100%;
-}
-
-.week-body-wrapper {
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.week-time-grid {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.day-time-grid-inner {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-.day-time-grid {
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-height: 100%;
-}
-
-.week-body-wrapper {
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.week-time-grid {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.day-time-grid-inner {
-  flex: 1;
-  display: flex;
-  min-height: 0;
 }
