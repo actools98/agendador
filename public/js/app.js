@@ -84,7 +84,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</div>`;
     grid.innerHTML = html;
 
-    // Click en evento para editar
     document.querySelectorAll('.day-event-item').forEach(el => {
       el.addEventListener('click', function() {
         const id = parseInt(this.dataset.id);
@@ -96,14 +95,13 @@ document.addEventListener('DOMContentLoaded', function() {
   // ========== VISTA SEMANA ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Domingo
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 6);
 
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
     let html = `<div class="week-grid">`;
-    // Cabecera con días
     html += `<div class="week-header">`;
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
@@ -113,7 +111,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    // Cuerpo: eventos por día
     html += `<div class="week-body">`;
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
@@ -140,7 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</div></div>`;
     grid.innerHTML = html;
 
-    // Click en columna para crear evento
     document.querySelectorAll('.week-day-col').forEach(col => {
       col.addEventListener('click', function(e) {
         if (e.target === this || e.target.classList.contains('week-day-empty')) {
@@ -149,7 +145,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
     });
-    // Click en evento para editar
     document.querySelectorAll('.week-event-item').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -159,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES (LA QUE YA TENÍAS) ==========
+  // ========== VISTA MES (CON BARRAS) ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -184,16 +179,24 @@ document.addEventListener('DOMContentLoaded', function() {
       const dateStr = dateObj.toISOString().split('T')[0];
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const isToday = (new Date().toISOString().split('T')[0] === dateStr);
+
       html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
       html += `<span class="day-number">${day}</span>`;
+      
       if (dayEvents.length > 0) {
-        html += `<div class="day-dots">`;
-        dayEvents.slice(0, 3).forEach(e => {
-          html += `<span class="dot" style="background-color: ${e.color || '#3788d8'}"></span>`;
-        });
-        if (dayEvents.length > 3) html += `<span class="dot-more">+${dayEvents.length - 3}</span>`;
+        html += `<div class="event-bars">`;
+        // Mostrar máximo 3 barras
+        const maxBars = Math.min(dayEvents.length, 3);
+        for (let i = 0; i < maxBars; i++) {
+          const e = dayEvents[i];
+          html += `<div class="event-bar" style="background-color: ${e.color || '#3788d8'};"></div>`;
+        }
+        if (dayEvents.length > 3) {
+          html += `<div class="event-bar-more">+${dayEvents.length - 3}</div>`;
+        }
         html += `</div>`;
       }
+
       html += '</div>';
     }
 
@@ -209,7 +212,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.day:not(.empty)').forEach(el => {
       el.addEventListener('click', function() {
         const date = this.dataset.date;
-        // Al hacer clic en un día, cambiar a vista día
         currentDate = new Date(date);
         currentView = 'day';
         updateViewButtons();
@@ -233,7 +235,6 @@ document.addEventListener('DOMContentLoaded', function() {
       html += `<div class="year-month" data-month="${m}">`;
       html += `<div class="year-month-title">${monthName}</div>`;
       html += `<div class="year-month-days">`;
-      // Días en miniatura (solo números con puntos)
       const miniDays = [];
       for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(year, m, d);
@@ -247,7 +248,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</div>`;
     grid.innerHTML = html;
 
-    // Click en un mes para cambiar a vista mes
     document.querySelectorAll('.year-month').forEach(el => {
       el.addEventListener('click', function() {
         const month = parseInt(this.dataset.month);
@@ -257,7 +257,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderView();
       });
     });
-    // Click en un día para cambiar a vista día
     document.querySelectorAll('.year-day.has-event').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
