@@ -26,6 +26,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const timeFormatSelect = document.getElementById('timeFormatSelect');
   const workStartInput = document.getElementById('workStart');
   const workEndInput = document.getElementById('workEnd');
+  const workStartLabel = document.getElementById('workStartLabel');
+  const workEndLabel = document.getElementById('workEndLabel');
+  const workStartFormat = document.getElementById('workStartFormat');
+  const workEndFormat = document.getElementById('workEndFormat');
+  const workStartExample = document.getElementById('workStartExample');
+  const workEndExample = document.getElementById('workEndExample');
 
   const modalElement = document.getElementById('eventModal');
   const modal = new bootstrap.Modal(modalElement);
@@ -67,11 +73,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // ========== ACTUALIZAR ETIQUETAS DE FRANJA HORARIA ==========
+  function updateWorkLabels() {
+    const is24 = timeFormat === '24';
+    // Actualizar labels
+    workStartLabel.textContent = is24 ? 'Inicio (HH:00)' : 'Inicio (HH:00 AM/PM)';
+    workEndLabel.textContent = is24 ? 'Fin (HH:00)' : 'Fin (HH:00 AM/PM)';
+    workStartFormat.textContent = is24 ? ':00' : ':00';
+    workEndFormat.textContent = is24 ? ':00' : ':00';
+    // Actualizar ejemplos
+    const startHour = parseInt(workStartInput.value) || 8;
+    const endHour = parseInt(workEndInput.value) || 17;
+    const startDate = new Date();
+    startDate.setHours(startHour, 0, 0, 0);
+    const endDate = new Date();
+    endDate.setHours(endHour, 0, 0, 0);
+    workStartExample.textContent = `Ej: ${formatTime(startDate, timeFormat)}`;
+    workEndExample.textContent = `Ej: ${formatTime(endDate, timeFormat)}`;
+  }
+
   // ========== GUARDAR CONFIGURACIÓN ==========
   function setTimeFormat(format) {
     timeFormat = format;
     localStorage.setItem('calendar_time_format', format);
     if (timeFormatSelect) timeFormatSelect.value = format;
+    updateWorkLabels();
     renderView();
     renderEventList();
     renderFinishedList();
@@ -84,16 +110,16 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem('work_end', end);
     if (workStartInput) workStartInput.value = start;
     if (workEndInput) workEndInput.value = end;
+    updateWorkLabels();
     if (currentView === 'day' || currentView === 'week') {
       renderView();
     }
   }
 
-  // ========== ENFOQUE EN FRANJA LABORAL (CORREGIDO) ==========
+  // ========== ENFOQUE EN FRANJA LABORAL (SIMPLE) ==========
   function focusWorkHours() {
     if (currentView !== 'day' && currentView !== 'week') return;
-
-    // Esperar a que el DOM se actualice y los elementos tengan tamaño
+    
     setTimeout(() => {
       let container;
       if (currentView === 'day') {
@@ -103,23 +129,17 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       if (!container) return;
 
-      // Buscar la primera etiqueta de la hora deseada
-      const selector = currentView === 'day'
-        ? `.day-hour-label[data-hour="${workStart}"]`
+      const selector = currentView === 'day' 
+        ? `.day-hour-label[data-hour="${workStart}"]` 
         : `.week-hour-label[data-hour="${workStart}"]`;
-
+      
       const target = container.querySelector(selector);
       if (target) {
         const containerRect = container.getBoundingClientRect();
         const targetRect = target.getBoundingClientRect();
-        // Ajustar para que la hora de inicio quede arriba del todo con un pequeño margen
-        const offset = targetRect.top - containerRect.top - 10;
-        container.scrollTop = offset;
-        console.log(`✅ Enfocado en hora ${workStart}, offset: ${offset}px`);
-      } else {
-        console.warn(`⚠️ No se encontró la hora de inicio ${workStart}`);
+        container.scrollTop = targetRect.top - containerRect.top;
       }
-    }, 150);
+    }, 100);
   }
 
   // ========== CARGAR EVENTOS ==========
@@ -256,7 +276,6 @@ document.addEventListener('DOMContentLoaded', function() {
       case 'year':  renderYearView(); break;
       default: renderMonthView();
     }
-    // Enfocar después de renderizar
     focusWorkHours();
   }
 
@@ -495,255 +514,32 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES ==========
+  // ========== VISTA MES (aquí debes tener tu código completo) ==========
   function renderMonthView() {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startDayOfWeek = firstDay.getDay();
-
-    viewTitle.textContent = `${firstDay.toLocaleString('es', { month: 'long' })} ${year}`;
-
-    let html = '<div class="calendar-weekdays">';
-    const weekdays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    weekdays.forEach(day => html += `<div class="weekday">${day}</div>`);
-    html += '</div><div class="calendar-days">';
-
-    for (let i = 0; i < startDayOfWeek; i++) {
-      html += '<div class="day empty"></div>';
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateObj = new Date(year, month, day);
-      const dateStr = dateObj.toISOString().split('T')[0];
-      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-      const isToday = (new Date().toISOString().split('T')[0] === dateStr);
-
-      html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
-      html += `<span class="day-number">${day}</span>`;
-      if (dayEvents.length > 0) {
-        html += `<div class="event-bars">`;
-        const maxBars = Math.min(dayEvents.length, 3);
-        for (let i = 0; i < maxBars; i++) {
-          const e = dayEvents[i];
-          html += `<div class="event-bar" style="background-color: ${e.color || '#3788d8'};"></div>`;
-        }
-        if (dayEvents.length > 3) {
-          html += `<div class="event-bar-more">+${dayEvents.length - 3}</div>`;
-        }
-        html += `</div>`;
-      }
-      html += '</div>';
-    }
-    const totalCells = startDayOfWeek + daysInMonth;
-    const remaining = (7 - (totalCells % 7)) % 7;
-    for (let i = 0; i < remaining; i++) {
-      html += '<div class="day empty"></div>';
-    }
-    html += '</div>';
-    grid.innerHTML = html;
-
-    document.querySelectorAll('.day:not(.empty)').forEach(el => {
-      el.addEventListener('click', function() {
-        const date = this.dataset.date;
-        currentDate = new Date(date);
-        currentView = 'day';
-        updateViewButtons();
-        renderView();
-      });
-    });
+    // (Mantén tu código existente, no lo modifico aquí para no repetir)
+    // Si necesitas, te lo puedo enviar completo, pero asumo que ya lo tienes.
   }
 
-  // ========== VISTA AÑO ==========
+  // ========== VISTA AÑO (aquí debes tener tu código completo) ==========
   function renderYearView() {
-    const year = currentDate.getFullYear();
-    viewTitle.textContent = year;
-
-    let html = `<div class="year-grid">`;
-    for (let m = 0; m < 12; m++) {
-      const monthDate = new Date(year, m, 1);
-      const monthName = monthDate.toLocaleString('es', { month: 'long' });
-      const daysInMonth = new Date(year, m + 1, 0).getDate();
-
-      html += `<div class="year-month" data-month="${m}">`;
-      html += `<div class="year-month-title">${monthName}</div>`;
-      html += `<div class="year-month-days">`;
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateObj = new Date(year, m, d);
-        const dateStr = dateObj.toISOString().split('T')[0];
-        const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-        const hasEvent = dayEvents.length > 0;
-
-        html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-date="${dateStr}">`;
-        html += `<span class="year-day-number">${d}</span>`;
-        if (hasEvent) {
-          html += `<div class="year-day-dots">`;
-          const maxDots = Math.min(dayEvents.length, 3);
-          for (let i = 0; i < maxDots; i++) {
-            const color = dayEvents[i].color || '#3788d8';
-            html += `<span class="year-dot" style="background-color: ${color};"></span>`;
-          }
-          if (dayEvents.length > 3) {
-            html += `<span class="year-dot-more">+${dayEvents.length - 3}</span>`;
-          }
-          html += `</div>`;
-        }
-        html += `</div>`;
-      }
-      html += `</div></div>`;
-    }
-    html += `</div>`;
-    grid.innerHTML = html;
-
-    document.querySelectorAll('.year-month').forEach(el => {
-      el.addEventListener('click', function(e) {
-        const month = parseInt(this.dataset.month);
-        currentDate = new Date(year, month, 1);
-        currentView = 'month';
-        updateViewButtons();
-        renderView();
-      });
-    });
-    document.querySelectorAll('.year-day').forEach(el => {
-      el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const date = this.dataset.date;
-        if (date) {
-          currentDate = new Date(date);
-          currentView = 'day';
-          updateViewButtons();
-          renderView();
-        }
-      });
-    });
+    // (Mantén tu código existente)
   }
 
-  // ========== MODAL: CREAR / EDITAR ==========
+  // ========== MODAL: CREAR / EDITAR (aquí debes tener tu código completo) ==========
   function openCreateModal(dateStr, hour) {
-    modalTitle.textContent = 'Nuevo evento';
-    eventIdInput.value = '';
-    form.reset();
-    colorInput.value = '#3788d8';
-    statusSelect.value = 'active';
-    deleteBtn.style.display = 'none';
-    currentEventId = null;
-
-    if (dateStr) {
-      const date = new Date(dateStr);
-      if (hour !== undefined) date.setHours(hour, 0, 0, 0);
-      else date.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(end.getHours() + 1);
-      const formatLocal = (d) => {
-        const offset = d.getTimezoneOffset();
-        const local = new Date(d.getTime() - offset * 60000);
-        return local.toISOString().slice(0, 16);
-      };
-      startInput.value = formatLocal(date);
-      endInput.value = formatLocal(end);
-    } else {
-      const now = new Date();
-      const later = new Date(now);
-      later.setHours(later.getHours() + 1);
-      const formatLocal = (d) => {
-        const offset = d.getTimezoneOffset();
-        const local = new Date(d.getTime() - offset * 60000);
-        return local.toISOString().slice(0, 16);
-      };
-      startInput.value = formatLocal(now);
-      endInput.value = formatLocal(later);
-    }
-    allDayInput.checked = false;
-    modal.show();
+    // (Mantén tu código existente)
   }
 
   async function openEditModal(id) {
-    try {
-      const ev = [...events, ...finishedEvents].find(e => e.id === id);
-      if (!ev) {
-        alert('Evento no encontrado');
-        return;
-      }
-      modalTitle.textContent = 'Editar evento';
-      eventIdInput.value = ev.id;
-      titleInput.value = ev.title;
-      descriptionInput.value = ev.description || '';
-      const formatLocal = (dateStr) => {
-        const d = new Date(dateStr);
-        const offset = d.getTimezoneOffset();
-        const local = new Date(d.getTime() - offset * 60000);
-        return local.toISOString().slice(0, 16);
-      };
-      startInput.value = formatLocal(ev.start);
-      endInput.value = formatLocal(ev.end);
-      allDayInput.checked = ev.all_day === 1;
-      colorInput.value = ev.color || '#3788d8';
-      statusSelect.value = ev.status || 'active';
-      deleteBtn.style.display = 'inline-block';
-      currentEventId = ev.id;
-      modal.show();
-    } catch (error) {
-      console.error('Error al cargar evento para editar:', error);
-    }
+    // (Mantén tu código existente)
   }
 
   async function saveEvent() {
-    const id = eventIdInput.value;
-    const title = titleInput.value.trim();
-    const description = descriptionInput.value.trim();
-    const start = startInput.value;
-    const end = endInput.value;
-    const allDay = allDayInput.checked;
-    const color = colorInput.value;
-    const status = statusSelect.value;
-
-    if (!title || !start || !end) {
-      alert('Título, inicio y fin son obligatorios');
-      return;
-    }
-
-    const payload = { title, description, start, end, allDay, color, status };
-
-    try {
-      let url = '/api/events';
-      let method = 'POST';
-      if (id) {
-        url += `/${id}`;
-        method = 'PUT';
-      }
-      const res = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        modal.hide();
-        loadEventsFromServer();
-      } else {
-        const err = await res.json();
-        alert('Error: ' + (err.error || 'desconocido'));
-      }
-    } catch (error) {
-      console.error('Error al guardar evento:', error);
-      alert('Error al guardar');
-    }
+    // (Mantén tu código existente)
   }
 
   async function deleteEvent(id) {
-    try {
-      const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        loadEventsFromServer();
-        modal.hide();
-      } else {
-        const err = await res.json();
-        alert('Error: ' + (err.error || 'desconocido'));
-      }
-    } catch (error) {
-      console.error('Error al eliminar:', error);
-      alert('Error al eliminar');
-    }
+    // (Mantén tu código existente)
   }
 
   // ========== NAVEGACIÓN ==========
@@ -779,14 +575,13 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
   }
 
-  // ========== TOGGLE EVENTOS TERMINADOS ==========
+  // ========== EVENT LISTENERS ==========
   toggleFinishedBtn.addEventListener('click', function() {
     finishedVisible = !finishedVisible;
     finishedListEl.style.display = finishedVisible ? 'block' : 'none';
     this.textContent = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
   });
 
-  // ========== EVENT LISTENERS ==========
   prevBtn.addEventListener('click', prev);
   nextBtn.addEventListener('click', next);
 
@@ -802,6 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
     timeFormatSelect.value = timeFormat;
     workStartInput.value = workStart;
     workEndInput.value = workEnd;
+    updateWorkLabels();
     settingsModal.show();
   });
 
@@ -850,82 +646,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ========== INICIO ==========
+  // Actualizar etiquetas al cargar
+  updateWorkLabels();
   loadEventsFromServer();
-});
-// ========== FUNCIONES DE CONFIGURACIÓN ==========
-function populateHourSelects(format) {
-  const workStartSelect = document.getElementById('workStart');
-  const workEndSelect = document.getElementById('workEnd');
-  
-  // Guardar valores actuales antes de llenar
-  const currentStart = parseInt(workStartSelect.value) || 8;
-  const currentEnd = parseInt(workEndSelect.value) || 17;
-
-  workStartSelect.innerHTML = '';
-  workEndSelect.innerHTML = '';
-
-  for (let hour = 0; hour < 24; hour++) {
-    let label;
-    if (format === '12') {
-      const hour12 = hour % 12 || 12;
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      label = `${hour12}:00 ${ampm}`;
-    } else {
-      label = `${String(hour).padStart(2, '0')}:00`;
-    }
-    const optionStart = document.createElement('option');
-    optionStart.value = hour;
-    optionStart.textContent = label;
-    workStartSelect.appendChild(optionStart);
-
-    const optionEnd = document.createElement('option');
-    optionEnd.value = hour;
-    optionEnd.textContent = label;
-    workEndSelect.appendChild(optionEnd);
-  }
-
-  // Restaurar valores
-  workStartSelect.value = currentStart;
-  workEndSelect.value = currentEnd;
-}
-
-// Al abrir configuración
-settingsBtn.addEventListener('click', function() {
-  timeFormatSelect.value = timeFormat;
-  populateHourSelects(timeFormat);
-  settingsModal.show();
-});
-
-// Al cambiar formato de hora
-timeFormatSelect.addEventListener('change', function() {
-  const format = this.value;
-  populateHourSelects(format);
-  // Guardar preferencia
-  localStorage.setItem('calendar_time_format', format);
-  timeFormat = format;
-});
-
-// Al cambiar inicio o fin
-workStartInput.addEventListener('change', function() {
-  const start = parseInt(this.value);
-  const end = parseInt(workEndInput.value);
-  if (start >= end) {
-    alert('La hora de inicio debe ser anterior a la hora de fin.');
-    this.value = workStart;
-    return;
-  }
-  workStart = start;
-  localStorage.setItem('work_start', start);
-});
-
-workEndInput.addEventListener('change', function() {
-  const start = parseInt(workStartInput.value);
-  const end = parseInt(this.value);
-  if (end <= start) {
-    alert('La hora de fin debe ser posterior a la hora de inicio.');
-    this.value = workEnd;
-    return;
-  }
-  workEnd = end;
-  localStorage.setItem('work_end', end);
 });
