@@ -646,3 +646,29 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 .week-all-day-event:hover {
   opacity: 0.85;
 }
+/* ============================================================
+   SCROLL EN VISTAS DE DÍA Y SEMANA
+   ============================================================ */
+.day-time-grid {
+  overflow-y: auto;  /* Permitir scroll vertical */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.week-body-wrapper {
+  overflow-y: auto;  /* Permitir scroll vertical */
+  flex: 1;
+  display: flex;
+}
+
+/* Ajuste para que las horas ocupen todo el alto disponible */
+.day-time-grid-inner {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.week-body-wrapper {
+  min-height: 0;
+}
