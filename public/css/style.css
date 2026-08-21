@@ -1,4 +1,298 @@
 /* ============================================================
+   ESTILOS BASE Y GLOBALES
+   ============================================================ */
+body {
+  background-color: #121212;
+  color: #f0f0f0;
+}
+
+body, .card, .modal-content, .sidebar,
+.list-group-item, .text-muted, .form-label, label,
+h1, h2, h3, h4, h5, h6, p, span, a {
+  color: #f0f0f0 !important;
+}
+
+.text-muted {
+  color: #cccccc !important;
+}
+
+.sidebar {
+  background-color: #1e1e2e;
+  border-right: 1px solid #2a2a3a;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.calendar-container {
+  background-color: #1a1a2e;
+  height: 100vh;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+#calendarGrid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+/* ============================================================
+   VISTA MES (con barras de eventos)
+   ============================================================ */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background-color: #2a2a3a;
+  color: #ccc;
+  font-weight: bold;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.weekday {
+  padding: 5px;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
+}
+
+.day {
+  border: 1px solid #2a2a3a;
+  min-height: 80px;
+  padding: 5px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.day:hover {
+  background-color: #2a2a3a;
+}
+
+.day.empty {
+  background-color: #121212;
+  cursor: default;
+}
+
+.day.today {
+  background-color: rgba(55, 136, 216, 0.2);
+  border-color: #3788d8;
+}
+
+.day-number {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #ccc;
+}
+
+/* Barras de eventos en vista mes */
+.event-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.event-bar {
+  height: 4px;
+  width: 100%;
+  border-radius: 2px;
+  background-color: #3788d8; /* fallback */
+}
+
+.event-bar-more {
+  font-size: 0.6rem;
+  color: #aaa;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ============================================================
+   VISTA DÍA (con horario, SIN SCROLL)
+   ============================================================ */
+.day-time-grid {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.day-time-column {
+  width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e2e;
+  height: 100%;
+}
+
+.day-hour-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #aaa;
+  border-bottom: 1px solid #2a2a3a;
+  border-right: 1px solid #2a2a3a;
+}
+
+.day-events-column {
+  flex: 1;
+  position: relative;
+  background: #121212;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-hour-slot {
+  flex: 1;
+  border-bottom: 1px solid #2a2a3a;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.day-hour-slot:hover {
+  background: #1a1a2e;
+}
+
+.day-event-block {
+  position: absolute;
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 0.7rem;
+  color: #fff;
+  cursor: pointer;
+  border-left: 2px solid rgba(255,255,255,0.3);
+  transition: opacity 0.2s;
+  min-height: 18px;
+}
+
+.day-event-block:hover {
+  opacity: 0.85;
+}
+
+.event-title-inline {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: bold;
+}
+
+/* ============================================================
+   VISTA SEMANA (con horario, SIN SCROLL)
+   ============================================================ */
+.week-time-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.week-header {
+  display: flex;
+  border-bottom: 2px solid #2a2a3a;
+  background: #1e1e2e;
+  flex-shrink: 0;
+}
+
+.week-header-empty {
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.week-header-day {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  font-weight: bold;
+  border-left: 1px solid #2a2a3a;
+}
+
+.week-header-day.today {
+  color: #3788d8;
+}
+
+.week-body-wrapper {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.week-hours-column {
+  width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e2e;
+  height: 100%;
+}
+
+.week-hour-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #aaa;
+  border-bottom: 1px solid #2a2a3a;
+  border-right: 1px solid #2a2a3a;
+}
+
+.week-day-column {
+  flex: 1;
+  position: relative;
+  background: #121212;
+  border-left: 1px solid #2a2a3a;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.week-hour-slot {
+  flex: 1;
+  border-bottom: 1px solid #2a2a3a;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.week-hour-slot:hover {
+  background: #1a1a2e;
+}
+
+.week-event-block {
+  position: absolute;
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 0.65rem;
+  color: #fff;
+  cursor: pointer;
+  border-left: 2px solid rgba(255,255,255,0.3);
+  transition: opacity 0.2s;
+  min-height: 16px;
+}
+
+.week-event-block:hover {
+  opacity: 0.85;
+}
+
+/* ============================================================
    VISTA AÑO (con puntos de colores)
    ============================================================ */
 .year-grid {
@@ -88,4 +382,112 @@
   color: #888;
   line-height: 1;
   margin-left: 1px;
+}
+
+/* ============================================================
+   FORMULARIOS, INPUTS Y LISTAS
+   ============================================================ */
+.form-control, .form-control-color, .form-select {
+  background-color: #2a2a3a !important;
+  color: #ffffff !important;
+  border-color: #3b3b5c !important;
+}
+
+.form-control:focus, .form-control-color:focus {
+  background-color: #2a2a3a !important;
+  color: #ffffff !important;
+  border-color: #5a5a7e !important;
+  box-shadow: 0 0 0 0.25rem rgba(90, 90, 126, 0.25);
+}
+
+::placeholder {
+  color: #aaaaaa !important;
+  opacity: 1;
+}
+
+.list-group-item {
+  background-color: transparent;
+  color: #f0f0f0 !important;
+  border-color: #2a2a3a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.25rem;
+}
+
+.list-group-item .event-title {
+  cursor: pointer;
+  flex: 1;
+}
+
+.list-group-item .event-actions button {
+  background: none;
+  border: none;
+  color: #ccc;
+  margin-left: 6px;
+}
+
+.list-group-item .event-actions button:hover {
+  color: #fff;
+}
+
+/* ============================================================
+   SCROLLBAR PERSONALIZADA
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e2e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b3b5c;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5a5a7e;
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.modal-content {
+  background-color: #1e1e2e;
+  color: #f0f0f0;
+}
+
+.form-control, .form-control-color {
+  background-color: #2a2a3a !important;
+  color: #ffffff !important;
+  border-color: #2a2a3a !important;
+}
+
+.form-control:focus, .form-control-color:focus {
+  background-color: #2a2a3a !important;
+  color: #ffffff !important;
+  border-color: #5a5a7e !important;
+  box-shadow: 0 0 0 0.25rem rgba(90, 90, 126, 0.25);
+}
+
+.form-check-input {
+  background-color: #2a2a3a;
+  border-color: #3b3b5c;
+}
+
+.form-check-input:checked {
+  background-color: #3788d8;
+  border-color: #3788d8;
+}
+
+/* ============================================================
+   MENSAJE DE DEPURACIÓN
+   ============================================================ */
+#debug-message {
+  color: #88aadd;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 10px;
 }
