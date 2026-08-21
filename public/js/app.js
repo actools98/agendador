@@ -208,13 +208,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== VISTA DÍA (con separación de "todo el día") ==========
+  // ========== VISTA DÍA ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
 
-    // Separar eventos todo el día y con hora
     const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
     const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
 
@@ -222,7 +221,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let html = `<div class="day-time-grid">`;
 
-    // ---- Sección de eventos "todo el día" ----
     if (allDayEvents.length > 0) {
       html += `<div class="day-all-day-section">`;
       html += `<div class="day-all-day-label">📌 Todo el día</div>`;
@@ -239,7 +237,6 @@ document.addEventListener('DOMContentLoaded', function() {
       html += `</div></div>`;
     }
 
-    // ---- Línea de tiempo con horas ----
     html += `<div class="day-time-grid-inner">`;
     html += `<div class="day-time-column">`;
     for (let hour = 0; hour < 24; hour++) {
@@ -259,7 +256,6 @@ document.addEventListener('DOMContentLoaded', function() {
     for (let hour = 0; hour < 24; hour++) {
       html += `<div class="day-hour-slot" data-hour="${hour}" style="flex: 1; border-bottom: 1px solid #2a2a3a;"></div>`;
     }
-    // Eventos con hora específica
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -296,11 +292,10 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
       });
     }
-    html += `</div></div></div>`; // cierra day-time-grid-inner y day-time-grid
+    html += `</div></div></div>`;
 
     grid.innerHTML = html;
 
-    // Event listeners para slots horarios (crear evento)
     document.querySelectorAll('.day-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
@@ -310,7 +305,6 @@ document.addEventListener('DOMContentLoaded', function() {
         openCreateModal(dateStrForModal, hour);
       });
     });
-    // Click en eventos (normales y todo el día) para editar
     document.querySelectorAll('.day-event-block, .day-all-day-event').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -320,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA (con separación de "todo el día") ==========
+  // ========== VISTA SEMANA (CON FILA DE "TODO EL DÍA") ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -341,9 +335,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    // Cuerpo: ahora separamos la sección "todo el día" y la línea de tiempo
+    // ---- FILA DE EVENTOS "TODO EL DÍA" (igual que en vista día) ----
+    html += `<div class="week-all-day-row">`;
+    html += `<div class="week-all-day-label">📌 Todo el día</div>`;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+      const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
+      html += `<div class="week-all-day-cell" data-date="${dateStr}">`;
+      if (allDayEvents.length > 0) {
+        allDayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+        allDayEvents.forEach(e => {
+          const color = e.color || '#3788d8';
+          html += `
+            <div class="week-all-day-event" style="background-color: ${color}66; border-left: 4px solid ${color};" data-id="${e.id}">
+              <span>${e.title}</span>
+            </div>
+          `;
+        });
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+
+    // ---- Línea de tiempo (con horas) ----
     html += `<div class="week-body-wrapper">`;
-    // Columna de horas (vacía en la sección de todo el día)
+    // Columna de horas
     html += `<div class="week-hours-column">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -358,39 +377,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    // Columnas de días (cada una con su sección "todo el día" y su línea de tiempo)
+    // Columnas de días (con slots y eventos con hora)
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-
-      const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
       const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
 
-      html += `<div class="week-day-column" data-date="${dateStr}" style="display: flex; flex-direction: column;">`;
-
-      // ---- Subsección de eventos "todo el día" para este día ----
-      if (allDayEvents.length > 0) {
-        html += `<div class="week-all-day-section">`;
-        allDayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
-        allDayEvents.forEach(e => {
-          const color = e.color || '#3788d8';
-          html += `
-            <div class="week-all-day-event" style="background-color: ${color}66; border-left: 4px solid ${color};" data-id="${e.id}">
-              <span>${e.title}</span>
-            </div>
-          `;
-        });
-        html += `</div>`;
-      }
-
-      // ---- Línea de tiempo (slots horarios) ----
-      html += `<div style="position: relative; flex: 1;">`;
+      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; display: flex; flex-direction: column;">`;
+      // Slots horarios
       for (let hour = 0; hour < 24; hour++) {
-        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${100/24}%; border-bottom: 1px solid #2a2a3a;"></div>`;
+        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="flex: 1; border-bottom: 1px solid #2a2a3a;"></div>`;
       }
-      // Eventos con hora específica
+      // Eventos con hora
       if (timedEvents.length > 0) {
         const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
         const hourCounts = {};
@@ -427,8 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
           `;
         });
       }
-      html += `</div>`; // cierra el contenedor relativo
-      html += `</div>`; // cierra week-day-column
+      html += `</div>`;
     }
 
     html += `</div></div>`; // cierra week-body-wrapper y week-time-grid
@@ -452,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES (sin cambios, pero la incluimos) ==========
+  // ========== VISTA MES ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -512,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (con puntos de colores) ==========
+  // ========== VISTA AÑO ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
