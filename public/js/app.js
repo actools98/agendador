@@ -3,9 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentDate = new Date();
   let currentView = 'month';
   let events = [];
-  let finishedEvents = []; // eventos con status != 'active'
+  let finishedEvents = [];
 
-  // Preferencias (desde localStorage)
   let timeFormat = localStorage.getItem('calendar_time_format') || '24';
 
   // ========== ELEMENTOS DOM ==========
@@ -20,12 +19,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const eventListEl = document.getElementById('eventList');
   const finishedListEl = document.getElementById('finishedEventsList');
 
-  // Modal de configuración
   const settingsModalElement = document.getElementById('settingsModal');
   const settingsModal = new bootstrap.Modal(settingsModalElement);
   const timeFormatSelect = document.getElementById('timeFormatSelect');
 
-  // Modal de eventos
   const modalElement = document.getElementById('eventModal');
   const modal = new bootstrap.Modal(modalElement);
   const modalTitle = document.getElementById('modalTitle');
@@ -81,10 +78,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const res = await fetch('/api/events');
       if (!res.ok) throw new Error('Error al cargar eventos');
       const allEvents = await res.json();
-      // Separar activos y terminados
-      events = allEvents.filter(e => e.status === 'active');
-      finishedEvents = allEvents.filter(e => e.status !== 'active' && e.status !== undefined);
-      // Asegurar que los eventos antiguos (sin status) se traten como activos
       events = allEvents.filter(e => !e.status || e.status === 'active');
       finishedEvents = allEvents.filter(e => e.status && e.status !== 'active');
       renderView();
@@ -215,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== VISTA DÍA (solo eventos activos) ==========
+  // ========== VISTA DÍA ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
@@ -299,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA (solo eventos activos) ==========
+  // ========== VISTA SEMANA ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -401,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES (solo eventos activos) ==========
+  // ========== VISTA MES ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -461,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (solo eventos activos) ==========
+  // ========== VISTA AÑO (MEJORADA CON PUNTOS DE COLORES) ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
@@ -478,16 +471,35 @@ document.addEventListener('DOMContentLoaded', function() {
       for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(year, m, d);
         const dateStr = dateObj.toISOString().split('T')[0];
-        const hasEvent = events.some(e => e.start.startsWith(dateStr));
-        html += `<span class="year-day ${hasEvent ? 'has-event' : ''}" data-date="${dateStr}">${d}</span>`;
+        const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+        const hasEvent = dayEvents.length > 0;
+
+        html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-date="${dateStr}">`;
+        html += `<span class="year-day-number">${d}</span>`;
+        if (hasEvent) {
+          html += `<div class="year-day-dots">`;
+          // Mostrar hasta 3 puntos
+          const maxDots = Math.min(dayEvents.length, 3);
+          for (let i = 0; i < maxDots; i++) {
+            const color = dayEvents[i].color || '#3788d8';
+            html += `<span class="year-dot" style="background-color: ${color};"></span>`;
+          }
+          if (dayEvents.length > 3) {
+            html += `<span class="year-dot-more">+${dayEvents.length - 3}</span>`;
+          }
+          html += `</div>`;
+        }
+        html += `</div>`;
       }
       html += `</div></div>`;
     }
     html += `</div>`;
     grid.innerHTML = html;
 
+    // Click en un mes para cambiar a vista mes
     document.querySelectorAll('.year-month').forEach(el => {
-      el.addEventListener('click', function() {
+      el.addEventListener('click', function(e) {
+        // Evitar que el click en el mes se propague al día si se hace clic en el título
         const month = parseInt(this.dataset.month);
         currentDate = new Date(year, month, 1);
         currentView = 'month';
@@ -495,14 +507,18 @@ document.addEventListener('DOMContentLoaded', function() {
         renderView();
       });
     });
-    document.querySelectorAll('.year-day.has-event').forEach(el => {
+
+    // Click en un día para cambiar a vista día
+    document.querySelectorAll('.year-day').forEach(el => {
       el.addEventListener('click', function(e) {
-        e.stopPropagation();
+        e.stopPropagation(); // Evitar que se active el click del mes
         const date = this.dataset.date;
-        currentDate = new Date(date);
-        currentView = 'day';
-        updateViewButtons();
-        renderView();
+        if (date) {
+          currentDate = new Date(date);
+          currentView = 'day';
+          updateViewButtons();
+          renderView();
+        }
       });
     });
   }
@@ -548,7 +564,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function openEditModal(id) {
     try {
-      // Buscar en ambos arrays
       const ev = [...events, ...finishedEvents].find(e => e.id === id);
       if (!ev) {
         alert('Evento no encontrado');
