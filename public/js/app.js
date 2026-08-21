@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (workEndInput) workEndInput.value = end;
     if (currentView === 'day' || currentView === 'week') {
       renderView();
-      setTimeout(focusWorkHours, 100);
+      setTimeout(focusWorkHours, 150);
     }
   }
 
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
       default: renderMonthView();
     }
     if (currentView === 'day' || currentView === 'week') {
-      setTimeout(focusWorkHours, 50);
+      setTimeout(focusWorkHours, 100);
     }
   }
 
