@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentDate = new Date();
   let currentView = 'month';
   let events = [];
+  let finishedEvents = []; // eventos con status != 'active'
 
   // Preferencias (desde localStorage)
   let timeFormat = localStorage.getItem('calendar_time_format') || '24';
@@ -15,7 +16,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const viewBtns = document.querySelectorAll('.view-btn');
   const newEventBtn = document.getElementById('newEventBtn');
   const settingsBtn = document.getElementById('settingsBtn');
+  const toggleFinishedBtn = document.getElementById('toggleFinishedBtn');
   const eventListEl = document.getElementById('eventList');
+  const finishedListEl = document.getElementById('finishedEventsList');
 
   // Modal de configuración
   const settingsModalElement = document.getElementById('settingsModal');
@@ -34,10 +37,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const endInput = document.getElementById('end');
   const allDayInput = document.getElementById('allDay');
   const colorInput = document.getElementById('color');
+  const statusSelect = document.getElementById('eventStatus');
   const saveBtn = document.getElementById('saveEventBtn');
   const deleteBtn = document.getElementById('deleteEventBtn');
 
   let currentEventId = null;
+  let finishedVisible = false;
 
   // ========== FUNCIONES DE FORMATO DE HORA ==========
   function formatTime(date, format = timeFormat) {
@@ -46,10 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const minutes = date.getMinutes();
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12;
-      hours = hours ? hours : 12; // 12 en lugar de 0
+      hours = hours ? hours : 12;
       return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
     } else {
-      // 24h
       return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     }
   }
@@ -62,14 +66,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Actualizar preferencia y refrescar vista
   function setTimeFormat(format) {
     timeFormat = format;
     localStorage.setItem('calendar_time_format', format);
-    // Actualizar el select en el modal si está abierto
     if (timeFormatSelect) timeFormatSelect.value = format;
     renderView();
     renderEventList();
+    renderFinishedList();
   }
 
   // ========== CARGAR EVENTOS ==========
@@ -77,14 +80,131 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const res = await fetch('/api/events');
       if (!res.ok) throw new Error('Error al cargar eventos');
-      events = await res.json();
+      const allEvents = await res.json();
+      // Separar activos y terminados
+      events = allEvents.filter(e => e.status === 'active');
+      finishedEvents = allEvents.filter(e => e.status !== 'active' && e.status !== undefined);
+      // Asegurar que los eventos antiguos (sin status) se traten como activos
+      events = allEvents.filter(e => !e.status || e.status === 'active');
+      finishedEvents = allEvents.filter(e => e.status && e.status !== 'active');
       renderView();
       renderEventList();
+      renderFinishedList();
     } catch (error) {
       console.error('Error cargando eventos:', error);
     }
   }
 
+  // ========== RENDERIZAR LISTA DE EVENTOS ACTIVOS ==========
+  function renderEventList() {
+    if (!eventListEl) return;
+    if (events.length === 0) {
+      eventListEl.innerHTML = '<div class="text-muted small p-2">No hay eventos activos</div>';
+      return;
+    }
+    const sorted = [...events].sort((a, b) => new Date(a.start) - new Date(b.start));
+    let html = '';
+    sorted.forEach(ev => {
+      const startDate = new Date(ev.start);
+      const dateStr = startDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+      const timeStr = formatTime(startDate);
+      html += `
+        <div class="list-group-item" data-id="${ev.id}">
+          <span class="event-title" style="border-left: 4px solid ${ev.color || '#3788d8'}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
+            <strong>${ev.title}</strong><br>
+            <small class="text-muted">${dateStr} ${timeStr}</small>
+          </span>
+          <span class="event-actions">
+            <button class="edit-event" data-id="${ev.id}" title="Editar">✏️</button>
+            <button class="delete-event" data-id="${ev.id}" title="Eliminar">🗑️</button>
+          </span>
+        </div>
+      `;
+    });
+    eventListEl.innerHTML = html;
+
+    document.querySelectorAll('.edit-event').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.id);
+        openEditModal(id);
+      });
+    });
+    document.querySelectorAll('.delete-event').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.id);
+        if (confirm('¿Eliminar este evento?')) {
+          deleteEvent(id);
+        }
+      });
+    });
+    document.querySelectorAll('.event-title').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.closest('.list-group-item').dataset.id);
+        openEditModal(id);
+      });
+    });
+  }
+
+  // ========== RENDERIZAR LISTA DE EVENTOS TERMINADOS ==========
+  function renderFinishedList() {
+    if (!finishedListEl) return;
+    if (finishedEvents.length === 0) {
+      finishedListEl.innerHTML = '<div class="text-muted small p-2">No hay eventos terminados</div>';
+      return;
+    }
+    const sorted = [...finishedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
+    let html = '';
+    sorted.forEach(ev => {
+      const startDate = new Date(ev.start);
+      const dateStr = startDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+      const timeStr = formatTime(startDate);
+      const statusLabel = {
+        'completed': '✅ Completado',
+        'postponed': '⏳ Pospuesto',
+        'cancelled': '❌ Cancelado'
+      }[ev.status] || ev.status;
+      html += `
+        <div class="list-group-item" data-id="${ev.id}" style="opacity:0.7;">
+          <span class="event-title" style="border-left: 4px solid ${ev.color || '#3788d8'}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
+            <strong>${ev.title}</strong><br>
+            <small class="text-muted">${dateStr} ${timeStr} - ${statusLabel}</small>
+          </span>
+          <span class="event-actions">
+            <button class="edit-event-finished" data-id="${ev.id}" title="Editar">✏️</button>
+            <button class="delete-event-finished" data-id="${ev.id}" title="Eliminar">🗑️</button>
+          </span>
+        </div>
+      `;
+    });
+    finishedListEl.innerHTML = html;
+
+    document.querySelectorAll('.edit-event-finished').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.id);
+        openEditModal(id);
+      });
+    });
+    document.querySelectorAll('.delete-event-finished').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.id);
+        if (confirm('¿Eliminar este evento?')) {
+          deleteEvent(id);
+        }
+      });
+    });
+    document.querySelectorAll('.event-title').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.closest('.list-group-item').dataset.id);
+        openEditModal(id);
+      });
+    });
+  }
+
+  // ========== RENDERIZADO DE VISTAS ==========
   function renderView() {
     switch (currentView) {
       case 'day':   renderDayView(); break;
@@ -95,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== VISTA DÍA ==========
+  // ========== VISTA DÍA (solo eventos activos) ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
@@ -179,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA ==========
+  // ========== VISTA SEMANA (solo eventos activos) ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -281,7 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES (sin cambios) ==========
+  // ========== VISTA MES (solo eventos activos) ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -341,7 +461,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (sin cambios) ==========
+  // ========== VISTA AÑO (solo eventos activos) ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
@@ -387,65 +507,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== LISTA DE EVENTOS (SIDEBAR) ==========
-  function renderEventList() {
-    if (!eventListEl) return;
-    if (events.length === 0) {
-      eventListEl.innerHTML = '<div class="text-muted small p-2">No hay eventos</div>';
-      return;
-    }
-    const sorted = [...events].sort((a, b) => new Date(a.start) - new Date(b.start));
-    let html = '';
-    sorted.forEach(ev => {
-      const startDate = new Date(ev.start);
-      const dateStr = startDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-      // Mostrar hora en el tooltip o en el título
-      const timeStr = formatTime(startDate);
-      html += `
-        <div class="list-group-item" data-id="${ev.id}">
-          <span class="event-title" style="border-left: 4px solid ${ev.color || '#3788d8'}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
-            <strong>${ev.title}</strong><br>
-            <small class="text-muted">${dateStr} ${timeStr}</small>
-          </span>
-          <span class="event-actions">
-            <button class="edit-event" data-id="${ev.id}" title="Editar">✏️</button>
-            <button class="delete-event" data-id="${ev.id}" title="Eliminar">🗑️</button>
-          </span>
-        </div>
-      `;
-    });
-    eventListEl.innerHTML = html;
-
-    document.querySelectorAll('.edit-event').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = parseInt(btn.dataset.id);
-        openEditModal(id);
-      });
-    });
-    document.querySelectorAll('.delete-event').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = parseInt(btn.dataset.id);
-        if (confirm('¿Eliminar este evento?')) {
-          deleteEvent(id);
-        }
-      });
-    });
-    document.querySelectorAll('.event-title').forEach(el => {
-      el.addEventListener('click', () => {
-        const id = parseInt(el.closest('.list-group-item').dataset.id);
-        openEditModal(id);
-      });
-    });
-  }
-
   // ========== MODAL: CREAR / EDITAR ==========
   function openCreateModal(dateStr, hour) {
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
     form.reset();
     colorInput.value = '#3788d8';
+    statusSelect.value = 'active';
     deleteBtn.style.display = 'none';
     currentEventId = null;
 
@@ -480,7 +548,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function openEditModal(id) {
     try {
-      const ev = events.find(e => e.id === id);
+      // Buscar en ambos arrays
+      const ev = [...events, ...finishedEvents].find(e => e.id === id);
       if (!ev) {
         alert('Evento no encontrado');
         return;
@@ -499,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
       endInput.value = formatLocal(ev.end);
       allDayInput.checked = ev.all_day === 1;
       colorInput.value = ev.color || '#3788d8';
+      statusSelect.value = ev.status || 'active';
       deleteBtn.style.display = 'inline-block';
       currentEventId = ev.id;
       modal.show();
@@ -515,13 +585,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const end = endInput.value;
     const allDay = allDayInput.checked;
     const color = colorInput.value;
+    const status = statusSelect.value;
 
     if (!title || !start || !end) {
       alert('Título, inicio y fin son obligatorios');
       return;
     }
 
-    const payload = { title, description, start, end, allDay, color };
+    const payload = { title, description, start, end, allDay, color, status };
 
     try {
       let url = '/api/events';
@@ -597,6 +668,13 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
   }
 
+  // ========== TOGGLE EVENTOS TERMINADOS ==========
+  toggleFinishedBtn.addEventListener('click', function() {
+    finishedVisible = !finishedVisible;
+    finishedListEl.style.display = finishedVisible ? 'block' : 'none';
+    this.textContent = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
+  });
+
   // ========== EVENT LISTENERS ==========
   prevBtn.addEventListener('click', prev);
   nextBtn.addEventListener('click', next);
@@ -609,9 +687,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   newEventBtn.addEventListener('click', () => openCreateModal(null));
 
-  // Configuración
   settingsBtn.addEventListener('click', () => {
-    // Sincronizar el select con la preferencia actual
     timeFormatSelect.value = timeFormat;
     settingsModal.show();
   });
