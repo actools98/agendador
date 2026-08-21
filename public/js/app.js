@@ -75,9 +75,8 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
     renderEventList();
     renderFinishedList();
-    // Después de renderizar, enfocar (si es día o semana)
     if (currentView === 'day' || currentView === 'week') {
-      setTimeout(focusWorkHours, 250);
+      setTimeout(focusWorkHours, 200);
     }
   }
 
@@ -90,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (workEndInput) workEndInput.value = end;
     if (currentView === 'day' || currentView === 'week') {
       renderView();
-      setTimeout(focusWorkHours, 250);
+      setTimeout(focusWorkHours, 200);
     }
   }
 
@@ -121,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         console.warn('No se encontró la hora de inicio', workStart);
       }
-    }, 250);
+    }, 200);
   }
 
   // ========== CARGAR EVENTOS ==========
@@ -259,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
       default: renderMonthView();
     }
     if (currentView === 'day' || currentView === 'week') {
-      setTimeout(focusWorkHours, 250);
+      setTimeout(focusWorkHours, 200);
     }
   }
 
