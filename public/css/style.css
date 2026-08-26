@@ -266,35 +266,29 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   color: #fff;
 }
 /* ============================================================
-   VISTA SEMANA (con Grid y alineación perfecta)
+   VISTA SEMANA (Grid de 2 filas, alineación perfecta)
    ============================================================ */
 .week-time-grid {
-  display: flex;
-  flex-direction: column;
   height: 100%;
-  min-height: 0;
   overflow: hidden;
 }
 
+/* La cabecera usa display: contents para integrarse en el grid padre */
 .week-header {
-  display: grid;
-  grid-template-columns: 70px repeat(7, 1fr);
-  border-bottom: 2px solid var(--calendar-border);
-  background: var(--header-bg);
-  flex-shrink: 0;
+  display: contents;
 }
 
 .week-header-empty {
-  /* Sin contenido, solo para ocupar la primera columna */
+  /* Celda vacía para la columna de horas */
 }
 
 .week-header-day {
   text-align: center;
   padding: 8px 0;
   font-weight: bold;
-  border-left: 1px solid var(--calendar-border);
   background-color: var(--sidebar-bg);
   color: var(--text-body);
+  border-bottom: 2px solid var(--calendar-border);
 }
 
 .week-header-day.today {
@@ -302,16 +296,14 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .week-body-wrapper {
-  flex: 1;
   overflow-y: auto;
-  min-height: 0;
+  position: relative;
   background-color: var(--calendar-bg);
   border-radius: 0 0 8px 8px;
 }
 
 .week-body-grid {
   display: grid;
-  grid-template-columns: 70px repeat(7, 1fr);
   /* La altura se fija desde JavaScript (totalHeight) */
 }
 
@@ -331,6 +323,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   color: var(--header-text);
   background-color: var(--sidebar-bg);
   box-sizing: border-box;
+  border-bottom: 1px solid var(--slot-border);
 }
 
 .week-day-column {
