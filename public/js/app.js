@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== RENDER LISTAS ==========
+  // ========== RENDER LISTA DE EVENTOS ACTIVOS ==========
   function renderEventList() {
     if (!eventListEl) return;
     if (events.length === 0) {
@@ -193,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // ========== RENDER LISTA DE EVENTOS TERMINADOS ==========
   function renderFinishedList() {
     if (!finishedListEl) return;
     if (finishedEvents.length === 0) {
@@ -277,36 +278,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA DÍA ==========
+  // ========== VISTA DÍA (con línea roja, sin "Todo el día") ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-
-    const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
     const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
 
     viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     let html = `<div class="day-time-grid">`;
-
-    if (allDayEvents.length > 0) {
-      html += `<div class="day-all-day-section">`;
-      html += `<div class="day-all-day-label">📌 Todo el día</div>`;
-      html += `<div class="day-all-day-events">`;
-      allDayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
-      allDayEvents.forEach(e => {
-        const color = e.color || '#3788d8';
-        html += `
-          <div class="day-all-day-event" style="background-color: ${color}66; border-left: 4px solid ${color};" data-id="${e.id}">
-            <span>${e.title}</span>
-          </div>
-        `;
-      });
-      html += `</div></div>`;
-    }
-
     html += `<div class="day-time-grid-inner">`;
+    // Columna de horas
     html += `<div class="day-time-column">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -321,10 +304,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
+    // Columna de eventos con slots
     html += `<div class="day-events-column" style="position: relative; display: flex; flex-direction: column;">`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<div class="day-hour-slot" data-hour="${hour}" style="flex: 1; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
     }
+    // Línea roja de hora actual (solo si estamos en el día de hoy)
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (dateStr === todayStr) {
+      const now = new Date();
+      const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+      const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
+      html += `
+        <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none;"></div>
+      `;
+    }
+
+    // Eventos con hora
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -365,6 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
+    // Listeners
     $$('.day-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
@@ -373,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
         openCreateModal(dateObj.toISOString().split('T')[0], hour);
       });
     });
-    $$('.day-event-block, .day-all-day-event').forEach(el => {
+    $$('.day-event-block').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
         openEditModal(parseInt(this.dataset.id));
@@ -381,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA ==========
+  // ========== VISTA SEMANA (con línea roja, sin "Todo el día") ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -391,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
     let html = `<div class="week-time-grid">`;
+    // Cabecera
     html += `<div class="week-header">`;
     html += `<div class="week-header-empty"></div>`;
     for (let i = 0; i < 7; i++) {
@@ -401,31 +399,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    html += `<div class="week-all-day-row">`;
-    html += `<div class="week-all-day-label">📌 Todo el día</div>`;
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(startOfWeek);
-      d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-      const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
-      html += `<div class="week-all-day-cell" data-date="${dateStr}">`;
-      if (allDayEvents.length > 0) {
-        allDayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
-        allDayEvents.forEach(e => {
-          const color = e.color || '#3788d8';
-          html += `
-            <div class="week-all-day-event" style="background-color: ${color}66; border-left: 4px solid ${color};" data-id="${e.id}">
-              <span>${e.title}</span>
-            </div>
-          `;
-        });
-      }
-      html += `</div>`;
-    }
-    html += `</div>`;
-
+    // Cuerpo
     html += `<div class="week-body-wrapper">`;
+    // Columna de horas
     html += `<div class="week-hours-column">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -440,6 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
+    // Días
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
@@ -451,6 +428,17 @@ document.addEventListener('DOMContentLoaded', function() {
       for (let hour = 0; hour < 24; hour++) {
         html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="flex: 1; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
       }
+      // Línea roja en el día actual
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (dateStr === todayStr) {
+        const now = new Date();
+        const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+        const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
+        html += `
+          <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none;"></div>
+        `;
+      }
+      // Eventos con hora
       if (timedEvents.length > 0) {
         const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
         const hourCounts = {};
@@ -489,8 +477,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       html += `</div>`;
     }
-
     html += `</div></div>`;
+
     grid.innerHTML = html;
 
     $$('.week-hour-slot').forEach(slot => {
@@ -500,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
         openCreateModal(dateStr, hour);
       });
     });
-    $$('.week-event-block, .week-all-day-event').forEach(el => {
+    $$('.week-event-block').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
         openEditModal(parseInt(this.dataset.id));
@@ -508,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES (con cabecera de días, sin día en cada celda) ==========
+  // ========== VISTA MES (con día de semana abreviado) ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -520,14 +508,10 @@ document.addEventListener('DOMContentLoaded', function() {
     viewTitle.textContent = `${firstDay.toLocaleString('es', { month: 'long' })} ${year}`;
 
     let html = '<div class="calendar-weekdays">';
-    // Días de la semana (solo en cabecera)
-    const weekdays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    weekdays.forEach(day => html += `<div class="weekday">${day}</div>`);
+    ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].forEach(d => html += `<div class="weekday">${d}</div>`);
     html += '</div><div class="calendar-days">';
 
-    for (let i = 0; i < startDayOfWeek; i++) {
-      html += '<div class="day empty"></div>';
-    }
+    for (let i = 0; i < startDayOfWeek; i++) html += '<div class="day empty"></div>';
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateObj = new Date(year, month, day);
@@ -536,7 +520,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
       html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
-      // Solo mostramos el número del día (sin día de la semana)
       html += `<span class="day-number">${day}</span>`;
       if (dayEvents.length > 0) {
         html += `<div class="event-bars">`;
@@ -552,9 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const remaining = (7 - ((startDayOfWeek + daysInMonth) % 7)) % 7;
-    for (let i = 0; i < remaining; i++) {
-      html += '<div class="day empty"></div>';
-    }
+    for (let i = 0; i < remaining; i++) html += '<div class="day empty"></div>';
 
     html += '</div>';
     grid.innerHTML = html;
@@ -569,7 +550,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (sin cambios, mantener la nueva lógica) ==========
+  // ========== VISTA AÑO ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
@@ -579,18 +560,14 @@ document.addEventListener('DOMContentLoaded', function() {
       const monthDate = new Date(year, m, 1);
       const monthName = monthDate.toLocaleString('es', { month: 'long' });
       const daysInMonth = new Date(year, m + 1, 0).getDate();
-      const firstDayOfMonth = new Date(year, m, 1).getDay(); // 0=domingo
+      const firstDayOfMonth = new Date(year, m, 1).getDay();
 
       html += `<div class="year-month" data-month="${m}">`;
       html += `<div class="year-month-title">${monthName}</div>`;
       html += `<div class="year-month-days">`;
-
-      // Días vacíos al inicio
       for (let i = 0; i < firstDayOfMonth; i++) {
         html += `<div class="year-day empty"></div>`;
       }
-
-      // Días del mes
       for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(year, m, d);
         const dateStr = dateObj.toISOString().split('T')[0];
@@ -610,7 +587,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         html += `</div>`;
       }
-
       html += `</div></div>`;
     }
     html += `</div>`;
