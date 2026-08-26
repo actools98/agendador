@@ -180,11 +180,197 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA DÍA, SEMANA (sin cambios)
+   VISTA DÍA (con altura fija y scroll)
    ============================================================ */
-/* ... (todo el código de día, semana, año, formularios, modales, responsive) se mantiene igual, solo se añade el siguiente bloque para el año */
+.day-time-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--calendar-bg);
+}
 
+.day-time-grid-inner {
+  flex: 1;
+  display: flex;
+  overflow-y: auto;  /* Scroll vertical */
+  background-color: var(--calendar-bg);
+  border-radius: 8px;
+}
 
+.day-time-column {
+  width: 70px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--header-bg);
+  border-right: 1px solid var(--slot-border);
+}
+
+.day-hour-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--header-text);
+  border-bottom: 1px solid var(--slot-border);
+  background-color: var(--sidebar-bg);
+  box-sizing: border-box;
+}
+
+.day-events-column {
+  flex: 1;
+  position: relative;
+  background: var(--calendar-bg);
+  box-sizing: border-box;
+}
+
+.day-hour-slot {
+  border-bottom: 1px solid var(--slot-border);
+  cursor: pointer;
+  transition: background 0.2s;
+  box-sizing: border-box;
+}
+
+.day-hour-slot:hover {
+  background: var(--slot-hover);
+}
+
+.day-event-block {
+  position: absolute;
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 0.7rem;
+  color: #fff;
+  cursor: pointer;
+  border-left: 3px solid rgba(255,255,255,0.5);
+  transition: opacity 0.2s;
+  min-height: 18px;
+  box-sizing: border-box;
+}
+
+.day-event-block:hover {
+  opacity: 0.85;
+}
+
+.event-title-inline {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: bold;
+  color: #fff;
+}
+
+/* ============================================================
+   VISTA SEMANA (con altura fija y scroll)
+   ============================================================ */
+.week-time-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.week-header {
+  display: flex;
+  border-bottom: 2px solid var(--calendar-border);
+  background: var(--header-bg);
+  flex-shrink: 0;
+}
+
+.week-header-empty {
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.week-header-day {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  font-weight: bold;
+  border-left: 1px solid var(--calendar-border);
+  background-color: var(--sidebar-bg);
+}
+
+.week-header-day.today {
+  color: var(--today-border);
+}
+
+.week-body-wrapper {
+  flex: 1;
+  display: flex;
+  overflow-y: auto;  /* Scroll vertical */
+  background-color: var(--calendar-bg);
+  border-radius: 8px;
+  min-height: 0;
+}
+
+.week-hours-column {
+  width: 70px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--header-bg);
+  border-right: 1px solid var(--slot-border);
+}
+
+.week-hour-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--header-text);
+  border-bottom: 1px solid var(--slot-border);
+  background-color: var(--sidebar-bg);
+  box-sizing: border-box;
+}
+
+.week-day-column {
+  flex: 1;
+  position: relative;
+  background: var(--calendar-bg);
+  border-left: 1px solid var(--calendar-border);
+  box-sizing: border-box;
+}
+
+.week-hour-slot {
+  border-bottom: 1px solid var(--slot-border);
+  cursor: pointer;
+  transition: background 0.2s;
+  box-sizing: border-box;
+}
+
+.week-hour-slot:hover {
+  background: var(--slot-hover);
+}
+
+.week-event-block {
+  position: absolute;
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 0.65rem;
+  color: #fff;
+  cursor: pointer;
+  border-left: 3px solid rgba(255,255,255,0.5);
+  transition: opacity 0.2s;
+  min-height: 16px;
+  box-sizing: border-box;
+}
+
+.week-event-block:hover {
+  opacity: 0.85;
+}
+
+/* Línea roja de tiempo real */
+.current-time-line {
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+   
 /* ============================================================
    VISTA AÑO (con 7 columnas)
    ============================================================ */
