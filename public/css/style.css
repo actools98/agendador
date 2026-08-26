@@ -330,3 +330,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   /* Modal configuración */
   .modal-dialog { margin: 0.5rem; }
 }
+.current-time-line {
+  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+}
