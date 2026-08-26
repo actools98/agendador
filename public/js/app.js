@@ -420,7 +420,7 @@ function renderDayView() {
     });
   });
 }
-// ========== VISTA SEMANA (con Grid y alineación perfecta) ==========
+// ========== VISTA SEMANA (Grid de 2 filas, alineación perfecta) ==========
 function renderWeekView() {
   const startOfWeek = new Date(currentDate);
   startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -430,30 +430,31 @@ function renderWeekView() {
   viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   const totalHeight = 24 * HOUR_HEIGHT;
-
-  // Definición de columnas: 70px para horas + 7 columnas iguales para los días
   const colTemplate = `70px repeat(7, 1fr)`;
 
-  let html = `<div class="week-time-grid">`;
+  let html = `<div class="week-time-grid" style="display: grid; grid-template-columns: ${colTemplate}; grid-template-rows: auto 1fr; height: 100%; overflow: hidden;">`;
 
-  // ---------- CABECERA (grid) ----------
-  html += `<div class="week-header" style="display: grid; grid-template-columns: ${colTemplate};">`;
-  html += `<div class="week-header-empty"></div>`;
+  // ========== FILA 1: CABECERA ==========
+  // Usamos display: contents para que los hijos se coloquen directamente en el grid padre
+  html += `<div class="week-header" style="display: contents;">`;
+  // Celda vacía para la columna de horas
+  html += `<div class="week-header-empty" style="grid-column: 1; grid-row: 1;"></div>`;
+  // Días de la semana (columnas 2 a 8)
   for (let i = 0; i < 7; i++) {
     const d = new Date(startOfWeek);
     d.setDate(d.getDate() + i);
     const isToday = d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
-    html += `<div class="week-header-day ${isToday ? 'today' : ''}">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
+    html += `<div class="week-header-day ${isToday ? 'today' : ''}" style="grid-column: ${i + 2}; grid-row: 1; border-left: 1px solid var(--calendar-border, #dee2e6);">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
   }
   html += `</div>`;
 
-  // ---------- CUERPO (con scroll) ----------
-  html += `<div class="week-body-wrapper" style="overflow-y: auto; flex: 1; min-height: 0;">`;
-  // Contenedor grid interno que tendrá la misma definición de columnas
+  // ========== FILA 2: CUERPO (con scroll) ==========
+  html += `<div class="week-body-wrapper" style="grid-column: 1 / -1; grid-row: 2; overflow-y: auto; position: relative; background-color: var(--calendar-bg);">`;
+  // Grid interno que mantiene la misma estructura de columnas y altura fija
   html += `<div class="week-body-grid" style="display: grid; grid-template-columns: ${colTemplate}; height: ${totalHeight}px;">`;
 
-  // Columna de horas
-  html += `<div class="week-hours-column" style="display: flex; flex-direction: column; height: 100%;">`;
+  // Columna de horas (columna 1)
+  html += `<div class="week-hours-column" style="display: flex; flex-direction: column; height: 100%; border-right: 1px solid var(--slot-border, #dee2e6);">`;
   for (let hour = 0; hour < 24; hour++) {
     let label;
     if (timeFormat === '12') {
@@ -467,7 +468,7 @@ function renderWeekView() {
   }
   html += `</div>`;
 
-  // Columnas de días (7)
+  // Columnas de días (columnas 2 a 8)
   for (let i = 0; i < 7; i++) {
     const d = new Date(startOfWeek);
     d.setDate(d.getDate() + i);
@@ -480,7 +481,7 @@ function renderWeekView() {
     for (let hour = 0; hour < 24; hour++) {
       html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
     }
-    // Línea roja en el día actual
+    // Línea roja (solo en el día actual)
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateStr === todayStr) {
       const now = new Date();
@@ -536,7 +537,7 @@ function renderWeekView() {
 
   grid.innerHTML = html;
 
-  // Listeners para slots
+  // Listeners para slots horarios
   $$('.week-hour-slot').forEach(slot => {
     slot.addEventListener('click', function() {
       const hour = parseInt(this.dataset.hour);
@@ -551,63 +552,7 @@ function renderWeekView() {
       openEditModal(parseInt(this.dataset.id));
     });
   });
-}
-  // ========== VISTA MES ==========
-  function renderMonthView() {
-    // (sin cambios, igual que antes)
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startDayOfWeek = firstDay.getDay();
-
-    viewTitle.textContent = `${firstDay.toLocaleString('es', { month: 'long' })} ${year}`;
-
-    let html = '<div class="calendar-weekdays">';
-    ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].forEach(d => html += `<div class="weekday">${d}</div>`);
-    html += '</div><div class="calendar-days">';
-
-    for (let i = 0; i < startDayOfWeek; i++) html += '<div class="day empty"></div>';
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateObj = new Date(year, month, day);
-      const dateStr = dateObj.toISOString().split('T')[0];
-      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-      const isToday = new Date().toISOString().split('T')[0] === dateStr;
-
-      html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
-      html += `<span class="day-number">${day}</span>`;
-      if (dayEvents.length > 0) {
-        html += `<div class="event-bars">`;
-        const maxBars = Math.min(dayEvents.length, 3);
-        for (let i = 0; i < maxBars; i++) {
-          const e = dayEvents[i];
-          html += `<div class="event-bar" style="background-color: ${e.color || '#3788d8'};"></div>`;
-        }
-        if (dayEvents.length > 3) html += `<div class="event-bar-more">+${dayEvents.length - 3}</div>`;
-        html += `</div>`;
-      }
-      html += '</div>';
-    }
-
-    const remaining = (7 - ((startDayOfWeek + daysInMonth) % 7)) % 7;
-    for (let i = 0; i < remaining; i++) html += '<div class="day empty"></div>';
-
-    html += '</div>';
-    grid.innerHTML = html;
-
-    $$('.day:not(.empty)').forEach(el => {
-      el.addEventListener('click', function() {
-        currentDate = new Date(this.dataset.date);
-        currentView = 'day';
-        updateViewButtons();
-        renderView();
-      });
-    });
-  }
-
-  // ========== VISTA AÑO ==========
+}  // ========== VISTA AÑO ==========
   function renderYearView() {
     // (sin cambios, igual que antes)
     const year = currentDate.getFullYear();
