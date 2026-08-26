@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+  'use strict';
+
   // ========== ESTADO ==========
   let currentDate = new Date();
   let currentView = 'month';
@@ -10,37 +12,38 @@ document.addEventListener('DOMContentLoaded', function() {
   let workEnd = parseInt(localStorage.getItem('work_end')) || 17;
 
   // ========== ELEMENTOS DOM ==========
-  const grid = document.getElementById('calendarGrid');
-  const viewTitle = document.getElementById('viewTitle');
-  const prevBtn = document.getElementById('prevView');
-  const nextBtn = document.getElementById('nextView');
-  const viewBtns = document.querySelectorAll('.view-btn');
-  const newEventBtn = document.getElementById('newEventBtn');
-  const settingsBtn = document.getElementById('settingsBtn');
-  const toggleFinishedBtn = document.getElementById('toggleFinishedBtn');
-  const eventListEl = document.getElementById('eventList');
-  const finishedListEl = document.getElementById('finishedEventsList');
+  const $ = (sel, ctx = document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-  const settingsModalElement = document.getElementById('settingsModal');
-  const settingsModal = new bootstrap.Modal(settingsModalElement);
-  const timeFormatSelect = document.getElementById('timeFormatSelect');
-  const workStartInput = document.getElementById('workStart');
-  const workEndInput = document.getElementById('workEnd');
+  const grid = $('#calendarGrid');
+  const viewTitle = $('#viewTitle');
+  const prevBtn = $('#prevView');
+  const nextBtn = $('#nextView');
+  const viewBtns = $$('.view-btn');
+  const newEventBtn = $('#newEventBtn');
+  const settingsBtn = $('#settingsBtn');
+  const toggleFinishedBtn = $('#toggleFinishedBtn');
+  const eventListEl = $('#eventList');
+  const finishedListEl = $('#finishedEventsList');
 
-  const modalElement = document.getElementById('eventModal');
-  const modal = new bootstrap.Modal(modalElement);
-  const modalTitle = document.getElementById('modalTitle');
-  const form = document.getElementById('eventForm');
-  const eventIdInput = document.getElementById('eventId');
-  const titleInput = document.getElementById('title');
-  const descriptionInput = document.getElementById('description');
-  const startInput = document.getElementById('start');
-  const endInput = document.getElementById('end');
-  const allDayInput = document.getElementById('allDay');
-  const colorInput = document.getElementById('color');
-  const statusSelect = document.getElementById('eventStatus');
-  const saveBtn = document.getElementById('saveEventBtn');
-  const deleteBtn = document.getElementById('deleteEventBtn');
+  const settingsModal = new bootstrap.Modal($('#settingsModal'));
+  const timeFormatSelect = $('#timeFormatSelect');
+  const workStartInput = $('#workStart');
+  const workEndInput = $('#workEnd');
+
+  const modalEvent = new bootstrap.Modal($('#eventModal'));
+  const modalTitle = $('#modalTitle');
+  const form = $('#eventForm');
+  const eventIdInput = $('#eventId');
+  const titleInput = $('#title');
+  const descriptionInput = $('#description');
+  const startInput = $('#start');
+  const endInput = $('#end');
+  const allDayInput = $('#allDay');
+  const colorInput = $('#color');
+  const statusSelect = $('#eventStatus');
+  const saveBtn = $('#saveEventBtn');
+  const deleteBtn = $('#deleteEventBtn');
 
   let currentEventId = null;
   let finishedVisible = false;
@@ -51,27 +54,21 @@ document.addEventListener('DOMContentLoaded', function() {
       let hours = date.getHours();
       const minutes = date.getMinutes();
       const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12;
+      hours = hours % 12 || 12;
       return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
-    } else {
-      return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     }
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
 
-  function formatTimeRange(start, end, format = timeFormat) {
-    if (format === '12') {
-      return `${formatTime(start, '12')} - ${formatTime(end, '12')}`;
-    } else {
-      return `${formatTime(start, '24')} - ${formatTime(end, '24')}`;
-    }
+  function formatTimeRange(start, end) {
+    return `${formatTime(start)} - ${formatTime(end)}`;
   }
 
-  // ========== GUARDAR CONFIGURACIÓN ==========
+  // ========== CONFIGURACIÓN ==========
   function setTimeFormat(format) {
     timeFormat = format;
     localStorage.setItem('calendar_time_format', format);
-    if (timeFormatSelect) timeFormatSelect.value = format;
+    timeFormatSelect.value = format;
     renderView();
     renderEventList();
     renderFinishedList();
@@ -82,8 +79,33 @@ document.addEventListener('DOMContentLoaded', function() {
     workEnd = end;
     localStorage.setItem('work_start', start);
     localStorage.setItem('work_end', end);
-    if (workStartInput) workStartInput.value = start;
-    if (workEndInput) workEndInput.value = end;
+    workStartInput.value = start;
+    workEndInput.value = end;
+    if (currentView === 'day' || currentView === 'week') {
+      renderView();
+    }
+  }
+
+  // ========== ENFOQUE (scroll) A LA FRANJA LABORAL ==========
+  function focusWorkHours() {
+    if (currentView !== 'day' && currentView !== 'week') return;
+
+    requestAnimationFrame(() => {
+      const container = currentView === 'day'
+        ? document.querySelector('.day-time-grid')
+        : document.querySelector('.week-body-wrapper');
+      if (!container) return;
+
+      const selector = currentView === 'day'
+        ? `.day-hour-label[data-hour="${workStart}"]`
+        : `.week-hour-label[data-hour="${workStart}"]`;
+      const target = container.querySelector(selector);
+      if (target) {
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        container.scrollTop = targetRect.top - containerRect.top;
+      }
+    });
   }
 
   // ========== CARGAR EVENTOS ==========
@@ -102,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== RENDERIZAR LISTA DE EVENTOS ACTIVOS ==========
+  // ========== RENDER LISTAS ==========
   function renderEventList() {
     if (!eventListEl) return;
     if (events.length === 0) {
@@ -130,23 +152,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     eventListEl.innerHTML = html;
 
-    document.querySelectorAll('.edit-event').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // Listeners
+    $$('.edit-event', eventListEl).forEach(btn => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
-        const id = parseInt(btn.dataset.id);
-        openEditModal(id);
+        openEditModal(parseInt(btn.dataset.id));
       });
     });
-    document.querySelectorAll('.delete-event').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    $$('.delete-event', eventListEl).forEach(btn => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
-        const id = parseInt(btn.dataset.id);
-        if (confirm('¿Eliminar este evento?')) {
-          deleteEvent(id);
-        }
+        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(btn.dataset.id));
       });
     });
-    document.querySelectorAll('.event-title').forEach(el => {
+    $$('.event-title', eventListEl).forEach(el => {
       el.addEventListener('click', () => {
         const id = parseInt(el.closest('.list-group-item').dataset.id);
         openEditModal(id);
@@ -154,7 +173,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== RENDERIZAR LISTA DE EVENTOS TERMINADOS ==========
   function renderFinishedList() {
     if (!finishedListEl) return;
     if (finishedEvents.length === 0) {
@@ -187,23 +205,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     finishedListEl.innerHTML = html;
 
-    document.querySelectorAll('.edit-event-finished').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    $$('.edit-event-finished', finishedListEl).forEach(btn => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
-        const id = parseInt(btn.dataset.id);
-        openEditModal(id);
+        openEditModal(parseInt(btn.dataset.id));
       });
     });
-    document.querySelectorAll('.delete-event-finished').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    $$('.delete-event-finished', finishedListEl).forEach(btn => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
-        const id = parseInt(btn.dataset.id);
-        if (confirm('¿Eliminar este evento?')) {
-          deleteEvent(id);
-        }
+        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(btn.dataset.id));
       });
     });
-    document.querySelectorAll('.event-title').forEach(el => {
+    $$('.event-title', finishedListEl).forEach(el => {
       el.addEventListener('click', () => {
         const id = parseInt(el.closest('.list-group-item').dataset.id);
         openEditModal(id);
@@ -211,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== RENDERIZADO DE VISTAS ==========
+  // ========== RENDER VISTAS ==========
   function renderView() {
     switch (currentView) {
       case 'day':   renderDayView(); break;
@@ -220,6 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
       case 'year':  renderYearView(); break;
       default: renderMonthView();
     }
+    focusWorkHours();
   }
 
   // ========== VISTA DÍA ==========
@@ -235,6 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let html = `<div class="day-time-grid">`;
 
+    // Sección "Todo el día"
     if (allDayEvents.length > 0) {
       html += `<div class="day-all-day-section">`;
       html += `<div class="day-all-day-label">📌 Todo el día</div>`;
@@ -252,24 +268,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     html += `<div class="day-time-grid-inner">`;
+    // Columna de horas
     html += `<div class="day-time-column">`;
     for (let hour = 0; hour < 24; hour++) {
-      let label;
-      if (timeFormat === '12') {
-        const hour12 = hour % 12 || 12;
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
-      } else {
-        label = `${String(hour).padStart(2, '0')}:00`;
-      }
+      const label = timeFormat === '12'
+        ? `${String(hour % 12 || 12).padStart(2, '0')}:00 ${hour >= 12 ? 'PM' : 'AM'}`
+        : `${String(hour).padStart(2, '0')}:00`;
       html += `<div class="day-hour-label" data-hour="${hour}">${label}</div>`;
     }
     html += `</div>`;
 
+    // Columna de eventos
     html += `<div class="day-events-column" style="position: relative; display: flex; flex-direction: column;">`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<div class="day-hour-slot" data-hour="${hour}" style="flex: 1; border-bottom: 1px solid #2a2a3a;"></div>`;
     }
+    // Dibujar eventos con hora
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -310,20 +324,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
-    document.querySelectorAll('.day-hour-slot').forEach(slot => {
+    // Listeners
+    $$('.day-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
         const dateObj = new Date(currentDate);
         dateObj.setHours(hour, 0, 0, 0);
-        const dateStrForModal = dateObj.toISOString().split('T')[0];
-        openCreateModal(dateStrForModal, hour);
+        openCreateModal(dateObj.toISOString().split('T')[0], hour);
       });
     });
-    document.querySelectorAll('.day-event-block, .day-all-day-event').forEach(el => {
+    $$('.day-event-block, .day-all-day-event').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
-        const id = parseInt(this.dataset.id);
-        openEditModal(id);
+        openEditModal(parseInt(this.dataset.id));
       });
     });
   }
@@ -338,6 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
     let html = `<div class="week-time-grid">`;
+    // Cabecera
     html += `<div class="week-header">`;
     html += `<div class="week-header-empty"></div>`;
     for (let i = 0; i < 7; i++) {
@@ -348,6 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
+    // Fila "Todo el día"
     html += `<div class="week-all-day-row">`;
     html += `<div class="week-all-day-label">📌 Todo el día</div>`;
     for (let i = 0; i < 7; i++) {
@@ -372,17 +387,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
+    // Cuerpo con horas
     html += `<div class="week-body-wrapper">`;
     html += `<div class="week-hours-column">`;
     for (let hour = 0; hour < 24; hour++) {
-      let label;
-      if (timeFormat === '12') {
-        const hour12 = hour % 12 || 12;
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
-      } else {
-        label = `${String(hour).padStart(2, '0')}:00`;
-      }
+      const label = timeFormat === '12'
+        ? `${String(hour % 12 || 12).padStart(2, '0')}:00 ${hour >= 12 ? 'PM' : 'AM'}`
+        : `${String(hour).padStart(2, '0')}:00`;
       html += `<div class="week-hour-label" data-hour="${hour}">${label}</div>`;
     }
     html += `</div>`;
@@ -398,6 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
       for (let hour = 0; hour < 24; hour++) {
         html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="flex: 1; border-bottom: 1px solid #2a2a3a;"></div>`;
       }
+      // Eventos con hora
       if (timedEvents.length > 0) {
         const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
         const hourCounts = {};
@@ -438,21 +450,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     html += `</div></div>`;
-
     grid.innerHTML = html;
 
-    document.querySelectorAll('.week-hour-slot').forEach(slot => {
+    // Listeners
+    $$('.week-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
         const dateStr = this.dataset.date;
         openCreateModal(dateStr, hour);
       });
     });
-    document.querySelectorAll('.week-event-block, .week-all-day-event').forEach(el => {
+    $$('.week-event-block, .week-all-day-event').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
-        const id = parseInt(this.dataset.id);
-        openEditModal(id);
+        openEditModal(parseInt(this.dataset.id));
       });
     });
   }
@@ -469,18 +480,16 @@ document.addEventListener('DOMContentLoaded', function() {
     viewTitle.textContent = `${firstDay.toLocaleString('es', { month: 'long' })} ${year}`;
 
     let html = '<div class="calendar-weekdays">';
-    const weekdays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    weekdays.forEach(day => html += `<div class="weekday">${day}</div>`);
+    ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].forEach(d => html += `<div class="weekday">${d}</div>`);
     html += '</div><div class="calendar-days">';
 
-    for (let i = 0; i < startDayOfWeek; i++) {
-      html += '<div class="day empty"></div>';
-    }
+    for (let i = 0; i < startDayOfWeek; i++) html += '<div class="day empty"></div>';
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dateObj = new Date(year, month, day);
       const dateStr = dateObj.toISOString().split('T')[0];
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-      const isToday = (new Date().toISOString().split('T')[0] === dateStr);
+      const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
       html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
       html += `<span class="day-number">${day}</span>`;
@@ -491,25 +500,21 @@ document.addEventListener('DOMContentLoaded', function() {
           const e = dayEvents[i];
           html += `<div class="event-bar" style="background-color: ${e.color || '#3788d8'};"></div>`;
         }
-        if (dayEvents.length > 3) {
-          html += `<div class="event-bar-more">+${dayEvents.length - 3}</div>`;
-        }
+        if (dayEvents.length > 3) html += `<div class="event-bar-more">+${dayEvents.length - 3}</div>`;
         html += `</div>`;
       }
       html += '</div>';
     }
-    const totalCells = startDayOfWeek + daysInMonth;
-    const remaining = (7 - (totalCells % 7)) % 7;
-    for (let i = 0; i < remaining; i++) {
-      html += '<div class="day empty"></div>';
-    }
+
+    const remaining = (7 - ((startDayOfWeek + daysInMonth) % 7)) % 7;
+    for (let i = 0; i < remaining; i++) html += '<div class="day empty"></div>';
+
     html += '</div>';
     grid.innerHTML = html;
 
-    document.querySelectorAll('.day:not(.empty)').forEach(el => {
+    $$('.day:not(.empty)').forEach(el => {
       el.addEventListener('click', function() {
-        const date = this.dataset.date;
-        currentDate = new Date(date);
+        currentDate = new Date(this.dataset.date);
         currentView = 'day';
         updateViewButtons();
         renderView();
@@ -543,12 +548,9 @@ document.addEventListener('DOMContentLoaded', function() {
           html += `<div class="year-day-dots">`;
           const maxDots = Math.min(dayEvents.length, 3);
           for (let i = 0; i < maxDots; i++) {
-            const color = dayEvents[i].color || '#3788d8';
-            html += `<span class="year-dot" style="background-color: ${color};"></span>`;
+            html += `<span class="year-dot" style="background-color: ${dayEvents[i].color || '#3788d8'};"></span>`;
           }
-          if (dayEvents.length > 3) {
-            html += `<span class="year-dot-more">+${dayEvents.length - 3}</span>`;
-          }
+          if (dayEvents.length > 3) html += `<span class="year-dot-more">+${dayEvents.length - 3}</span>`;
           html += `</div>`;
         }
         html += `</div>`;
@@ -558,8 +560,8 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</div>`;
     grid.innerHTML = html;
 
-    document.querySelectorAll('.year-month').forEach(el => {
-      el.addEventListener('click', function(e) {
+    $$('.year-month').forEach(el => {
+      el.addEventListener('click', function() {
         const month = parseInt(this.dataset.month);
         currentDate = new Date(year, month, 1);
         currentView = 'month';
@@ -567,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderView();
       });
     });
-    document.querySelectorAll('.year-day').forEach(el => {
+    $$('.year-day').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
         const date = this.dataset.date;
@@ -591,33 +593,29 @@ document.addEventListener('DOMContentLoaded', function() {
     deleteBtn.style.display = 'none';
     currentEventId = null;
 
+    const formatLocal = (d) => {
+      const offset = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - offset * 60000);
+      return local.toISOString().slice(0, 16);
+    };
+
     if (dateStr) {
       const date = new Date(dateStr);
       if (hour !== undefined) date.setHours(hour, 0, 0, 0);
       else date.setHours(0, 0, 0, 0);
       const end = new Date(date);
       end.setHours(end.getHours() + 1);
-      const formatLocal = (d) => {
-        const offset = d.getTimezoneOffset();
-        const local = new Date(d.getTime() - offset * 60000);
-        return local.toISOString().slice(0, 16);
-      };
       startInput.value = formatLocal(date);
       endInput.value = formatLocal(end);
     } else {
       const now = new Date();
       const later = new Date(now);
       later.setHours(later.getHours() + 1);
-      const formatLocal = (d) => {
-        const offset = d.getTimezoneOffset();
-        const local = new Date(d.getTime() - offset * 60000);
-        return local.toISOString().slice(0, 16);
-      };
       startInput.value = formatLocal(now);
       endInput.value = formatLocal(later);
     }
     allDayInput.checked = false;
-    modal.show();
+    modalEvent.show();
   }
 
   async function openEditModal(id) {
@@ -644,7 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
       statusSelect.value = ev.status || 'active';
       deleteBtn.style.display = 'inline-block';
       currentEventId = ev.id;
-      modal.show();
+      modalEvent.show();
     } catch (error) {
       console.error('Error al cargar evento para editar:', error);
     }
@@ -668,19 +666,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const payload = { title, description, start, end, allDay, color, status };
 
     try {
-      let url = '/api/events';
-      let method = 'POST';
-      if (id) {
-        url += `/${id}`;
-        method = 'PUT';
-      }
+      const url = id ? `/api/events/${id}` : '/api/events';
+      const method = id ? 'PUT' : 'POST';
       const res = await fetch(url, {
-        method: method,
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        modal.hide();
+        modalEvent.hide();
         loadEventsFromServer();
       } else {
         const err = await res.json();
@@ -697,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
       if (res.ok) {
         loadEventsFromServer();
-        modal.hide();
+        modalEvent.hide();
       } else {
         const err = await res.json();
         alert('Error: ' + (err.error || 'desconocido'));
@@ -708,7 +702,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== NAVEGACIÓN Y VISTAS ==========
+  // ========== NAVEGACIÓN ==========
   function prev() {
     switch (currentView) {
       case 'day':   currentDate.setDate(currentDate.getDate() - 1); break;
@@ -730,9 +724,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function updateViewButtons() {
-    viewBtns.forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === currentView);
-    });
+    viewBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.view === currentView));
   }
 
   function setView(view) {
@@ -741,23 +733,16 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
   }
 
-  // ========== TOGGLE EVENTOS TERMINADOS ==========
+  // ========== EVENT LISTENERS ==========
   toggleFinishedBtn.addEventListener('click', function() {
     finishedVisible = !finishedVisible;
     finishedListEl.style.display = finishedVisible ? 'block' : 'none';
     this.textContent = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
   });
 
-  // ========== EVENT LISTENERS ==========
   prevBtn.addEventListener('click', prev);
   nextBtn.addEventListener('click', next);
-
-  viewBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-      setView(this.dataset.view);
-    });
-  });
-
+  viewBtns.forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
   newEventBtn.addEventListener('click', () => openCreateModal(null));
 
   settingsBtn.addEventListener('click', function() {
@@ -772,8 +757,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   workStartInput.addEventListener('change', function() {
-    let val = parseInt(this.value);
-    if (isNaN(val)) val = 8;
+    let val = parseInt(this.value) || 8;
     if (val < 0) val = 0;
     if (val > 23) val = 23;
     const end = parseInt(workEndInput.value) || 17;
@@ -786,8 +770,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   workEndInput.addEventListener('change', function() {
-    let val = parseInt(this.value);
-    if (isNaN(val)) val = 17;
+    let val = parseInt(this.value) || 17;
     if (val < 0) val = 0;
     if (val > 23) val = 23;
     const start = parseInt(workStartInput.value) || 8;
@@ -801,12 +784,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   saveBtn.addEventListener('click', saveEvent);
   deleteBtn.addEventListener('click', function() {
-    if (currentEventId && confirm('¿Eliminar este evento?')) {
-      deleteEvent(currentEventId);
-    }
+    if (currentEventId && confirm('¿Eliminar este evento?')) deleteEvent(currentEventId);
   });
 
-  modalElement.addEventListener('hidden.bs.modal', function () {
+  modalEvent._element.addEventListener('hidden.bs.modal', function() {
     currentEventId = null;
     deleteBtn.style.display = 'none';
   });
