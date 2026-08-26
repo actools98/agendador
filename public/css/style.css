@@ -179,7 +179,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   line-height: 1.2;
 }
 /* ============================================================
-   VISTA DÍA (con altura fija, scroll y línea separadora completa)
+   VISTA DÍA (con altura fija y línea separadora completa)
    ============================================================ */
 .day-time-grid {
   flex: 1;
@@ -190,12 +190,12 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .day-time-grid-inner {
-  position: relative; /* Necesario para el pseudo-elemento */
   flex: 1;
   display: flex;
   overflow-y: auto;  /* Scroll vertical */
   background-color: var(--calendar-bg);
   border-radius: 8px;
+  align-items: flex-start; /* Asegura que las columnas con altura fija no se estiren */
 }
 
 .day-time-column {
@@ -204,21 +204,8 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   display: flex;
   flex-direction: column;
   background: var(--header-bg);
-  position: relative; /* Para el ::after */
-  /* Eliminamos border-right: ya no es necesario */
-}
-
-/* Línea separadora vertical (completa de arriba a abajo) */
-.day-time-column::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background-color: var(--slot-border);
-  pointer-events: none;
-  z-index: 5;
+  border-right: 1px solid var(--slot-border); /* Línea separadora */
+  box-sizing: border-box;
 }
 
 .day-hour-label {
@@ -237,6 +224,8 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   position: relative;
   background: var(--calendar-bg);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .day-hour-slot {
@@ -278,7 +267,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA SEMANA (con altura fija, scroll y línea separadora completa)
+   VISTA SEMANA (con altura fija y línea separadora completa)
    ============================================================ */
 .week-time-grid {
   display: flex;
@@ -314,13 +303,13 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .week-body-wrapper {
-  position: relative; /* Necesario para el pseudo-elemento */
   flex: 1;
   display: flex;
   overflow-y: auto;  /* Scroll vertical */
   background-color: var(--calendar-bg);
   border-radius: 8px;
   min-height: 0;
+  align-items: flex-start; /* Asegura que las columnas con altura fija no se estiren */
 }
 
 .week-hours-column {
@@ -329,21 +318,8 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   display: flex;
   flex-direction: column;
   background: var(--header-bg);
-  position: relative; /* Para el ::after */
-  /* Eliminamos border-right: ya no es necesario */
-}
-
-/* Línea separadora vertical (completa de arriba a abajo) */
-.week-hours-column::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background-color: var(--slot-border);
-  pointer-events: none;
-  z-index: 5;
+  border-right: 1px solid var(--slot-border); /* Línea separadora */
+  box-sizing: border-box;
 }
 
 .week-hour-label {
@@ -363,6 +339,8 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   background: var(--calendar-bg);
   border-left: 1px solid var(--calendar-border);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .week-hour-slot {
@@ -394,7 +372,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   opacity: 0.85;
 }
 
-/* Línea roja de tiempo real (ya existente) */
+/* Línea roja de tiempo real */
 .current-time-line {
   pointer-events: none;
   z-index: 10;
