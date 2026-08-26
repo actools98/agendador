@@ -317,42 +317,163 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA DÍA (con altura fija por hora y scroll) ==========
-  function renderDayView() {
-    const date = currentDate;
-    const dateStr = date.toISOString().split('T')[0];
+  // ========== VISTA DÍA (con altura fija y línea separadora completa) ==========
+function renderDayView() {
+  const date = currentDate;
+  const dateStr = date.toISOString().split('T')[0];
+  const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+  const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
+
+  viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const totalHeight = 24 * HOUR_HEIGHT;
+
+  let html = `<div class="day-time-grid">`;
+  html += `<div class="day-time-grid-inner">`;
+
+  // Columna de horas (con altura fija)
+  html += `<div class="day-time-column" style="height: ${totalHeight}px;">`;
+  for (let hour = 0; hour < 24; hour++) {
+    let label;
+    if (timeFormat === '12') {
+      const hour12 = hour % 12 || 12;
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
+    } else {
+      label = `${String(hour).padStart(2, '0')}:00`;
+    }
+    html += `<div class="day-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px;">${label}</div>`;
+  }
+  html += `</div>`;
+
+  // Columna de eventos (con altura fija)
+  html += `<div class="day-events-column" style="height: ${totalHeight}px; position: relative;">`;
+  for (let hour = 0; hour < 24; hour++) {
+    html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
+  }
+
+  // Línea roja (solo hoy)
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (dateStr === todayStr) {
+    const now = new Date();
+    const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+    const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
+    html += `
+      <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
+    `;
+  }
+
+  // Eventos con hora
+  if (timedEvents.length > 0) {
+    const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
+    const hourCounts = {};
+    sorted.forEach(e => {
+      const startHour = new Date(e.start).getHours();
+      if (!hourCounts[startHour]) hourCounts[startHour] = [];
+      hourCounts[startHour].push(e);
+    });
+    sorted.forEach(e => {
+      const start = new Date(e.start);
+      const end = new Date(e.end);
+      const startMinutes = start.getHours() * 60 + start.getMinutes();
+      const endMinutes = end.getHours() * 60 + end.getMinutes();
+      const duration = endMinutes - startMinutes;
+      const top = (startMinutes / (24 * 60)) * 100;
+      const height = (duration / (24 * 60)) * 100;
+
+      const hour = start.getHours();
+      const eventsInHour = hourCounts[hour] || [];
+      const index = eventsInHour.indexOf(e);
+      const totalInHour = eventsInHour.length;
+      const width = totalInHour > 1 ? 80 / totalInHour : 100;
+      const left = index * (80 / totalInHour);
+
+      const timeStr = formatTimeRange(start, end);
+
+      html += `
+        <div class="day-event-block" 
+             style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
+             data-id="${e.id}"
+             title="${e.title} (${timeStr})">
+          <span class="event-title-inline">${e.title}</span>
+        </div>
+      `;
+    });
+  }
+  html += `</div></div></div>`;
+
+  grid.innerHTML = html;
+
+  // Listeners
+  $$('.day-hour-slot').forEach(slot => {
+    slot.addEventListener('click', function() {
+      const hour = parseInt(this.dataset.hour);
+      const dateObj = new Date(currentDate);
+      dateObj.setHours(hour, 0, 0, 0);
+      openCreateModal(dateObj.toISOString().split('T')[0], hour);
+    });
+  });
+  $$('.day-event-block').forEach(el => {
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openEditModal(parseInt(this.dataset.id));
+    });
+  });
+}
+
+// ========== VISTA SEMANA (con altura fija y línea separadora completa) ==========
+function renderWeekView() {
+  const startOfWeek = new Date(currentDate);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+  viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+  const totalHeight = 24 * HOUR_HEIGHT;
+
+  let html = `<div class="week-time-grid">`;
+  // Cabecera
+  html += `<div class="week-header">`;
+  html += `<div class="week-header-empty"></div>`;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startOfWeek);
+    d.setDate(d.getDate() + i);
+    const isToday = d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+    html += `<div class="week-header-day ${isToday ? 'today' : ''}">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
+  }
+  html += `</div>`;
+
+  // Cuerpo con scroll
+  html += `<div class="week-body-wrapper">`;
+  // Columna de horas (con altura fija)
+  html += `<div class="week-hours-column" style="height: ${totalHeight}px;">`;
+  for (let hour = 0; hour < 24; hour++) {
+    let label;
+    if (timeFormat === '12') {
+      const hour12 = hour % 12 || 12;
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
+    } else {
+      label = `${String(hour).padStart(2, '0')}:00`;
+    }
+    html += `<div class="week-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px;">${label}</div>`;
+  }
+  html += `</div>`;
+
+  // Días (cada columna con altura fija)
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startOfWeek);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
     const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
 
-    viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-    // Contenedor con scroll
-    let html = `<div class="day-time-grid">`;
-    html += `<div class="day-time-grid-inner">`;
-
-    // Columna de horas (altura fija)
-    html += `<div class="day-time-column">`;
+    html += `<div class="week-day-column" data-date="${dateStr}" style="height: ${totalHeight}px; position: relative;">`;
     for (let hour = 0; hour < 24; hour++) {
-      let label;
-      if (timeFormat === '12') {
-        const hour12 = hour % 12 || 12;
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
-      } else {
-        label = `${String(hour).padStart(2, '0')}:00`;
-      }
-      html += `<div class="day-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px;">${label}</div>`;
+      html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
     }
-    html += `</div>`;
-
-    // Columna de eventos (altura fija = 24 * HOUR_HEIGHT)
-    const totalHeight = 24 * HOUR_HEIGHT;
-    html += `<div class="day-events-column" style="position: relative; height: ${totalHeight}px; display: flex; flex-direction: column;">`;
-    for (let hour = 0; hour < 24; hour++) {
-      html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
-    }
-
-    // Línea roja de hora actual (solo en el día de hoy)
+    // Línea roja en el día actual
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateStr === todayStr) {
       const now = new Date();
@@ -362,8 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
       `;
     }
-
-    // Eventos con hora (posicionados en % sobre el contenedor de altura fija)
+    // Eventos con hora
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -391,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const timeStr = formatTimeRange(start, end);
 
         html += `
-          <div class="day-event-block" 
+          <div class="week-event-block" 
                style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
                data-id="${e.id}"
                title="${e.title} (${timeStr})">
@@ -400,27 +520,26 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
       });
     }
-    html += `</div></div></div>`;
-
-    grid.innerHTML = html;
-
-    // Listeners
-    $$('.day-hour-slot').forEach(slot => {
-      slot.addEventListener('click', function() {
-        const hour = parseInt(this.dataset.hour);
-        const dateObj = new Date(currentDate);
-        dateObj.setHours(hour, 0, 0, 0);
-        openCreateModal(dateObj.toISOString().split('T')[0], hour);
-      });
-    });
-    $$('.day-event-block').forEach(el => {
-      el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        openEditModal(parseInt(this.dataset.id));
-      });
-    });
+    html += `</div>`;
   }
+  html += `</div></div>`;
 
+  grid.innerHTML = html;
+
+  $$('.week-hour-slot').forEach(slot => {
+    slot.addEventListener('click', function() {
+      const hour = parseInt(this.dataset.hour);
+      const dateStr = this.dataset.date;
+      openCreateModal(dateStr, hour);
+    });
+  });
+  $$('.week-event-block').forEach(el => {
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openEditModal(parseInt(this.dataset.id));
+    });
+  });
+}
   // ========== VISTA SEMANA (con altura fija por hora y scroll) ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
