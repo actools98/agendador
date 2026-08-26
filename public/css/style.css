@@ -179,7 +179,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   line-height: 1.2;
 }
 /* ============================================================
-   VISTA DÍA (con altura consistente en labels y slots)
+   VISTA DÍA (con altura fija, scroll y línea separadora completa)
    ============================================================ */
 .day-time-grid {
   flex: 1;
@@ -190,9 +190,10 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .day-time-grid-inner {
+  position: relative; /* Necesario para el pseudo-elemento */
   flex: 1;
   display: flex;
-  overflow-y: auto;
+  overflow-y: auto;  /* Scroll vertical */
   background-color: var(--calendar-bg);
   border-radius: 8px;
 }
@@ -203,13 +204,24 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   display: flex;
   flex-direction: column;
   background: var(--header-bg);
-  border-right: 1px solid var(--slot-border);
+  position: relative; /* Para el ::after */
+  /* Eliminamos border-right: ya no es necesario */
+}
+
+/* Línea separadora vertical (completa de arriba a abajo) */
+.day-time-column::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--slot-border);
+  pointer-events: none;
+  z-index: 5;
 }
 
 .day-hour-label {
-  height: 70px;  /* MISMA ALTURA que los slots */
-  min-height: 70px;
-  max-height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,7 +230,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-bottom: 1px solid var(--slot-border);
   background-color: var(--sidebar-bg);
   box-sizing: border-box;
-  flex-shrink: 0;
 }
 
 .day-events-column {
@@ -226,19 +237,13 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   position: relative;
   background: var(--calendar-bg);
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
 }
 
 .day-hour-slot {
-  height: 70px;  /* MISMA ALTURA que los labels */
-  min-height: 70px;
-  max-height: 70px;
   border-bottom: 1px solid var(--slot-border);
   cursor: pointer;
   transition: background 0.2s;
   box-sizing: border-box;
-  flex-shrink: 0;
 }
 
 .day-hour-slot:hover {
@@ -273,7 +278,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA SEMANA (con altura consistente en labels y slots)
+   VISTA SEMANA (con altura fija, scroll y línea separadora completa)
    ============================================================ */
 .week-time-grid {
   display: flex;
@@ -309,9 +314,10 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .week-body-wrapper {
+  position: relative; /* Necesario para el pseudo-elemento */
   flex: 1;
   display: flex;
-  overflow-y: auto;
+  overflow-y: auto;  /* Scroll vertical */
   background-color: var(--calendar-bg);
   border-radius: 8px;
   min-height: 0;
@@ -323,13 +329,24 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   display: flex;
   flex-direction: column;
   background: var(--header-bg);
-  border-right: 1px solid var(--slot-border);
+  position: relative; /* Para el ::after */
+  /* Eliminamos border-right: ya no es necesario */
+}
+
+/* Línea separadora vertical (completa de arriba a abajo) */
+.week-hours-column::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--slot-border);
+  pointer-events: none;
+  z-index: 5;
 }
 
 .week-hour-label {
-  height: 70px;  /* MISMA ALTURA que los slots */
-  min-height: 70px;
-  max-height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -338,7 +355,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-bottom: 1px solid var(--slot-border);
   background-color: var(--sidebar-bg);
   box-sizing: border-box;
-  flex-shrink: 0;
 }
 
 .week-day-column {
@@ -347,19 +363,13 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   background: var(--calendar-bg);
   border-left: 1px solid var(--calendar-border);
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
 }
 
 .week-hour-slot {
-  height: 70px;  /* MISMA ALTURA que los labels */
-  min-height: 70px;
-  max-height: 70px;
   border-bottom: 1px solid var(--slot-border);
   cursor: pointer;
   transition: background 0.2s;
   box-sizing: border-box;
-  flex-shrink: 0;
 }
 
 .week-hour-slot:hover {
@@ -384,7 +394,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   opacity: 0.85;
 }
 
-/* Línea roja de tiempo real */
+/* Línea roja de tiempo real (ya existente) */
 .current-time-line {
   pointer-events: none;
   z-index: 10;
