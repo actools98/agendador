@@ -265,9 +265,8 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   font-weight: bold;
   color: #fff;
 }
-
 /* ============================================================
-   VISTA SEMANA (con altura fija y línea separadora completa)
+   VISTA SEMANA (con Grid y alineación perfecta)
    ============================================================ */
 .week-time-grid {
   display: flex;
@@ -278,24 +277,24 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .week-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 70px repeat(7, 1fr);
   border-bottom: 2px solid var(--calendar-border);
   background: var(--header-bg);
   flex-shrink: 0;
 }
 
 .week-header-empty {
-  width: 70px;
-  flex-shrink: 0;
+  /* Sin contenido, solo para ocupar la primera columna */
 }
 
 .week-header-day {
-  flex: 1;
   text-align: center;
   padding: 8px 0;
   font-weight: bold;
   border-left: 1px solid var(--calendar-border);
   background-color: var(--sidebar-bg);
+  color: var(--text-body);
 }
 
 .week-header-day.today {
@@ -304,22 +303,24 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 
 .week-body-wrapper {
   flex: 1;
-  display: flex;
-  overflow-y: auto;  /* Scroll vertical */
-  background-color: var(--calendar-bg);
-  border-radius: 8px;
+  overflow-y: auto;
   min-height: 0;
-  align-items: flex-start; /* Asegura que las columnas con altura fija no se estiren */
+  background-color: var(--calendar-bg);
+  border-radius: 0 0 8px 8px;
+}
+
+.week-body-grid {
+  display: grid;
+  grid-template-columns: 70px repeat(7, 1fr);
+  /* La altura se fija desde JavaScript (totalHeight) */
 }
 
 .week-hours-column {
-  width: 70px;
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  height: 100%;
   background: var(--header-bg);
-  border-right: 1px solid var(--slot-border); /* Línea separadora */
-  box-sizing: border-box;
+  border-right: 1px solid var(--slot-border);
 }
 
 .week-hour-label {
@@ -328,17 +329,14 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   justify-content: center;
   font-size: 0.8rem;
   color: var(--header-text);
-  border-bottom: 1px solid var(--slot-border);
   background-color: var(--sidebar-bg);
   box-sizing: border-box;
 }
 
 .week-day-column {
-  flex: 1;
   position: relative;
   background: var(--calendar-bg);
   border-left: 1px solid var(--calendar-border);
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
@@ -372,7 +370,15 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   opacity: 0.85;
 }
 
-/* Línea roja de tiempo real */
+.event-title-inline {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: bold;
+  color: #fff;
+}
+
 .current-time-line {
   pointer-events: none;
   z-index: 10;
