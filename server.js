@@ -4,6 +4,7 @@ const session = require('express-session');
 const path = require('path');
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/events');
+const preferenciasRoutes = require('./routes/preferencias');
 const db = require('./db');
 
 const app = express();
@@ -30,6 +31,7 @@ const requireAuth = (req, res, next) => {
 
 app.use('/', authRoutes);
 app.use('/api/events', requireAuth, eventRoutes);
+app.use('/api/preferencias', requireAuth, preferenciasRoutes);
 
 app.get('/', requireAuth, (req, res) => {
   res.render('index', { username: req.session.username });
