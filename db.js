@@ -32,6 +32,16 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS preferencias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL UNIQUE,
+    tema TEXT DEFAULT 'claro' CHECK(tema IN ('claro', 'oscuro')),
+    formato_hora TEXT DEFAULT '24' CHECK(formato_hora IN ('24', '12')),
+    work_start INTEGER DEFAULT 8,
+    work_end INTEGER DEFAULT 17,
+    FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // Migración: añadir columna status si no existe
