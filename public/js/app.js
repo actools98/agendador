@@ -147,7 +147,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ========== RENDER LISTAS ==========
   function renderEventList() {
-    // (mismo código que antes, sin cambios)
     if (!eventListEl) return;
     if (events.length === 0) {
       eventListEl.innerHTML = '<div class="text-muted small p-2">No hay eventos activos</div>';
@@ -173,11 +172,77 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
     });
     eventListEl.innerHTML = html;
-    // listeners...
+
+    $$('.edit-event', eventListEl).forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openEditModal(parseInt(btn.dataset.id));
+      });
+    });
+    $$('.delete-event', eventListEl).forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(btn.dataset.id));
+      });
+    });
+    $$('.event-title', eventListEl).forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.closest('.list-group-item').dataset.id);
+        openEditModal(id);
+      });
+    });
   }
 
   function renderFinishedList() {
-    // (mismo código que antes, sin cambios)
+    if (!finishedListEl) return;
+    if (finishedEvents.length === 0) {
+      finishedListEl.innerHTML = '<div class="text-muted small p-2">No hay eventos terminados</div>';
+      return;
+    }
+    const sorted = [...finishedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
+    let html = '';
+    sorted.forEach(ev => {
+      const startDate = new Date(ev.start);
+      const dateStr = startDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+      const timeStr = formatTime(startDate);
+      const statusLabel = {
+        'completed': '✅ Completado',
+        'postponed': '⏳ Pospuesto',
+        'cancelled': '❌ Cancelado'
+      }[ev.status] || ev.status;
+      html += `
+        <div class="list-group-item" data-id="${ev.id}" style="opacity:0.7;">
+          <span class="event-title" style="border-left: 4px solid ${ev.color || '#3788d8'}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
+            <strong>${ev.title}</strong><br>
+            <small class="text-muted">${dateStr} ${timeStr} - ${statusLabel}</small>
+          </span>
+          <span class="event-actions">
+            <button class="edit-event-finished" data-id="${ev.id}" title="Editar">✏️</button>
+            <button class="delete-event-finished" data-id="${ev.id}" title="Eliminar">🗑️</button>
+          </span>
+        </div>
+      `;
+    });
+    finishedListEl.innerHTML = html;
+
+    $$('.edit-event-finished', finishedListEl).forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openEditModal(parseInt(btn.dataset.id));
+      });
+    });
+    $$('.delete-event-finished', finishedListEl).forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(btn.dataset.id));
+      });
+    });
+    $$('.event-title', finishedListEl).forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.closest('.list-group-item').dataset.id);
+        openEditModal(id);
+      });
+    });
   }
 
   // ========== RENDER VISTAS ==========
@@ -194,7 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ========== ENFOQUE LABORAL ==========
   function focusWorkHours() {
-    // (mismo código que antes, sin cambios)
     if (currentView !== 'day' && currentView !== 'week') return;
     requestAnimationFrame(() => {
       const container = currentView === 'day'
@@ -215,7 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ========== VISTA DÍA ==========
   function renderDayView() {
-    // (mismo código que antes, sin cambios)
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
@@ -320,7 +383,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ========== VISTA SEMANA ==========
   function renderWeekView() {
-    // (mismo código que antes, sin cambios)
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     const endOfWeek = new Date(startOfWeek);
@@ -446,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES (con día de semana abreviado) ==========
+  // ========== VISTA MES (con cabecera de días, sin día en cada celda) ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -458,23 +520,24 @@ document.addEventListener('DOMContentLoaded', function() {
     viewTitle.textContent = `${firstDay.toLocaleString('es', { month: 'long' })} ${year}`;
 
     let html = '<div class="calendar-weekdays">';
-    ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].forEach(d => html += `<div class="weekday">${d}</div>`);
+    // Días de la semana (solo en cabecera)
+    const weekdays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    weekdays.forEach(day => html += `<div class="weekday">${day}</div>`);
     html += '</div><div class="calendar-days">';
 
-    for (let i = 0; i < startDayOfWeek; i++) html += '<div class="day empty"></div>';
+    for (let i = 0; i < startDayOfWeek; i++) {
+      html += '<div class="day empty"></div>';
+    }
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateObj = new Date(year, month, day);
       const dateStr = dateObj.toISOString().split('T')[0];
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const isToday = new Date().toISOString().split('T')[0] === dateStr;
-      const weekdayShort = dateObj.toLocaleDateString('es-ES', { weekday: 'short' }); // "mié", "jue", etc.
 
       html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
-      html += `<div class="day-content">`;
+      // Solo mostramos el número del día (sin día de la semana)
       html += `<span class="day-number">${day}</span>`;
-      html += `<span class="day-weekday">${weekdayShort}</span>`;
-      html += `</div>`;
       if (dayEvents.length > 0) {
         html += `<div class="event-bars">`;
         const maxBars = Math.min(dayEvents.length, 3);
@@ -489,7 +552,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const remaining = (7 - ((startDayOfWeek + daysInMonth) % 7)) % 7;
-    for (let i = 0; i < remaining; i++) html += '<div class="day empty"></div>';
+    for (let i = 0; i < remaining; i++) {
+      html += '<div class="day empty"></div>';
+    }
 
     html += '</div>';
     grid.innerHTML = html;
@@ -504,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (con 7 columnas) ==========
+  // ========== VISTA AÑO (sin cambios, mantener la nueva lógica) ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
@@ -576,7 +641,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ========== MODAL: CREAR / EDITAR ==========
   function openCreateModal(dateStr, hour) {
-    // (mismo código que antes)
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
     form.reset();
@@ -611,7 +675,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   async function openEditModal(id) {
-    // (mismo código que antes)
     try {
       const ev = [...events, ...finishedEvents].find(e => e.id === id);
       if (!ev) {
@@ -642,7 +705,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   async function saveEvent() {
-    // (mismo código que antes)
     const id = eventIdInput.value;
     const title = titleInput.value.trim();
     const description = descriptionInput.value.trim();
@@ -681,7 +743,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   async function deleteEvent(id) {
-    // (mismo código que antes)
     try {
       const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
       if (res.ok) {
