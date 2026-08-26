@@ -116,6 +116,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
+        <!-- Formato de hora -->
         <div class="mb-2">
           <label for="timeFormatSelect" class="form-label small">Formato de hora</label>
           <select id="timeFormatSelect" class="form-select form-select-sm">
@@ -123,7 +124,19 @@
             <option value="12">12h (AM/PM)</option>
           </select>
         </div>
-        <hr />
+
+        <!-- Tema -->
+        <div class="mb-2">
+          <label for="themeSelect" class="form-label small">Tema</label>
+          <select id="themeSelect" class="form-select form-select-sm">
+            <option value="claro">Claro</option>
+            <option value="oscuro">Oscuro</option>
+          </select>
+        </div>
+
+        <hr class="border-secondary" />
+
+        <!-- Franja horaria laboral -->
         <div class="mb-2">
           <label class="form-label small">Franja horaria laboral</label>
           <div class="row g-2">
@@ -140,6 +153,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" id="saveSettingsBtn" class="btn btn-primary btn-sm">Guardar cambios</button>
       </div>
     </div>
   </div>
