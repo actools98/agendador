@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
   let workEnd = 17;
   let tema = 'claro';
 
+  // Altura fija por hora (en píxeles)
+  const HOUR_HEIGHT = 70;
+
   // ========== ELEMENTOS DOM ==========
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
@@ -145,7 +148,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== RENDER LISTA DE EVENTOS ACTIVOS ==========
+  // ========== RENDER LISTAS ==========
+  // (sin cambios, se mantienen igual que antes)
   function renderEventList() {
     if (!eventListEl) return;
     if (events.length === 0) {
@@ -193,7 +197,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== RENDER LISTA DE EVENTOS TERMINADOS ==========
   function renderFinishedList() {
     if (!finishedListEl) return;
     if (finishedEvents.length === 0) {
@@ -256,6 +259,42 @@ document.addEventListener('DOMContentLoaded', function() {
       default: renderMonthView();
     }
     focusWorkHours();
+    // Iniciar actualización de la línea roja (cada minuto)
+    if (currentView === 'day' || currentView === 'week') {
+      startRedLineUpdater();
+    } else {
+      stopRedLineUpdater();
+    }
+  }
+
+  // ========== ACTUALIZAR LÍNEA ROJA (cada minuto) ==========
+  let redLineInterval = null;
+
+  function startRedLineUpdater() {
+    if (redLineInterval) return;
+    redLineInterval = setInterval(() => {
+      updateRedLine();
+    }, 60000); // cada 60 segundos
+  }
+
+  function stopRedLineUpdater() {
+    if (redLineInterval) {
+      clearInterval(redLineInterval);
+      redLineInterval = null;
+    }
+  }
+
+  function updateRedLine() {
+    // Buscar todas las líneas rojas y actualizar su posición
+    const lines = document.querySelectorAll('.current-time-line');
+    if (lines.length === 0) return;
+    const now = new Date();
+    const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+    const totalMinutes = 24 * 60;
+    const topPercent = (minutesSinceMidnight / totalMinutes) * 100;
+    lines.forEach(line => {
+      line.style.top = `${Math.min(100, topPercent)}%`;
+    });
   }
 
   // ========== ENFOQUE LABORAL ==========
@@ -263,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentView !== 'day' && currentView !== 'week') return;
     requestAnimationFrame(() => {
       const container = currentView === 'day'
-        ? document.querySelector('.day-time-grid')
+        ? document.querySelector('.day-time-grid-inner')
         : document.querySelector('.week-body-wrapper');
       if (!container) return;
       const selector = currentView === 'day'
@@ -278,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA DÍA (con línea roja, sin "Todo el día") ==========
+  // ========== VISTA DÍA (con altura fija por hora y scroll) ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
@@ -287,9 +326,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+    // Contenedor con scroll
     let html = `<div class="day-time-grid">`;
     html += `<div class="day-time-grid-inner">`;
-    // Columna de horas
+
+    // Columna de horas (altura fija)
     html += `<div class="day-time-column">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -300,27 +341,29 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         label = `${String(hour).padStart(2, '0')}:00`;
       }
-      html += `<div class="day-hour-label" data-hour="${hour}">${label}</div>`;
+      html += `<div class="day-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px;">${label}</div>`;
     }
     html += `</div>`;
 
-    // Columna de eventos con slots
-    html += `<div class="day-events-column" style="position: relative; display: flex; flex-direction: column;">`;
+    // Columna de eventos (altura fija = 24 * HOUR_HEIGHT)
+    const totalHeight = 24 * HOUR_HEIGHT;
+    html += `<div class="day-events-column" style="position: relative; height: ${totalHeight}px; display: flex; flex-direction: column;">`;
     for (let hour = 0; hour < 24; hour++) {
-      html += `<div class="day-hour-slot" data-hour="${hour}" style="flex: 1; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
+      html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
     }
-    // Línea roja de hora actual (solo si estamos en el día de hoy)
+
+    // Línea roja de hora actual (solo en el día de hoy)
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateStr === todayStr) {
       const now = new Date();
       const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
       const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
       html += `
-        <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none;"></div>
+        <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
       `;
     }
 
-    // Eventos con hora
+    // Eventos con hora (posicionados en % sobre el contenedor de altura fija)
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -378,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA (con línea roja, sin "Todo el día") ==========
+  // ========== VISTA SEMANA (con altura fija por hora y scroll) ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -386,6 +429,8 @@ document.addEventListener('DOMContentLoaded', function() {
     endOfWeek.setDate(endOfWeek.getDate() + 6);
 
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+    const totalHeight = 24 * HOUR_HEIGHT;
 
     let html = `<div class="week-time-grid">`;
     // Cabecera
@@ -399,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    // Cuerpo
+    // Cuerpo con scroll
     html += `<div class="week-body-wrapper">`;
     // Columna de horas
     html += `<div class="week-hours-column">`;
@@ -412,11 +457,11 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         label = `${String(hour).padStart(2, '0')}:00`;
       }
-      html += `<div class="week-hour-label" data-hour="${hour}">${label}</div>`;
+      html += `<div class="week-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px;">${label}</div>`;
     }
     html += `</div>`;
 
-    // Días
+    // Días (cada columna con altura fija total)
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
@@ -424,9 +469,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
 
-      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; display: flex; flex-direction: column;">`;
+      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; height: ${totalHeight}px; display: flex; flex-direction: column;">`;
       for (let hour = 0; hour < 24; hour++) {
-        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="flex: 1; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
+        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
       }
       // Línea roja en el día actual
       const todayStr = new Date().toISOString().split('T')[0];
@@ -435,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
         const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
         html += `
-          <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none;"></div>
+          <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
         `;
       }
       // Eventos con hora
@@ -496,8 +541,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES (con día de semana abreviado) ==========
+  // ========== VISTA MES ==========
   function renderMonthView() {
+    // (sin cambios, igual que antes)
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -552,6 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ========== VISTA AÑO ==========
   function renderYearView() {
+    // (sin cambios, igual que antes)
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
 
