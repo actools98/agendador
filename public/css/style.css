@@ -178,9 +178,8 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   text-align: center;
   line-height: 1.2;
 }
-
 /* ============================================================
-   VISTA DÍA (con altura fija y scroll)
+   VISTA DÍA (con altura consistente en labels y slots)
    ============================================================ */
 .day-time-grid {
   flex: 1;
@@ -193,7 +192,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 .day-time-grid-inner {
   flex: 1;
   display: flex;
-  overflow-y: auto;  /* Scroll vertical */
+  overflow-y: auto;
   background-color: var(--calendar-bg);
   border-radius: 8px;
 }
@@ -208,6 +207,9 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .day-hour-label {
+  height: 70px;  /* MISMA ALTURA que los slots */
+  min-height: 70px;
+  max-height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -216,6 +218,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-bottom: 1px solid var(--slot-border);
   background-color: var(--sidebar-bg);
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .day-events-column {
@@ -223,13 +226,19 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   position: relative;
   background: var(--calendar-bg);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .day-hour-slot {
+  height: 70px;  /* MISMA ALTURA que los labels */
+  min-height: 70px;
+  max-height: 70px;
   border-bottom: 1px solid var(--slot-border);
   cursor: pointer;
   transition: background 0.2s;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .day-hour-slot:hover {
@@ -264,7 +273,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA SEMANA (con altura fija y scroll)
+   VISTA SEMANA (con altura consistente en labels y slots)
    ============================================================ */
 .week-time-grid {
   display: flex;
@@ -302,7 +311,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 .week-body-wrapper {
   flex: 1;
   display: flex;
-  overflow-y: auto;  /* Scroll vertical */
+  overflow-y: auto;
   background-color: var(--calendar-bg);
   border-radius: 8px;
   min-height: 0;
@@ -318,6 +327,9 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 .week-hour-label {
+  height: 70px;  /* MISMA ALTURA que los slots */
+  min-height: 70px;
+  max-height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -326,6 +338,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-bottom: 1px solid var(--slot-border);
   background-color: var(--sidebar-bg);
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .week-day-column {
@@ -334,13 +347,19 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   background: var(--calendar-bg);
   border-left: 1px solid var(--calendar-border);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .week-hour-slot {
+  height: 70px;  /* MISMA ALTURA que los labels */
+  min-height: 70px;
+  max-height: 70px;
   border-bottom: 1px solid var(--slot-border);
   cursor: pointer;
   transition: background 0.2s;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .week-hour-slot:hover {
@@ -370,7 +389,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   pointer-events: none;
   z-index: 10;
   box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
-   
+}
 /* ============================================================
    VISTA AÑO (con 7 columnas)
    ============================================================ */
