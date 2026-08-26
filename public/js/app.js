@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let workEnd = 17;
   let tema = 'claro';
 
-  // Altura fija por hora (en píxeles)
+  // Altura fija por hora (en píxeles) - 70px para vista elegante
   const HOUR_HEIGHT = 70;
 
   // ========== ELEMENTOS DOM ==========
@@ -148,8 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== RENDER LISTAS ==========
-  // (sin cambios, se mantienen igual que antes)
+  // ========== RENDER LISTA DE EVENTOS ACTIVOS ==========
   function renderEventList() {
     if (!eventListEl) return;
     if (events.length === 0) {
@@ -197,6 +196,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // ========== RENDER LISTA DE EVENTOS TERMINADOS ==========
   function renderFinishedList() {
     if (!finishedListEl) return;
     if (finishedEvents.length === 0) {
@@ -259,7 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
       default: renderMonthView();
     }
     focusWorkHours();
-    // Iniciar actualización de la línea roja (cada minuto)
     if (currentView === 'day' || currentView === 'week') {
       startRedLineUpdater();
     } else {
@@ -267,14 +266,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== ACTUALIZAR LÍNEA ROJA (cada minuto) ==========
+  // ========== ACTUALIZAR LÍNEA ROJA ==========
   let redLineInterval = null;
 
   function startRedLineUpdater() {
     if (redLineInterval) return;
     redLineInterval = setInterval(() => {
       updateRedLine();
-    }, 60000); // cada 60 segundos
+    }, 60000);
   }
 
   function stopRedLineUpdater() {
@@ -285,7 +284,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function updateRedLine() {
-    // Buscar todas las líneas rojas y actualizar su posición
     const lines = document.querySelectorAll('.current-time-line');
     if (lines.length === 0) return;
     const now = new Date();
@@ -317,171 +315,42 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA DÍA (con altura fija y línea separadora completa) ==========
-function renderDayView() {
-  const date = currentDate;
-  const dateStr = date.toISOString().split('T')[0];
-  const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-  const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
-
-  viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-  const totalHeight = 24 * HOUR_HEIGHT;
-
-  let html = `<div class="day-time-grid">`;
-  html += `<div class="day-time-grid-inner">`;
-
-  // Columna de horas (con altura fija)
-  html += `<div class="day-time-column" style="height: ${totalHeight}px;">`;
-  for (let hour = 0; hour < 24; hour++) {
-    let label;
-    if (timeFormat === '12') {
-      const hour12 = hour % 12 || 12;
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
-    } else {
-      label = `${String(hour).padStart(2, '0')}:00`;
-    }
-    html += `<div class="day-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px;">${label}</div>`;
-  }
-  html += `</div>`;
-
-  // Columna de eventos (con altura fija)
-  html += `<div class="day-events-column" style="height: ${totalHeight}px; position: relative;">`;
-  for (let hour = 0; hour < 24; hour++) {
-    html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
-  }
-
-  // Línea roja (solo hoy)
-  const todayStr = new Date().toISOString().split('T')[0];
-  if (dateStr === todayStr) {
-    const now = new Date();
-    const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
-    const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
-    html += `
-      <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
-    `;
-  }
-
-  // Eventos con hora
-  if (timedEvents.length > 0) {
-    const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
-    const hourCounts = {};
-    sorted.forEach(e => {
-      const startHour = new Date(e.start).getHours();
-      if (!hourCounts[startHour]) hourCounts[startHour] = [];
-      hourCounts[startHour].push(e);
-    });
-    sorted.forEach(e => {
-      const start = new Date(e.start);
-      const end = new Date(e.end);
-      const startMinutes = start.getHours() * 60 + start.getMinutes();
-      const endMinutes = end.getHours() * 60 + end.getMinutes();
-      const duration = endMinutes - startMinutes;
-      const top = (startMinutes / (24 * 60)) * 100;
-      const height = (duration / (24 * 60)) * 100;
-
-      const hour = start.getHours();
-      const eventsInHour = hourCounts[hour] || [];
-      const index = eventsInHour.indexOf(e);
-      const totalInHour = eventsInHour.length;
-      const width = totalInHour > 1 ? 80 / totalInHour : 100;
-      const left = index * (80 / totalInHour);
-
-      const timeStr = formatTimeRange(start, end);
-
-      html += `
-        <div class="day-event-block" 
-             style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
-             data-id="${e.id}"
-             title="${e.title} (${timeStr})">
-          <span class="event-title-inline">${e.title}</span>
-        </div>
-      `;
-    });
-  }
-  html += `</div></div></div>`;
-
-  grid.innerHTML = html;
-
-  // Listeners
-  $$('.day-hour-slot').forEach(slot => {
-    slot.addEventListener('click', function() {
-      const hour = parseInt(this.dataset.hour);
-      const dateObj = new Date(currentDate);
-      dateObj.setHours(hour, 0, 0, 0);
-      openCreateModal(dateObj.toISOString().split('T')[0], hour);
-    });
-  });
-  $$('.day-event-block').forEach(el => {
-    el.addEventListener('click', function(e) {
-      e.stopPropagation();
-      openEditModal(parseInt(this.dataset.id));
-    });
-  });
-}
-// ========== VISTA SEMANA (Grid de 2 filas, alineación perfecta) ==========
-function renderWeekView() {
-  const startOfWeek = new Date(currentDate);
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(endOfWeek.getDate() + 6);
-
-  viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-
-  const totalHeight = 24 * HOUR_HEIGHT;
-  const colTemplate = `70px repeat(7, 1fr)`;
-
-  let html = `<div class="week-time-grid" style="display: grid; grid-template-columns: ${colTemplate}; grid-template-rows: auto 1fr; height: 100%; overflow: hidden;">`;
-
-  // ========== FILA 1: CABECERA ==========
-  // Usamos display: contents para que los hijos se coloquen directamente en el grid padre
-  html += `<div class="week-header" style="display: contents;">`;
-  // Celda vacía para la columna de horas
-  html += `<div class="week-header-empty" style="grid-column: 1; grid-row: 1;"></div>`;
-  // Días de la semana (columnas 2 a 8)
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(startOfWeek);
-    d.setDate(d.getDate() + i);
-    const isToday = d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
-    html += `<div class="week-header-day ${isToday ? 'today' : ''}" style="grid-column: ${i + 2}; grid-row: 1; border-left: 1px solid var(--calendar-border, #dee2e6);">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
-  }
-  html += `</div>`;
-
-  // ========== FILA 2: CUERPO (con scroll) ==========
-  html += `<div class="week-body-wrapper" style="grid-column: 1 / -1; grid-row: 2; overflow-y: auto; position: relative; background-color: var(--calendar-bg);">`;
-  // Grid interno que mantiene la misma estructura de columnas y altura fija
-  html += `<div class="week-body-grid" style="display: grid; grid-template-columns: ${colTemplate}; height: ${totalHeight}px;">`;
-
-  // Columna de horas (columna 1)
-  html += `<div class="week-hours-column" style="display: flex; flex-direction: column; height: 100%; border-right: 1px solid var(--slot-border, #dee2e6);">`;
-  for (let hour = 0; hour < 24; hour++) {
-    let label;
-    if (timeFormat === '12') {
-      const hour12 = hour % 12 || 12;
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
-    } else {
-      label = `${String(hour).padStart(2, '0')}:00`;
-    }
-    html += `<div class="week-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);">${label}</div>`;
-  }
-  html += `</div>`;
-
-  // Columnas de días (columnas 2 a 8)
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(startOfWeek);
-    d.setDate(d.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+  // ========== VISTA DÍA (con altura fija y scroll) ==========
+  function renderDayView() {
+    const date = currentDate;
+    const dateStr = date.toISOString().split('T')[0];
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
     const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
 
-    html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; height: 100%; display: flex; flex-direction: column; border-left: 1px solid var(--calendar-border, #dee2e6);">`;
-    // Slots horarios
+    viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    const totalHeight = 24 * HOUR_HEIGHT;
+
+    let html = `<div class="day-time-grid">`;
+    html += `<div class="day-time-grid-inner">`;
+
+    // Columna de horas
+    html += `<div class="day-time-column" style="height: ${totalHeight}px;">`;
     for (let hour = 0; hour < 24; hour++) {
-      html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
+      let label;
+      if (timeFormat === '12') {
+        const hour12 = hour % 12 || 12;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
+      } else {
+        label = `${String(hour).padStart(2, '0')}:00`;
+      }
+      html += `<div class="day-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px;">${label}</div>`;
     }
-    // Línea roja (solo en el día actual)
+    html += `</div>`;
+
+    // Columna de eventos
+    html += `<div class="day-events-column" style="height: ${totalHeight}px; position: relative;">`;
+    for (let hour = 0; hour < 24; hour++) {
+      html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
+    }
+
+    // Línea roja (hoy)
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateStr === todayStr) {
       const now = new Date();
@@ -491,7 +360,8 @@ function renderWeekView() {
         <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
       `;
     }
-    // Eventos con hora
+
+    // Eventos
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -519,7 +389,7 @@ function renderWeekView() {
         const timeStr = formatTimeRange(start, end);
 
         html += `
-          <div class="week-event-block" 
+          <div class="day-event-block" 
                style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
                data-id="${e.id}"
                title="${e.title} (${timeStr})">
@@ -528,33 +398,210 @@ function renderWeekView() {
         `;
       });
     }
-    html += `</div>`;
+    html += `</div></div></div>`;
+
+    grid.innerHTML = html;
+
+    $$('.day-hour-slot').forEach(slot => {
+      slot.addEventListener('click', function() {
+        const hour = parseInt(this.dataset.hour);
+        const dateObj = new Date(currentDate);
+        dateObj.setHours(hour, 0, 0, 0);
+        openCreateModal(dateObj.toISOString().split('T')[0], hour);
+      });
+    });
+    $$('.day-event-block').forEach(el => {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openEditModal(parseInt(this.dataset.id));
+      });
+    });
   }
 
-  html += `</div>`; // fin .week-body-grid
-  html += `</div>`; // fin .week-body-wrapper
-  html += `</div>`; // fin .week-time-grid
+  // ========== VISTA SEMANA (Grid de 2 filas, alineación perfecta) ==========
+  function renderWeekView() {
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
 
-  grid.innerHTML = html;
+    viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
-  // Listeners para slots horarios
-  $$('.week-hour-slot').forEach(slot => {
-    slot.addEventListener('click', function() {
-      const hour = parseInt(this.dataset.hour);
-      const dateStr = this.dataset.date;
-      openCreateModal(dateStr, hour);
+    const totalHeight = 24 * HOUR_HEIGHT;
+    const colTemplate = `70px repeat(7, 1fr)`;
+
+    let html = `<div class="week-time-grid" style="display: grid; grid-template-columns: ${colTemplate}; grid-template-rows: auto 1fr; height: 100%; overflow: hidden;">`;
+
+    // ========== FILA 1: CABECERA (display: contents) ==========
+    html += `<div class="week-header" style="display: contents;">`;
+    html += `<div class="week-header-empty" style="grid-column: 1; grid-row: 1;"></div>`;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const isToday = d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+      html += `<div class="week-header-day ${isToday ? 'today' : ''}" style="grid-column: ${i + 2}; grid-row: 1; border-left: 1px solid var(--calendar-border, #dee2e6);">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
+    }
+    html += `</div>`;
+
+    // ========== FILA 2: CUERPO (con scroll) ==========
+    html += `<div class="week-body-wrapper" style="grid-column: 1 / -1; grid-row: 2; overflow-y: auto; position: relative; background-color: var(--calendar-bg);">`;
+    html += `<div class="week-body-grid" style="display: grid; grid-template-columns: ${colTemplate}; height: ${totalHeight}px;">`;
+
+    // Columna de horas
+    html += `<div class="week-hours-column" style="display: flex; flex-direction: column; height: 100%; border-right: 1px solid var(--slot-border, #dee2e6);">`;
+    for (let hour = 0; hour < 24; hour++) {
+      let label;
+      if (timeFormat === '12') {
+        const hour12 = hour % 12 || 12;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
+      } else {
+        label = `${String(hour).padStart(2, '0')}:00`;
+      }
+      html += `<div class="week-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);">${label}</div>`;
+    }
+    html += `</div>`;
+
+    // Columnas de días (7)
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+      const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
+
+      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; height: 100%; display: flex; flex-direction: column; border-left: 1px solid var(--calendar-border, #dee2e6);">`;
+      // Slots
+      for (let hour = 0; hour < 24; hour++) {
+        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
+      }
+      // Línea roja (hoy)
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (dateStr === todayStr) {
+        const now = new Date();
+        const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+        const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
+        html += `
+          <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
+        `;
+      }
+      // Eventos
+      if (timedEvents.length > 0) {
+        const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
+        const hourCounts = {};
+        sorted.forEach(e => {
+          const startHour = new Date(e.start).getHours();
+          if (!hourCounts[startHour]) hourCounts[startHour] = [];
+          hourCounts[startHour].push(e);
+        });
+        sorted.forEach(e => {
+          const start = new Date(e.start);
+          const end = new Date(e.end);
+          const startMinutes = start.getHours() * 60 + start.getMinutes();
+          const endMinutes = end.getHours() * 60 + end.getMinutes();
+          const duration = endMinutes - startMinutes;
+          const top = (startMinutes / (24 * 60)) * 100;
+          const height = (duration / (24 * 60)) * 100;
+
+          const hour = start.getHours();
+          const eventsInHour = hourCounts[hour] || [];
+          const index = eventsInHour.indexOf(e);
+          const totalInHour = eventsInHour.length;
+          const width = totalInHour > 1 ? 80 / totalInHour : 100;
+          const left = index * (80 / totalInHour);
+
+          const timeStr = formatTimeRange(start, end);
+
+          html += `
+            <div class="week-event-block" 
+                 style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
+                 data-id="${e.id}"
+                 title="${e.title} (${timeStr})">
+              <span class="event-title-inline">${e.title}</span>
+            </div>
+          `;
+        });
+      }
+      html += `</div>`;
+    }
+
+    html += `</div>`; // fin week-body-grid
+    html += `</div>`; // fin week-body-wrapper
+    html += `</div>`; // fin week-time-grid
+
+    grid.innerHTML = html;
+
+    $$('.week-hour-slot').forEach(slot => {
+      slot.addEventListener('click', function() {
+        const hour = parseInt(this.dataset.hour);
+        const dateStr = this.dataset.date;
+        openCreateModal(dateStr, hour);
+      });
     });
-  });
-  // Listeners para eventos
-  $$('.week-event-block').forEach(el => {
-    el.addEventListener('click', function(e) {
-      e.stopPropagation();
-      openEditModal(parseInt(this.dataset.id));
+    $$('.week-event-block').forEach(el => {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openEditModal(parseInt(this.dataset.id));
+      });
     });
-  });
-}  // ========== VISTA AÑO ==========
+  }
+
+  // ========== VISTA MES ==========
+  function renderMonthView() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay();
+
+    viewTitle.textContent = `${firstDay.toLocaleString('es', { month: 'long' })} ${year}`;
+
+    let html = '<div class="calendar-weekdays">';
+    ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].forEach(d => html += `<div class="weekday">${d}</div>`);
+    html += '</div><div class="calendar-days">';
+
+    for (let i = 0; i < startDayOfWeek; i++) html += '<div class="day empty"></div>';
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateObj = new Date(year, month, day);
+      const dateStr = dateObj.toISOString().split('T')[0];
+      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+      const isToday = new Date().toISOString().split('T')[0] === dateStr;
+
+      html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
+      html += `<span class="day-number">${day}</span>`;
+      if (dayEvents.length > 0) {
+        html += `<div class="event-bars">`;
+        const maxBars = Math.min(dayEvents.length, 3);
+        for (let i = 0; i < maxBars; i++) {
+          const e = dayEvents[i];
+          html += `<div class="event-bar" style="background-color: ${e.color || '#3788d8'};"></div>`;
+        }
+        if (dayEvents.length > 3) html += `<div class="event-bar-more">+${dayEvents.length - 3}</div>`;
+        html += `</div>`;
+      }
+      html += '</div>';
+    }
+
+    const remaining = (7 - ((startDayOfWeek + daysInMonth) % 7)) % 7;
+    for (let i = 0; i < remaining; i++) html += '<div class="day empty"></div>';
+
+    html += '</div>';
+    grid.innerHTML = html;
+
+    $$('.day:not(.empty)').forEach(el => {
+      el.addEventListener('click', function() {
+        currentDate = new Date(this.dataset.date);
+        currentView = 'day';
+        updateViewButtons();
+        renderView();
+      });
+    });
+  }
+
+  // ========== VISTA AÑO ==========
   function renderYearView() {
-    // (sin cambios, igual que antes)
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
 
