@@ -613,6 +613,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
    RESPONSIVE (MÓVIL) - CORREGIDO DEFINITIVO
    ============================================================ */
 @media (max-width: 768px) {
+  /* Contenedor principal: ocupa toda la pantalla sin scroll */
   .container-fluid {
     height: 100vh;
     overflow: hidden;
@@ -625,6 +626,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     flex-direction: column;
   }
 
+  /* Sidebar: fijo, sin scroll */
   .sidebar {
     flex: 0 0 auto;
     overflow-y: visible;
@@ -661,16 +663,17 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     margin: 0.5rem 0;
   }
 
+  /* Calendario: ocupa el resto, solo scroll vertical aquí */
   .calendar-container {
     flex: 1;
     min-height: 0;
     padding: 10px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow-y: auto;      /* Scroll vertical solo aquí */
+    overflow-x: hidden;    /* Sin scroll horizontal */
     background-color: var(--bg-body);
   }
 
-  /* Ajustes de día y semana */
+  /* ========== Ajustes generales de vistas ========== */
   .day-time-column, .week-hours-column, .week-header-empty {
     width: 45px !important;
   }
@@ -697,7 +700,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   /* ========== VISTA AÑO CORREGIDA ========== */
   .year-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 columnas fijas */
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     padding: 8px;
   }
@@ -714,7 +717,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 
   .year-month-days {
     display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 7 columnas fijas para los días */
+    grid-template-columns: repeat(7, 1fr);
     gap: 2px;
     justify-items: center;
   }
@@ -759,7 +762,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     background: transparent;
   }
 
-  /* Botones de vista en móvil */
+  /* ========== Botones y navegación ========== */
   .calendar-container .btn-group {
     margin-left: 0;
     width: 100%;
@@ -781,13 +784,11 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     font-size: 1rem !important;
   }
 
+  /* ========== Modales ========== */
   .modal-dialog {
     margin: 0.5rem;
   }
   .modal-body .form-control-sm {
     font-size: 0.9rem;
   }
-}
-  .modal-dialog { margin: 0.5rem; }
-  .modal-body .form-control-sm { font-size: 0.9rem; }
 }
