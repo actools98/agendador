@@ -610,41 +610,60 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   RESPONSIVE (MÓVIL)
+   RESPONSIVE (MÓVIL) - CORREGIDO
    ============================================================ */
 @media (max-width: 768px) {
+  /* El contenedor padre debe ocupar toda la pantalla sin scroll */
+  .container-fluid {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* El row debe ocupar todo el espacio y no tener scroll */
+  .row {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Sidebar: fijo en la parte superior, sin scroll, se ajusta al contenido */
   .sidebar {
     height: auto !important;
-    max-height: 40vh;
+    max-height: none !important;
+    overflow-y: visible !important;
     border-right: none;
     border-bottom: 1px solid var(--sidebar-border);
-    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 0.75rem !important;
   }
+
+  /* Sidebar: compactar elementos */
+  .sidebar h4 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .sidebar .btn { font-size: 0.75rem; padding: 0.2rem 0.4rem; margin-bottom: 0.3rem; }
+  .sidebar .list-group-item { padding: 0.25rem 0.15rem; font-size: 0.75rem; }
+  .sidebar .text-muted { font-size: 0.7rem; }
+
+  /* Contenedor del calendario: ocupa el resto de la pantalla y tiene scroll */
   .calendar-container {
-    height: 60vh;
-    padding: 10px;
-  }
-  .calendar-container .btn-group {
-    margin-left: 0;
-    width: 100%;
-    justify-content: center;
-  }
-  .calendar-container .btn-group .btn {
     flex: 1;
-    font-size: 0.65rem;
-    padding: 0.25rem 0.3rem;
+    height: auto;
+    min-height: 0;
+    padding: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
+
+  /* Ajustes de las vistas dentro del calendario */
   .day-time-column, .week-hours-column, .week-header-empty {
     width: 40px !important;
   }
   .day-hour-label, .week-hour-label {
-    font-size: 0.65rem !important;
+    font-size: 0.6rem !important;
   }
   .day, .week-day-column {
     min-height: 40px !important;
   }
   .week-header-day {
-    font-size: 0.6rem !important;
+    font-size: 0.55rem !important;
     padding: 4px 0 !important;
   }
   .day-event-block, .week-event-block {
@@ -652,15 +671,34 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     padding: 1px 3px !important;
     min-height: 10px !important;
   }
+  .day-all-day-event, .week-all-day-event {
+    font-size: 0.55rem !important;
+    padding: 1px 4px !important;
+  }
+
   .year-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
     padding: 8px;
   }
-  .year-month { padding: 10px; }
+  .year-month { padding: 8px; }
   .year-month-days { gap: 2px; }
-  .year-day { font-size: 0.65rem; }
-  .year-day-number { font-size: 0.65rem; }
+  .year-day { width: 24px; height: 24px; font-size: 0.6rem; }
   .year-dot { width: 4px; height: 4px; }
+
+  /* Botones de vista en móvil: ocupan todo el ancho, centrados */
+  .calendar-container .btn-group {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+  .calendar-container .btn-group .btn {
+    flex: 1;
+    font-size: 0.6rem;
+    padding: 0.2rem 0.3rem;
+  }
+
+  /* Modales */
   .modal-dialog { margin: 0.5rem; }
+  .modal-body .form-control-sm { font-size: 0.8rem; }
 }
