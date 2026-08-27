@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const Categoria = require('../models/Categoria');
 const router = express.Router();
 
 const redirectIfLoggedIn = (req, res, next) => {
@@ -50,7 +51,9 @@ router.post('/register', redirectIfLoggedIn, async (req, res) => {
     return res.render('register', { error: 'El nombre de usuario ya está en uso' });
   }
   const hash = await bcrypt.hash(password, 10);
-  User.create(username, hash);
+  const userId = User.create(username, hash);
+  // Crear categorías por defecto para el nuevo usuario
+  Categoria.createDefaultCategories(userId);
   res.redirect('/login');
 });
 
