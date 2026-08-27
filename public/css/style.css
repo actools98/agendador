@@ -613,51 +613,64 @@ h1, h2, h3, h4, h5, h6, p, span, a {
    RESPONSIVE (MÓVIL) - CORREGIDO DEFINITIVO
    ============================================================ */
 @media (max-width: 768px) {
-  /* Contenedor principal: scroll natural de la página */
   .container-fluid {
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
+    height: 100vh;
+    overflow: hidden;
   }
 
   .row {
+    height: 100%;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    height: auto;
-    overflow: visible;
   }
 
-  /* Sidebar: ocupa su espacio natural, sin scroll interno */
   .sidebar {
     flex: 0 0 auto;
+    overflow-y: visible;
     height: auto;
     max-height: none;
-    overflow-y: visible;
     border-right: none;
     border-bottom: 1px solid var(--sidebar-border);
     padding: 0.75rem 1rem !important;
     background-color: var(--sidebar-bg);
   }
 
-  /* Contenedor del calendario: ocupa el espacio restante, sin scroll forzado */
+  .sidebar h4 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+  .sidebar .text-muted {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  .sidebar .btn {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.5rem;
+    margin-bottom: 0.3rem;
+    min-height: 44px;
+  }
+  .sidebar .list-group-item {
+    padding: 0.3rem 0.15rem;
+    font-size: 0.8rem;
+  }
+  .sidebar .list-group-item .event-title strong {
+    font-size: 0.85rem;
+  }
+  .sidebar hr {
+    margin: 0.5rem 0;
+  }
+
   .calendar-container {
     flex: 1;
     min-height: 0;
     padding: 10px;
-    overflow: visible; /* Sin scroll propio para que fluya con la página */
+    overflow-y: auto;
+    overflow-x: hidden;
     background-color: var(--bg-body);
   }
 
-  /* Vistas de día y semana: solo ellas tienen scroll interno */
-  .day-time-grid,
-  .week-time-grid,
-  .week-body-wrapper,
-  .day-time-grid-inner {
-    overflow-y: auto !important;
-    max-height: 70vh; /* Ajusta según necesidad, para que se vean las horas */
-  }
-
-  /* Ajustes de tamaño para móvil */
+  /* Ajustes de día y semana */
   .day-time-column, .week-hours-column, .week-header-empty {
     width: 45px !important;
   }
@@ -681,15 +694,70 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     padding: 2px 6px !important;
   }
 
+  /* ========== VISTA AÑO CORREGIDA ========== */
   .year-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 10px;
-    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas fijas */
+    gap: 8px;
+    padding: 8px;
   }
-  .year-month { padding: 10px; }
-  .year-month-days { gap: 3px; }
-  .year-day { width: 28px; height: 28px; font-size: 0.7rem; }
-  .year-dot { width: 5px; height: 5px; }
+
+  .year-month {
+    padding: 8px 6px;
+    border-radius: 6px;
+  }
+
+  .year-month-title {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+
+  .year-month-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7 columnas fijas para los días */
+    gap: 2px;
+    justify-items: center;
+  }
+
+  .year-day {
+    width: 100%;
+    aspect-ratio: 1/1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.55rem;
+    border-radius: 3px;
+    background-color: var(--bg-body);
+  }
+
+  .year-day-number {
+    font-size: 0.55rem;
+    line-height: 1;
+  }
+
+  .year-day-dots {
+    display: flex;
+    gap: 1px;
+    margin-top: 1px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .year-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+  }
+
+  .year-dot-more {
+    font-size: 0.4rem;
+    line-height: 1;
+  }
+
+  .year-day.empty {
+    background: transparent;
+  }
 
   /* Botones de vista en móvil */
   .calendar-container .btn-group {
@@ -713,6 +781,13 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     font-size: 1rem !important;
   }
 
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+  .modal-body .form-control-sm {
+    font-size: 0.9rem;
+  }
+}
   .modal-dialog { margin: 0.5rem; }
   .modal-body .form-control-sm { font-size: 0.9rem; }
 }
