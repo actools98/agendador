@@ -29,8 +29,20 @@ db.exec(`
     all_day INTEGER DEFAULT 0,
     color TEXT DEFAULT '#3788d8',
     status TEXT DEFAULT 'active',
+    categoria_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS categorias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    nombre TEXT NOT NULL,
+    color TEXT DEFAULT '#6c757d',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(usuario_id, nombre)
   );
 
   CREATE TABLE IF NOT EXISTS preferencias (
@@ -38,8 +50,6 @@ db.exec(`
     usuario_id INTEGER NOT NULL UNIQUE,
     tema TEXT DEFAULT 'claro' CHECK(tema IN ('claro', 'oscuro')),
     formato_hora TEXT DEFAULT '24' CHECK(formato_hora IN ('24', '12')),
-    work_start INTEGER DEFAULT 8,
-    work_end INTEGER DEFAULT 17,
     FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `);
@@ -50,6 +60,13 @@ const hasStatus = tableInfo.some(col => col.name === 'status');
 if (!hasStatus) {
   db.exec(`ALTER TABLE events ADD COLUMN status TEXT DEFAULT 'active';`);
   console.log('✅ Columna "status" añadida a la tabla events');
+}
+
+// Migración: añadir columna categoria_id si no existe
+const hasCategoriaId = tableInfo.some(col => col.name === 'categoria_id');
+if (!hasCategoriaId) {
+  db.exec(`ALTER TABLE events ADD COLUMN categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL;`);
+  console.log('✅ Columna "categoria_id" añadida a la tabla events');
 }
 
 module.exports = db;
