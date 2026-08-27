@@ -6,11 +6,11 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentView = 'month';
   let events = [];
   let finishedEvents = [];
+  let categorias = [];
 
   let timeFormat = '24';
   let tema = 'claro';
 
-  // Altura fija por hora (en píxeles) - 70px para vista elegante
   const HOUR_HEIGHT = 70;
 
   // ========== ELEMENTOS DOM ==========
@@ -25,15 +25,30 @@ document.addEventListener('DOMContentLoaded', function() {
   const newEventBtn = $('#newEventBtn');
   const settingsBtn = $('#settingsBtn');
   const toggleFinishedBtn = $('#toggleFinishedBtn');
+  const categoriasBtn = $('#categoriasBtn');
   const eventListEl = $('#eventList');
   const finishedListEl = $('#finishedEventsList');
 
+  // Modales
   const settingsModal = new bootstrap.Modal($('#settingsModal'));
+  const categoriasModal = new bootstrap.Modal($('#categoriasModal'));
+  const modalEvent = new bootstrap.Modal($('#eventModal'));
+
+  // Elementos configuración
   const timeFormatSelect = $('#timeFormatSelect');
   const themeSelect = $('#themeSelect');
   const saveSettingsBtn = $('#saveSettingsBtn');
 
-  const modalEvent = new bootstrap.Modal($('#eventModal'));
+  // Elementos categorías
+  const categoriasList = $('#categoriasList');
+  const categoriaForm = $('#categoriaForm');
+  const categoriaEditId = $('#categoriaEditId');
+  const categoriaNombre = $('#categoriaNombre');
+  const categoriaColor = $('#categoriaColor');
+  const categoriaSaveBtn = $('#categoriaSaveBtn');
+  const categoriaError = $('#categoriaError');
+
+  // Elementos evento
   const modalTitle = $('#modalTitle');
   const form = $('#eventForm');
   const eventIdInput = $('#eventId');
@@ -44,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const allDayInput = $('#allDay');
   const colorInput = $('#color');
   const statusSelect = $('#eventStatus');
+  const eventCategoria = $('#eventCategoria');
   const saveBtn = $('#saveEventBtn');
   const deleteBtn = $('#deleteEventBtn');
 
@@ -75,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== CARGAR PREFERENCIAS ==========
+  // ========== PREFERENCIAS ==========
   async function loadPreferences() {
     try {
       const res = await fetch('/api/preferencias');
@@ -92,7 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== GUARDAR PREFERENCIAS ==========
   async function savePreferences() {
     const payload = {
       tema: themeSelect.value,
@@ -117,7 +132,147 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== CARGAR EVENTOS ==========
+  // ========== CATEGORÍAS ==========
+  async function loadCategorias() {
+    try {
+      const res = await fetch('/api/categorias');
+      if (!res.ok) throw new Error('Error al cargar categorías');
+      categorias = await res.json();
+      // Actualizar selector en el modal de evento
+      populateCategoriaSelect();
+      // Si el modal de categorías está abierto, actualizar lista
+      if (categoriasModal._element.classList.contains('show')) {
+        renderCategoriasList();
+      }
+    } catch (error) {
+      console.error('Error cargando categorías:', error);
+    }
+  }
+
+  function populateCategoriaSelect() {
+    const select = eventCategoria;
+    select.innerHTML = '<option value="">Sin categoría</option>';
+    categorias.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat.id;
+      option.textContent = cat.nombre;
+      option.style.backgroundColor = cat.color || '#6c757d';
+      option.style.color = '#fff';
+      select.appendChild(option);
+    });
+  }
+
+  function renderCategoriasList() {
+    if (!categoriasList) return;
+    if (categorias.length === 0) {
+      categoriasList.innerHTML = '<div class="text-muted small p-2">No hay categorías</div>';
+      return;
+    }
+    let html = '';
+    categorias.forEach(cat => {
+      html += `
+        <div class="list-group-item d-flex justify-content-between align-items-center" data-id="${cat.id}">
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span style="display:inline-block; width:16px; height:16px; border-radius:4px; background-color:${cat.color || '#6c757d'};"></span>
+            <strong>${cat.nombre}</strong>
+          </span>
+          <span>
+            <button class="btn btn-sm btn-outline-secondary edit-categoria" data-id="${cat.id}" title="Editar">✏️</button>
+            <button class="btn btn-sm btn-outline-danger delete-categoria" data-id="${cat.id}" title="Eliminar">🗑️</button>
+          </span>
+        </div>
+      `;
+    });
+    categoriasList.innerHTML = html;
+
+    // Listeners
+    $$('.edit-categoria', categoriasList).forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const id = parseInt(this.dataset.id);
+        const cat = categorias.find(c => c.id === id);
+        if (cat) {
+          categoriaEditId.value = cat.id;
+          categoriaNombre.value = cat.nombre;
+          categoriaColor.value = cat.color || '#6c757d';
+          categoriaSaveBtn.textContent = 'Actualizar';
+          categoriaError.style.display = 'none';
+        }
+      });
+    });
+
+    $$('.delete-categoria', categoriasList).forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const id = parseInt(this.dataset.id);
+        if (confirm('¿Eliminar esta categoría? Los eventos que la usen quedarán sin categoría.')) {
+          deleteCategoria(id);
+        }
+      });
+    });
+  }
+
+  async function saveCategoria(e) {
+    e.preventDefault();
+    const id = categoriaEditId.value;
+    const nombre = categoriaNombre.value.trim();
+    const color = categoriaColor.value;
+
+    if (!nombre) {
+      categoriaError.textContent = 'El nombre es obligatorio.';
+      categoriaError.style.display = 'block';
+      return;
+    }
+
+    const payload = { nombre, color };
+    const url = id ? `/api/categorias/${id}` : '/api/categorias';
+    const method = id ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        categoriaEditId.value = '';
+        categoriaNombre.value = '';
+        categoriaColor.value = '#6c757d';
+        categoriaSaveBtn.textContent = 'Guardar';
+        categoriaError.style.display = 'none';
+        await loadCategorias();
+        renderCategoriasList();
+      } else {
+        const err = await res.json();
+        categoriaError.textContent = err.error || 'Error al guardar';
+        categoriaError.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('Error guardando categoría:', error);
+      categoriaError.textContent = 'Error de conexión';
+      categoriaError.style.display = 'block';
+    }
+  }
+
+  async function deleteCategoria(id) {
+    try {
+      const res = await fetch(`/api/categorias/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await loadCategorias();
+        renderCategoriasList();
+        // Recargar eventos para actualizar los colores si se usaba la categoría
+        loadEventsFromServer();
+      } else {
+        const err = await res.json();
+        alert('Error al eliminar: ' + (err.error || 'desconocido'));
+      }
+    } catch (error) {
+      console.error('Error eliminando categoría:', error);
+      alert('Error al eliminar');
+    }
+  }
+
+  // ========== EVENTOS ==========
   async function loadEventsFromServer() {
     try {
       const res = await fetch('/api/events');
@@ -133,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== RENDER LISTA DE EVENTOS ACTIVOS ==========
+  // ========== RENDER LISTAS ==========
   function renderEventList() {
     if (!eventListEl) return;
     if (events.length === 0) {
@@ -146,9 +301,10 @@ document.addEventListener('DOMContentLoaded', function() {
       const startDate = new Date(ev.start);
       const dateStr = startDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
       const timeStr = formatTime(startDate);
+      const color = ev.color || '#3788d8';
       html += `
         <div class="list-group-item" data-id="${ev.id}">
-          <span class="event-title" style="border-left: 4px solid ${ev.color || '#3788d8'}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
+          <span class="event-title" style="border-left: 4px solid ${color}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
             <strong>${ev.title}</strong><br>
             <small class="text-muted">${dateStr} ${timeStr}</small>
           </span>
@@ -181,7 +337,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== RENDER LISTA DE EVENTOS TERMINADOS ==========
   function renderFinishedList() {
     if (!finishedListEl) return;
     if (finishedEvents.length === 0) {
@@ -199,9 +354,10 @@ document.addEventListener('DOMContentLoaded', function() {
         'postponed': '⏳ Pospuesto',
         'cancelled': '❌ Cancelado'
       }[ev.status] || ev.status;
+      const color = ev.color || '#3788d8';
       html += `
         <div class="list-group-item" data-id="${ev.id}" style="opacity:0.7;">
-          <span class="event-title" style="border-left: 4px solid ${ev.color || '#3788d8'}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
+          <span class="event-title" style="border-left: 4px solid ${color}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
             <strong>${ev.title}</strong><br>
             <small class="text-muted">${dateStr} ${timeStr} - ${statusLabel}</small>
           </span>
@@ -250,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== ACTUALIZAR LÍNEA ROJA ==========
+  // ========== LÍNEA ROJA ==========
   let redLineInterval = null;
 
   function startRedLineUpdater() {
@@ -293,7 +449,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let html = `<div class="day-time-grid">`;
     html += `<div class="day-time-grid-inner">`;
 
-    // Columna de horas
     html += `<div class="day-time-column" style="height: ${totalHeight}px;">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -308,13 +463,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    // Columna de eventos
     html += `<div class="day-events-column" style="height: ${totalHeight}px; position: relative;">`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
     }
 
-    // Línea roja (hoy)
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateStr === todayStr) {
       const now = new Date();
@@ -325,7 +478,6 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
     }
 
-    // Eventos
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -382,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA (con tabla y cabecera fija) ==========
+  // ========== VISTA SEMANA ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -391,13 +543,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
-    const totalHeight = 24 * HOUR_HEIGHT;
-
     let html = `<div class="week-container">`;
     html += `<div class="week-table-scroll">`;
     html += `<table class="week-table">`;
     
-    // Cabecera
     html += `<thead>`;
     html += `<tr>`;
     html += `<th class="week-header-empty"></th>`;
@@ -410,11 +559,9 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</tr>`;
     html += `</thead>`;
     
-    // Cuerpo
     html += `<tbody>`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<tr>`;
-      // Celda de hora
       let label;
       if (timeFormat === '12') {
         const hour12 = hour % 12 || 12;
@@ -425,7 +572,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       html += `<td class="week-hour-label" data-hour="${hour}">${label}</td>`;
 
-      // Celdas de días (7 columnas)
       for (let i = 0; i < 7; i++) {
         const d = new Date(startOfWeek);
         d.setDate(d.getDate() + i);
@@ -437,7 +583,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         html += `<td class="week-day-cell" data-date="${dateStr}" data-hour="${hour}">`;
         
-        // Línea roja (solo en el día y hora actual)
         const todayStr = new Date().toISOString().split('T')[0];
         if (dateStr === todayStr) {
           const now = new Date();
@@ -451,7 +596,6 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }
 
-        // Eventos
         if (eventsAtThisHour.length > 0) {
           const sorted = eventsAtThisHour.sort((a, b) => new Date(a.start) - new Date(b.start));
           const total = sorted.length;
@@ -489,7 +633,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
-    // Listeners
     $$('.week-day-cell').forEach(cell => {
       cell.addEventListener('click', function(e) {
         if (e.target.closest('.week-event-block')) return;
@@ -626,7 +769,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== MODAL: CREAR / EDITAR ==========
+  // ========== MODAL EVENTO ==========
   function openCreateModal(dateStr, hour) {
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
@@ -658,6 +801,7 @@ document.addEventListener('DOMContentLoaded', function() {
       endInput.value = formatLocal(later);
     }
     allDayInput.checked = false;
+    eventCategoria.value = '';
     modalEvent.show();
   }
 
@@ -683,6 +827,7 @@ document.addEventListener('DOMContentLoaded', function() {
       allDayInput.checked = ev.all_day === 1;
       colorInput.value = ev.color || '#3788d8';
       statusSelect.value = ev.status || 'active';
+      eventCategoria.value = ev.categoria_id || '';
       deleteBtn.style.display = 'inline-block';
       currentEventId = ev.id;
       modalEvent.show();
@@ -700,13 +845,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const allDay = allDayInput.checked;
     const color = colorInput.value;
     const status = statusSelect.value;
+    const categoria_id = eventCategoria.value || null;
 
     if (!title || !start || !end) {
       alert('Título, inicio y fin son obligatorios');
       return;
     }
 
-    const payload = { title, description, start, end, allDay, color, status };
+    const payload = { title, description, start, end, allDay, color, status, categoria_id };
 
     try {
       const url = id ? `/api/events/${id}` : '/api/events';
@@ -788,14 +934,28 @@ document.addEventListener('DOMContentLoaded', function() {
   viewBtns.forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
   newEventBtn.addEventListener('click', () => openCreateModal(null));
 
+  // Configuración
   settingsBtn.addEventListener('click', function() {
     timeFormatSelect.value = timeFormat;
     themeSelect.value = tema;
     settingsModal.show();
   });
-
   saveSettingsBtn.addEventListener('click', savePreferences);
 
+  // Categorías
+  categoriasBtn.addEventListener('click', function() {
+    loadCategorias().then(() => {
+      renderCategoriasList();
+      categoriaForm.reset();
+      categoriaEditId.value = '';
+      categoriaSaveBtn.textContent = 'Guardar';
+      categoriaError.style.display = 'none';
+      categoriasModal.show();
+    });
+  });
+  categoriaForm.addEventListener('submit', saveCategoria);
+
+  // Eventos
   saveBtn.addEventListener('click', saveEvent);
   deleteBtn.addEventListener('click', function() {
     if (currentEventId && confirm('¿Eliminar este evento?')) deleteEvent(currentEventId);
@@ -808,6 +968,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ========== INICIO ==========
   loadPreferences().then(() => {
-    loadEventsFromServer();
+    loadCategorias().then(() => {
+      loadEventsFromServer();
+    });
   });
 });
