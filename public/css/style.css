@@ -247,16 +247,23 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA SEMANA (con TABLA)
+   VISTA SEMANA (con tabla y cabecera fija)
    ============================================================ */
-.week-table-wrapper {
+.week-container {
   flex: 1;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   background-color: var(--calendar-bg);
   border-radius: 8px;
   border: 1px solid var(--calendar-border);
+  overflow: hidden;
+}
+
+.week-table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .week-table {
@@ -265,40 +272,23 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   table-layout: fixed;
 }
 
+/* Cabecera fija */
 .week-table thead {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
-.week-table tbody {
-  display: block;
-  overflow-y: auto;
-  max-height: calc(100vh - 220px); /* Ajusta según tu layout */
-  width: 100%;
+.week-table thead tr {
+  background-color: var(--header-bg);
 }
 
-.week-table tbody tr {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
-}
-
-.week-table th,
-.week-table td {
-  border: none;
-  padding: 0;
-  text-align: center;
-  vertical-align: middle;
-  box-sizing: border-box;
-}
-
-/* Cabecera */
 .week-header-empty {
   width: 70px;
   min-width: 70px;
   max-width: 70px;
   border-right: 1px solid var(--calendar-border);
+  border-bottom: 2px solid var(--calendar-border);
   background-color: var(--header-bg);
 }
 
@@ -309,45 +299,49 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   color: var(--text-body);
   border-bottom: 2px solid var(--calendar-border);
   border-left: 1px solid var(--calendar-border);
+  text-align: center;
 }
 
 .week-header-day.today {
   color: var(--today-border);
 }
 
-/* Columnas de días */
-.week-day-cell {
-  height: 70px; /* Se sobreescribe inline con HOUR_HEIGHT */
+/* Cuerpo */
+.week-table tbody tr {
   border-bottom: 1px solid var(--slot-border);
+}
+
+.week-hour-label {
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
+  height: 70px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 0.8rem;
+  color: var(--header-text);
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--slot-border);
+  box-sizing: border-box;
+}
+
+.week-day-cell {
+  height: 70px;
+  padding: 0;
+  position: relative;
   border-left: 1px solid var(--calendar-border);
   cursor: pointer;
   transition: background 0.2s;
-  position: relative;
   background-color: var(--calendar-bg);
+  vertical-align: top;
 }
 
 .week-day-cell:hover {
   background-color: var(--slot-hover);
 }
 
-/* Columna de horas */
-.week-hour-label {
-  width: 70px;
-  min-width: 70px;
-  max-width: 70px;
-  height: 70px;
-  border-bottom: 1px solid var(--slot-border);
-  border-right: 1px solid var(--slot-border);
-  font-size: 0.8rem;
-  color: var(--header-text);
-  background-color: var(--sidebar-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-
-/* Eventos dentro de celdas */
+/* Eventos */
 .week-event-block {
   position: absolute;
   border-radius: 4px;
@@ -378,8 +372,13 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 
 /* Línea roja */
 .current-time-line {
-  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: red;
   z-index: 10;
+  pointer-events: none;
   box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
 }
 /* ============================================================
