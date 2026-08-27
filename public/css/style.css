@@ -613,40 +613,106 @@ h1, h2, h3, h4, h5, h6, p, span, a {
    RESPONSIVE (MÓVIL) - CORREGIDO DEFINITIVO
    ============================================================ */
 @media (max-width: 768px) {
-  /* Contenedor principal: ocupa toda la pantalla, sin scroll global */
+  /* Contenedor principal: scroll natural de la página */
   .container-fluid {
-    height: 100vh;
-    overflow: hidden;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .row {
-    height: 100%;
-    overflow: hidden;
     display: flex;
-    flex-direction: column; /* sidebar arriba, calendario abajo */
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
   }
 
-  /* Sidebar: fijo, sin scroll, se ajusta al contenido */
+  /* Sidebar: ocupa su espacio natural, sin scroll interno */
   .sidebar {
-    flex: 0 0 auto;      /* No crece ni encoge, se ajusta a su contenido */
-    overflow-y: visible;  /* Sin scroll interno */
+    flex: 0 0 auto;
     height: auto;
     max-height: none;
+    overflow-y: visible;
     border-right: none;
     border-bottom: 1px solid var(--sidebar-border);
     padding: 0.75rem 1rem !important;
     background-color: var(--sidebar-bg);
   }
 
-  /* Calendario: ocupa el resto y tiene scroll vertical */
+  /* Contenedor del calendario: ocupa el espacio restante, sin scroll forzado */
   .calendar-container {
-    flex: 1;              /* Ocupa todo el espacio restante */
-    min-height: 0;        /* Necesario para que flex funcione */
-    overflow-y: auto;     /* Solo aquí hay scroll */
-    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
     padding: 10px;
+    overflow: visible; /* Sin scroll propio para que fluya con la página */
     background-color: var(--bg-body);
   }
 
-  /* El resto de ajustes de tamaño (fuentes, padding, etc.) ... */
+  /* Vistas de día y semana: solo ellas tienen scroll interno */
+  .day-time-grid,
+  .week-time-grid,
+  .week-body-wrapper,
+  .day-time-grid-inner {
+    overflow-y: auto !important;
+    max-height: 70vh; /* Ajusta según necesidad, para que se vean las horas */
+  }
+
+  /* Ajustes de tamaño para móvil */
+  .day-time-column, .week-hours-column, .week-header-empty {
+    width: 45px !important;
+  }
+  .day-hour-label, .week-hour-label {
+    font-size: 0.7rem !important;
+  }
+  .day, .week-day-column {
+    min-height: 50px !important;
+  }
+  .week-header-day {
+    font-size: 0.65rem !important;
+    padding: 6px 0 !important;
+  }
+  .day-event-block, .week-event-block {
+    font-size: 0.6rem !important;
+    padding: 2px 4px !important;
+    min-height: 14px !important;
+  }
+  .day-all-day-event, .week-all-day-event {
+    font-size: 0.6rem !important;
+    padding: 2px 6px !important;
+  }
+
+  .year-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    padding: 10px;
+  }
+  .year-month { padding: 10px; }
+  .year-month-days { gap: 3px; }
+  .year-day { width: 28px; height: 28px; font-size: 0.7rem; }
+  .year-dot { width: 5px; height: 5px; }
+
+  /* Botones de vista en móvil */
+  .calendar-container .btn-group {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+  .calendar-container .btn-group .btn {
+    flex: 1;
+    font-size: 0.7rem;
+    padding: 0.3rem 0.4rem;
+    min-height: 40px;
+  }
+
+  .calendar-container .btn-secondary {
+    font-size: 1.2rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  #viewTitle {
+    font-size: 1rem !important;
+  }
+
+  .modal-dialog { margin: 0.5rem; }
+  .modal-body .form-control-sm { font-size: 0.9rem; }
 }
