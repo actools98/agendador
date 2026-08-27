@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA (con alineación perfecta de bordes) ==========
+  // ========== VISTA SEMANA (CON ALINEACIÓN PERFECTA DE BORDES) ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -434,14 +434,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== FILA 1: CABECERA ==========
     html += `<div class="week-header" style="display: contents;">`;
-    html += `<div class="week-header-empty" style="grid-column: 1; grid-row: 1;"></div>`;
+    // Celda vacía (columna de horas) – AÑADIMOS BORDE DERECHO para igualar con el cuerpo
+    html += `<div class="week-header-empty" style="grid-column: 1; grid-row: 1; border-right: 1px solid var(--calendar-border, #dee2e6);"></div>`;
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
       const isToday = d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
-      // El primer día (i===0) no tiene borde izquierdo
-      const borderLeft = i === 0 ? 'none' : '1px solid var(--calendar-border, #dee2e6)';
-      html += `<div class="week-header-day ${isToday ? 'today' : ''}" style="grid-column: ${i + 2}; grid-row: 1; border-left: ${borderLeft};">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
+      // TODOS los días tienen borde izquierdo (incluido el primero)
+      html += `<div class="week-header-day ${isToday ? 'today' : ''}" style="grid-column: ${i + 2}; grid-row: 1; border-left: 1px solid var(--calendar-border, #dee2e6);">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
     }
     html += `</div>`;
 
@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `<div class="week-body-wrapper" style="grid-column: 1 / -1; grid-row: 2; overflow-y: auto; position: relative; background-color: var(--calendar-bg);">`;
     html += `<div class="week-body-grid" style="display: grid; grid-template-columns: ${colTemplate}; height: ${totalHeight}px;">`;
 
-    // Columna de horas
+    // Columna de horas (con borde derecho)
     html += `<div class="week-hours-column" style="display: flex; flex-direction: column; height: 100%; border-right: 1px solid var(--slot-border, #dee2e6);">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    // Columnas de días (7)
+    // Columnas de días (7) – TODOS con borde izquierdo
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
@@ -472,9 +472,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
 
-      // El primer día (i===0) no tiene borde izquierdo
-      const borderLeft = i === 0 ? 'none' : '1px solid var(--calendar-border, #dee2e6)';
-      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; height: 100%; display: flex; flex-direction: column; border-left: ${borderLeft};">`;
+      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; height: 100%; display: flex; flex-direction: column; border-left: 1px solid var(--calendar-border, #dee2e6);">`;
       for (let hour = 0; hour < 24; hour++) {
         html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
       }
