@@ -610,10 +610,9 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   RESPONSIVE (MÓVIL) - CORREGIDO DEFINITIVO
+   RESPONSIVE (MÓVIL) - VERSIÓN PREVIA (todo funcionaba)
    ============================================================ */
 @media (max-width: 768px) {
-  /* Contenedor principal: ocupa toda la pantalla sin scroll */
   .container-fluid {
     height: 100vh;
     overflow: hidden;
@@ -626,12 +625,12 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     flex-direction: column;
   }
 
-  /* Sidebar: fijo, sin scroll */
+  /* Sidebar: ocupa la parte superior, CON SCROLL INTERNO */
   .sidebar {
-    flex: 0 0 auto;
-    overflow-y: visible;
+    flex: 0 0 45%;
+    overflow-y: auto;
     height: auto;
-    max-height: none;
+    max-height: 45vh;
     border-right: none;
     border-bottom: 1px solid var(--sidebar-border);
     padding: 0.75rem 1rem !important;
@@ -663,17 +662,17 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     margin: 0.5rem 0;
   }
 
-  /* Calendario: ocupa el resto, solo scroll vertical aquí */
+  /* Calendario: ocupa el resto, CON SCROLL INTERNO */
   .calendar-container {
     flex: 1;
     min-height: 0;
     padding: 10px;
-    overflow-y: auto;      /* Scroll vertical solo aquí */
-    overflow-x: hidden;    /* Sin scroll horizontal */
+    overflow-y: auto;
+    overflow-x: hidden;
     background-color: var(--bg-body);
   }
 
-  /* ========== Ajustes generales de vistas ========== */
+  /* Ajustes de día y semana */
   .day-time-column, .week-hours-column, .week-header-empty {
     width: 45px !important;
   }
@@ -697,7 +696,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     padding: 2px 6px !important;
   }
 
-  /* ========== VISTA AÑO CORREGIDA ========== */
+  /* VISTA AÑO - CORREGIDA (esto es lo que había que arreglar) */
   .year-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -762,7 +761,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     background: transparent;
   }
 
-  /* ========== Botones y navegación ========== */
+  /* Botones de vista en móvil */
   .calendar-container .btn-group {
     margin-left: 0;
     width: 100%;
@@ -784,7 +783,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     font-size: 1rem !important;
   }
 
-  /* ========== Modales ========== */
   .modal-dialog {
     margin: 0.5rem;
   }
