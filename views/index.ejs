@@ -107,7 +107,7 @@
   </div>
 </div>
 
-<!-- ========== MODAL DE CONFIGURACIÓN ========== -->
+<!-- ========== MODAL DE CONFIGURACIÓN (sin franja horaria) ========== -->
 <div class="modal fade" id="settingsModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
@@ -134,22 +134,7 @@
           </select>
         </div>
 
-        <hr class="border-secondary" />
-
-        <!-- Franja horaria laboral -->
-        <div class="mb-2">
-          <label class="form-label small">Franja horaria laboral</label>
-          <div class="row g-2">
-            <div class="col-6">
-              <label for="workStart" class="form-label small">Inicio</label>
-              <input type="number" id="workStart" class="form-control form-control-sm" min="0" max="23" value="8" />
-            </div>
-            <div class="col-6">
-              <label for="workEnd" class="form-label small">Fin</label>
-              <input type="number" id="workEnd" class="form-control form-control-sm" min="0" max="23" value="17" />
-            </div>
-          </div>
-        </div>
+        <!-- (Ya no hay franja horaria) -->
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
