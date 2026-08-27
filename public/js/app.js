@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let timeFormat = '24';
   let tema = 'claro';
 
-  // Altura fija por hora (en píxeles)
+  // Altura fija por hora (en píxeles) - 70px para vista elegante
   const HOUR_HEIGHT = 70;
 
   // ========== ELEMENTOS DOM ==========
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA SEMANA ==========
+  // ========== VISTA SEMANA (con tabla y cabecera fija) ==========
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -392,28 +392,29 @@ document.addEventListener('DOMContentLoaded', function() {
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
     const totalHeight = 24 * HOUR_HEIGHT;
-    const colTemplate = `70px repeat(7, 1fr)`;
 
-    let html = `<div class="week-time-grid" style="display: grid; grid-template-columns: ${colTemplate}; grid-template-rows: auto 1fr; height: 100%; overflow: hidden;">`;
-
-    // CABECERA
-    html += `<div class="week-header" style="display: contents;">`;
-    html += `<div class="week-header-empty" style="grid-column: 1; grid-row: 1; border-right: 1px solid var(--calendar-border, #dee2e6);"></div>`;
+    let html = `<div class="week-container">`;
+    html += `<div class="week-table-scroll">`;
+    html += `<table class="week-table">`;
+    
+    // Cabecera
+    html += `<thead>`;
+    html += `<tr>`;
+    html += `<th class="week-header-empty"></th>`;
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
       const isToday = d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
-      html += `<div class="week-header-day ${isToday ? 'today' : ''}" style="grid-column: ${i + 2}; grid-row: 1; border-left: 1px solid var(--calendar-border, #dee2e6);">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>`;
+      html += `<th class="week-header-day ${isToday ? 'today' : ''}">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</th>`;
     }
-    html += `</div>`;
-
-    // CUERPO
-    html += `<div class="week-body-wrapper" style="grid-column: 1 / -1; grid-row: 2; overflow-y: auto; position: relative; background-color: var(--calendar-bg);">`;
-    html += `<div class="week-body-grid" style="display: grid; grid-template-columns: ${colTemplate}; height: ${totalHeight}px;">`;
-
-    // Columna horas
-    html += `<div class="week-hours-column" style="display: flex; flex-direction: column; height: 100%; border-right: 1px solid var(--slot-border, #dee2e6);">`;
+    html += `</tr>`;
+    html += `</thead>`;
+    
+    // Cuerpo
+    html += `<tbody>`;
     for (let hour = 0; hour < 24; hour++) {
+      html += `<tr>`;
+      // Celda de hora
       let label;
       if (timeFormat === '12') {
         const hour12 = hour % 12 || 12;
@@ -422,85 +423,82 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         label = `${String(hour).padStart(2, '0')}:00`;
       }
-      html += `<div class="week-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);">${label}</div>`;
+      html += `<td class="week-hour-label" data-hour="${hour}">${label}</td>`;
+
+      // Celdas de días (7 columnas)
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(startOfWeek);
+        d.setDate(d.getDate() + i);
+        const dateStr = d.toISOString().split('T')[0];
+        const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+        const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
+
+        const eventsAtThisHour = timedEvents.filter(e => new Date(e.start).getHours() === hour);
+
+        html += `<td class="week-day-cell" data-date="${dateStr}" data-hour="${hour}">`;
+        
+        // Línea roja (solo en el día y hora actual)
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (dateStr === todayStr) {
+          const now = new Date();
+          const currentHour = now.getHours();
+          const currentMinute = now.getMinutes();
+          if (hour === currentHour) {
+            const topPercent = (currentMinute / 60) * 100;
+            html += `
+              <div class="current-time-line" style="top: ${Math.min(100, topPercent)}%;"></div>
+            `;
+          }
+        }
+
+        // Eventos
+        if (eventsAtThisHour.length > 0) {
+          const sorted = eventsAtThisHour.sort((a, b) => new Date(a.start) - new Date(b.start));
+          const total = sorted.length;
+          sorted.forEach((e, index) => {
+            const start = new Date(e.start);
+            const end = new Date(e.end);
+            const startMin = start.getMinutes();
+            const endMin = end.getMinutes();
+            const duration = endMin - startMin;
+            const top = (startMin / 60) * 100;
+            const height = (duration / 60) * 100;
+            const width = total > 1 ? 80 / total : 100;
+            const left = index * (80 / total);
+            const timeStr = formatTimeRange(start, end);
+
+            html += `
+              <div class="week-event-block" 
+                   style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
+                   data-id="${e.id}"
+                   title="${e.title} (${timeStr})">
+                <span class="event-title-inline">${e.title}</span>
+              </div>
+            `;
+          });
+        }
+        html += `</td>`;
+      }
+      html += `</tr>`;
     }
-    html += `</div>`;
-
-    // Días
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(startOfWeek);
-      d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-      const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
-
-      html += `<div class="week-day-column" data-date="${dateStr}" style="position: relative; height: 100%; display: flex; flex-direction: column; border-left: 1px solid var(--calendar-border, #dee2e6);">`;
-      for (let hour = 0; hour < 24; hour++) {
-        html += `<div class="week-hour-slot" data-hour="${hour}" data-date="${dateStr}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
-      }
-      // Línea roja
-      const todayStr = new Date().toISOString().split('T')[0];
-      if (dateStr === todayStr) {
-        const now = new Date();
-        const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
-        const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
-        html += `
-          <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
-        `;
-      }
-      // Eventos
-      if (timedEvents.length > 0) {
-        const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
-        const hourCounts = {};
-        sorted.forEach(e => {
-          const startHour = new Date(e.start).getHours();
-          if (!hourCounts[startHour]) hourCounts[startHour] = [];
-          hourCounts[startHour].push(e);
-        });
-        sorted.forEach(e => {
-          const start = new Date(e.start);
-          const end = new Date(e.end);
-          const startMinutes = start.getHours() * 60 + start.getMinutes();
-          const endMinutes = end.getHours() * 60 + end.getMinutes();
-          const duration = endMinutes - startMinutes;
-          const top = (startMinutes / (24 * 60)) * 100;
-          const height = (duration / (24 * 60)) * 100;
-
-          const hour = start.getHours();
-          const eventsInHour = hourCounts[hour] || [];
-          const index = eventsInHour.indexOf(e);
-          const totalInHour = eventsInHour.length;
-          const width = totalInHour > 1 ? 80 / totalInHour : 100;
-          const left = index * (80 / totalInHour);
-
-          const timeStr = formatTimeRange(start, end);
-
-          html += `
-            <div class="week-event-block" 
-                 style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
-                 data-id="${e.id}"
-                 title="${e.title} (${timeStr})">
-              <span class="event-title-inline">${e.title}</span>
-            </div>
-          `;
-        });
-      }
-      html += `</div>`;
-    }
-
-    html += `</div>`;
+    html += `</tbody>`;
+    
+    html += `</table>`;
     html += `</div>`;
     html += `</div>`;
 
     grid.innerHTML = html;
 
-    $$('.week-hour-slot').forEach(slot => {
-      slot.addEventListener('click', function() {
+    // Listeners
+    $$('.week-day-cell').forEach(cell => {
+      cell.addEventListener('click', function(e) {
+        if (e.target.closest('.week-event-block')) return;
         const hour = parseInt(this.dataset.hour);
         const dateStr = this.dataset.date;
         openCreateModal(dateStr, hour);
       });
     });
+
     $$('.week-event-block').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
