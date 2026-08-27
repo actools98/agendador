@@ -168,7 +168,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA DÍA (con altura fija y scroll)
+   VISTA DÍA
    ============================================================ */
 .day-time-grid {
   flex: 1;
@@ -247,7 +247,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA SEMANA (Grid de 2 filas, alineación perfecta)
+   VISTA SEMANA (con alineación perfecta de bordes)
    ============================================================ */
 .week-time-grid {
   height: 100%;
@@ -306,9 +306,9 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 .week-day-column {
   position: relative;
   background: var(--calendar-bg);
-  border-left: 1px solid var(--calendar-border);
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .week-hour-slot {
