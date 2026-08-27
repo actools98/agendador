@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-// ========== VISTA SEMANA (con TABLA para alineación perfecta) ==========
+// ========== VISTA SEMANA (con tabla y cabecera fija) ==========
 function renderWeekView() {
   const startOfWeek = new Date(currentDate);
   startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -429,15 +429,16 @@ function renderWeekView() {
 
   const totalHeight = 24 * HOUR_HEIGHT;
 
-  let html = `<div class="week-table-wrapper">`;
+  let html = `<div class="week-container">`;
+  
+  // --- Contenedor de la tabla con scroll ---
+  html += `<div class="week-table-scroll">`;
   html += `<table class="week-table">`;
-
-  // ========== CABECERA ==========
+  
+  // --- CABECERA (fija) ---
   html += `<thead>`;
   html += `<tr>`;
-  // Celda vacía (columna de horas)
   html += `<th class="week-header-empty"></th>`;
-  // Días de la semana
   for (let i = 0; i < 7; i++) {
     const d = new Date(startOfWeek);
     d.setDate(d.getDate() + i);
@@ -446,10 +447,9 @@ function renderWeekView() {
   }
   html += `</tr>`;
   html += `</thead>`;
-
-  // ========== CUERPO (con scroll) ==========
+  
+  // --- CUERPO (con scroll) ---
   html += `<tbody>`;
-  // Columna de horas
   for (let hour = 0; hour < 24; hour++) {
     html += `<tr>`;
     // Celda de hora
@@ -471,13 +471,12 @@ function renderWeekView() {
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
 
-      // Buscar eventos que empiecen en esta hora exacta (para dibujarlos)
-      // Como usamos tabla, los eventos se dibujan como elementos absolutos dentro de la celda
-      // Para simplificar, dibujamos todos los eventos en la celda correspondiente a su hora de inicio
+      // Eventos que empiezan en esta hora
       const eventsAtThisHour = timedEvents.filter(e => new Date(e.start).getHours() === hour);
 
-      html += `<td class="week-day-cell" data-date="${dateStr}" data-hour="${hour}" style="position: relative; height: ${HOUR_HEIGHT}px;">`;
-      // Línea roja (solo en la hora actual y día de hoy)
+      html += `<td class="week-day-cell" data-date="${dateStr}" data-hour="${hour}">`;
+      
+      // Línea roja (solo en el día y hora actual)
       const todayStr = new Date().toISOString().split('T')[0];
       if (dateStr === todayStr) {
         const now = new Date();
@@ -486,10 +485,11 @@ function renderWeekView() {
         if (hour === currentHour) {
           const topPercent = (currentMinute / 60) * 100;
           html += `
-            <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
+            <div class="current-time-line" style="top: ${Math.min(100, topPercent)}%;"></div>
           `;
         }
       }
+
       // Eventos
       if (eventsAtThisHour.length > 0) {
         const sorted = eventsAtThisHour.sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -508,7 +508,7 @@ function renderWeekView() {
 
           html += `
             <div class="week-event-block" 
-                 style="position: absolute; top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
+                 style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
                  data-id="${e.id}"
                  title="${e.title} (${timeStr})">
               <span class="event-title-inline">${e.title}</span>
@@ -521,15 +521,16 @@ function renderWeekView() {
     html += `</tr>`;
   }
   html += `</tbody>`;
+  
   html += `</table>`;
-  html += `</div>`;
+  html += `</div>`; // fin .week-table-scroll
+  html += `</div>`; // fin .week-container
 
   grid.innerHTML = html;
 
-  // Listeners para celdas (crear evento al hacer clic en una celda)
+  // Listeners
   $$('.week-day-cell').forEach(cell => {
     cell.addEventListener('click', function(e) {
-      // Si el clic fue en un evento, no abrir el modal (se maneja en el evento del bloque)
       if (e.target.closest('.week-event-block')) return;
       const hour = parseInt(this.dataset.hour);
       const dateStr = this.dataset.date;
@@ -537,7 +538,6 @@ function renderWeekView() {
     });
   });
 
-  // Listeners para eventos (editar)
   $$('.week-event-block').forEach(el => {
     el.addEventListener('click', function(e) {
       e.stopPropagation();
