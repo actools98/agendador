@@ -162,6 +162,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Al cambiar la categoría, actualizar el color del evento
+  if (eventCategoria) {
+    eventCategoria.addEventListener('change', function() {
+      const catId = parseInt(this.value);
+      if (!catId) return;
+      const cat = categorias.find(c => c.id === catId);
+      if (cat && cat.color) {
+        colorInput.value = cat.color;
+      }
+    });
+  }
+
   function renderCategoriasList() {
     if (!categoriasList) return;
     if (categorias.length === 0) {
@@ -433,19 +445,32 @@ document.addEventListener('DOMContentLoaded', function() {
       line.style.top = `${Math.min(100, topPercent)}%`;
     });
   }
-
-  // ========== VISTA DÍA ==========
+    // ========== VISTA DÍA ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
     const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
+    const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
 
     viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     const totalHeight = 24 * HOUR_HEIGHT;
-
     let html = `<div class="day-time-grid">`;
+
+    // --- Sección de eventos de todo el día (como Google Calendar) ---
+    if (allDayEvents.length > 0) {
+      html += `<div class="all-day-events-section" style="background-color: var(--header-bg); border-bottom: 2px solid var(--calendar-border); padding: 4px 8px; display: flex; flex-wrap: wrap; gap: 4px;">`;
+      allDayEvents.forEach(e => {
+        html += `
+          <div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'}; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;" data-id="${e.id}">
+            ${e.title}
+          </div>
+        `;
+      });
+      html += `</div>`;
+    }
+
     html += `<div class="day-time-grid-inner">`;
 
     // Columna de horas
@@ -480,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
     }
 
-    // Eventos
+    // Eventos con hora
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -521,12 +546,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
+    // Event listeners para slots y bloques
     $$('.day-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
         const dateObj = new Date(currentDate);
         dateObj.setHours(hour, 0, 0, 0);
         openCreateModal(dateObj.toISOString().split('T')[0], hour);
+      });
+    });
+    // Eventos de todo el día (click para editar)
+    $$('.all-day-event-badge').forEach(el => {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openEditModal(parseInt(this.dataset.id));
       });
     });
     $$('.day-event-block').forEach(el => {
@@ -561,13 +594,34 @@ document.addEventListener('DOMContentLoaded', function() {
       html += `<th class="week-header-day ${isToday ? 'today' : ''}">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</th>`;
     }
     html += `</tr>`;
+    // Fila de eventos de todo el día (debajo de la cabecera, como Google Calendar)
+    html += `<tr class="all-day-row">`;
+    html += `<td class="week-header-empty" style="background-color: var(--header-bg); border-right: 1px solid var(--calendar-border);"></td>`;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+      const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
+      html += `<td class="week-all-day-cell" style="background-color: var(--header-bg); border-left: 1px solid var(--calendar-border); padding: 2px; min-height: 30px;">`;
+      if (allDayEvents.length > 0) {
+        allDayEvents.forEach(e => {
+          html += `
+            <div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'}; color: #fff; padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; margin: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" data-id="${e.id}">
+              ${e.title}
+            </div>
+          `;
+        });
+      }
+      html += `</td>`;
+    }
+    html += `</tr>`;
     html += `</thead>`;
     
     // Cuerpo
     html += `<tbody>`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<tr>`;
-      // Celda de hora
       let label;
       if (timeFormat === '12') {
         const hour12 = hour % 12 || 12;
@@ -578,14 +632,12 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       html += `<td class="week-hour-label" data-hour="${hour}">${label}</td>`;
 
-      // Celdas de días (7 columnas)
       for (let i = 0; i < 7; i++) {
         const d = new Date(startOfWeek);
         d.setDate(d.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
         const dayEvents = events.filter(e => e.start.startsWith(dateStr));
         const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
-
         const eventsAtThisHour = timedEvents.filter(e => new Date(e.start).getHours() === hour);
 
         html += `<td class="week-day-cell" data-date="${dateStr}" data-hour="${hour}">`;
@@ -599,12 +651,11 @@ document.addEventListener('DOMContentLoaded', function() {
           if (hour === currentHour) {
             const topPercent = (currentMinute / 60) * 100;
             html += `
-              <div class="current-time-line" style="top: ${Math.min(100, topPercent)}%;"></div>
+              <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
             `;
           }
         }
 
-        // Eventos
         if (eventsAtThisHour.length > 0) {
           const sorted = eventsAtThisHour.sort((a, b) => new Date(a.start) - new Date(b.start));
           const total = sorted.length;
@@ -622,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             html += `
               <div class="week-event-block" 
-                   style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
+                   style="position: absolute; top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
                    data-id="${e.id}"
                    title="${e.title} (${timeStr})">
                 <span class="event-title-inline">${e.title}</span>
@@ -642,16 +693,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
+    // Event listeners
     $$('.week-day-cell').forEach(cell => {
       cell.addEventListener('click', function(e) {
-        if (e.target.closest('.week-event-block')) return;
+        if (e.target.closest('.week-event-block') || e.target.closest('.all-day-event-badge')) return;
         const hour = parseInt(this.dataset.hour);
         const dateStr = this.dataset.date;
         openCreateModal(dateStr, hour);
       });
     });
-
     $$('.week-event-block').forEach(el => {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openEditModal(parseInt(this.dataset.id));
+      });
+    });
+    $$('.all-day-event-badge').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
         openEditModal(parseInt(this.dataset.id));
@@ -713,21 +770,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO ==========
+  // ========== VISTA AÑO (3 columnas) ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
 
-    let html = `<div class="year-grid">`;
+    let html = `<div class="year-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 10px;">`;
     for (let m = 0; m < 12; m++) {
       const monthDate = new Date(year, m, 1);
       const monthName = monthDate.toLocaleString('es', { month: 'long' });
       const daysInMonth = new Date(year, m + 1, 0).getDate();
       const firstDayOfMonth = new Date(year, m, 1).getDay();
 
-      html += `<div class="year-month" data-month="${m}">`;
-      html += `<div class="year-month-title">${monthName}</div>`;
-      html += `<div class="year-month-days">`;
+      html += `<div class="year-month" data-month="${m}" style="background: var(--sidebar-bg); border: 1px solid var(--calendar-border); border-radius: 8px; padding: 10px; cursor: pointer; transition: background 0.2s;">`;
+      html += `<div class="year-month-title" style="font-weight: bold; text-align: center; margin-bottom: 8px; color: var(--text-body);">${monthName}</div>`;
+      html += `<div class="year-month-days" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; justify-items: center;">`;
       for (let i = 0; i < firstDayOfMonth; i++) {
         html += `<div class="year-day empty"></div>`;
       }
@@ -737,15 +794,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const dayEvents = events.filter(e => e.start.startsWith(dateStr));
         const hasEvent = dayEvents.length > 0;
 
-        html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-date="${dateStr}">`;
+        html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-date="${dateStr}" style="width: 100%; aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; background-color: var(--bg-body); border-radius: 4px; position: relative; cursor: pointer;">`;
         html += `<span class="year-day-number">${d}</span>`;
         if (hasEvent) {
-          html += `<div class="year-day-dots">`;
+          html += `<div class="year-day-dots" style="display: flex; gap: 2px; margin-top: 1px; flex-wrap: wrap; justify-content: center;">`;
           const maxDots = Math.min(dayEvents.length, 3);
           for (let i = 0; i < maxDots; i++) {
-            html += `<span class="year-dot" style="background-color: ${dayEvents[i].color || '#3788d8'};"></span>`;
+            html += `<span class="year-dot" style="width: 5px; height: 5px; border-radius: 50%; display: inline-block; background-color: ${dayEvents[i].color || '#3788d8'};"></span>`;
           }
-          if (dayEvents.length > 3) html += `<span class="year-dot-more">+${dayEvents.length - 3}</span>`;
+          if (dayEvents.length > 3) html += `<span class="year-dot-more" style="font-size: 0.5rem; color: var(--text-muted);">+${dayEvents.length - 3}</span>`;
           html += `</div>`;
         }
         html += `</div>`;
@@ -931,11 +988,10 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
   }
 
-  // ========== MENÚ HAMBURGUESA (SOLO MÓVIL) - CORREGIDO ==========
+  // ========== MENÚ HAMBURGUESA (a la derecha) ==========
   const menuToggle = document.getElementById('menuToggle');
   const sidebarDesktop = document.getElementById('sidebarDesktop');
 
-  // Función para abrir/cerrar el panel móvil (reutilizando el sidebar con CSS)
   function toggleMobileSidebar() {
     if (!sidebarDesktop) return;
     sidebarDesktop.classList.toggle('mobile-open');
@@ -944,24 +1000,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Evento del botón hamburguesa
   if (menuToggle) {
     menuToggle.addEventListener('click', toggleMobileSidebar);
   }
 
-  // Cerrar panel al hacer clic en un botón o enlace (excepto editar/eliminar)
+  // Cerrar panel al hacer clic en un enlace o botón (excepto los que abren modales o editan)
   if (sidebarDesktop) {
     sidebarDesktop.addEventListener('click', function(e) {
-      // Solo si está abierto en móvil (clase mobile-open)
       if (!this.classList.contains('mobile-open')) return;
       const target = e.target.closest('.btn, a');
       if (target) {
-        // Si es un botón de edición/eliminación, no cerramos automáticamente
-        if (target.classList.contains('edit-event') || target.classList.contains('delete-event') || 
-            target.classList.contains('edit-event-finished') || target.classList.contains('delete-event-finished') ||
-            target.classList.contains('edit-categoria') || target.classList.contains('delete-categoria')) {
+        // No cerrar si es un botón que abre modal o edita
+        if (target.id === 'newEventBtnDesktop' || 
+            target.id === 'categoriasBtnDesktop' || 
+            target.id === 'settingsBtnDesktop' ||
+            target.id === 'toggleFinishedBtnDesktop' ||
+            target.classList.contains('edit-event') || 
+            target.classList.contains('delete-event') || 
+            target.classList.contains('edit-event-finished') || 
+            target.classList.contains('delete-event-finished') ||
+            target.classList.contains('edit-categoria') || 
+            target.classList.contains('delete-categoria')) {
           return;
         }
+        // Para otros botones (como cerrar sesión), cerramos después
         setTimeout(() => {
           this.classList.remove('mobile-open');
           if (menuToggle) menuToggle.textContent = '☰';
@@ -971,17 +1033,30 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ========== EVENT LISTENERS ==========
+  // Botón de eventos terminados (funciona en escritorio y móvil)
+  function toggleFinishedEvents() {
+    finishedVisible = !finishedVisible;
+    if (finishedListEl) {
+      finishedListEl.style.display = finishedVisible ? 'block' : 'none';
+    }
+    const text = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
+    if (toggleFinishedBtn) toggleFinishedBtn.textContent = text;
+    const desktopBtn = document.getElementById('toggleFinishedBtnDesktop');
+    if (desktopBtn) desktopBtn.textContent = text;
+  }
+
   if (toggleFinishedBtn) {
-    toggleFinishedBtn.addEventListener('click', function() {
-      finishedVisible = !finishedVisible;
-      if (finishedListEl) {
-        finishedListEl.style.display = finishedVisible ? 'block' : 'none';
-      }
-      this.textContent = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
-      const desktopBtn = document.getElementById('toggleFinishedBtnDesktop');
-      if (desktopBtn) {
-        desktopBtn.textContent = this.textContent;
-      }
+    toggleFinishedBtn.addEventListener('click', function(e) {
+      e.stopPropagation(); // Evita que el menú se cierre
+      toggleFinishedEvents();
+    });
+  }
+
+  const toggleFinishedBtnDesktop = document.getElementById('toggleFinishedBtnDesktop');
+  if (toggleFinishedBtnDesktop) {
+    toggleFinishedBtnDesktop.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleFinishedEvents();
     });
   }
 
@@ -989,13 +1064,11 @@ document.addEventListener('DOMContentLoaded', function() {
   if (nextBtn) nextBtn.addEventListener('click', next);
   viewBtns.forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
 
-  // Nuevo evento desde el sidebar (desktop)
   const newEventBtnDesktop = document.getElementById('newEventBtnDesktop');
   if (newEventBtnDesktop) {
     newEventBtnDesktop.addEventListener('click', () => openCreateModal(null));
   }
 
-  // Configuración
   if (settingsBtn) {
     settingsBtn.addEventListener('click', function() {
       if (timeFormatSelect) timeFormatSelect.value = timeFormat;
@@ -1013,7 +1086,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Categorías
   if (categoriasBtn) {
     categoriasBtn.addEventListener('click', function() {
       loadCategorias().then(() => {
