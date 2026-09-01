@@ -931,30 +931,16 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
   }
 
-  // ========== MENÚ HAMBURGUESA (SOLO MÓVIL) ==========
+  // ========== MENÚ HAMBURGUESA (SOLO MÓVIL) - CORREGIDO ==========
   const menuToggle = document.getElementById('menuToggle');
   const sidebarDesktop = document.getElementById('sidebarDesktop');
 
-  // Crear panel móvil si no existe
-  let mobilePanel = document.querySelector('.mobile-sidebar-panel');
-  if (!mobilePanel && window.innerWidth < 768) {
-    mobilePanel = document.createElement('div');
-    mobilePanel.className = 'mobile-sidebar-panel';
-    if (sidebarDesktop) {
-      const clone = sidebarDesktop.cloneNode(true);
-      const desktopTitle = clone.querySelector('.d-none.d-md-block');
-      if (desktopTitle) desktopTitle.remove();
-      mobilePanel.innerHTML = clone.innerHTML;
-      document.body.appendChild(mobilePanel);
-    }
-  }
-
-  // Función para abrir/cerrar el panel móvil
+  // Función para abrir/cerrar el panel móvil (reutilizando el sidebar con CSS)
   function toggleMobileSidebar() {
-    if (!mobilePanel) return;
-    mobilePanel.classList.toggle('open');
+    if (!sidebarDesktop) return;
+    sidebarDesktop.classList.toggle('mobile-open');
     if (menuToggle) {
-      menuToggle.textContent = mobilePanel.classList.contains('open') ? '✕' : '☰';
+      menuToggle.textContent = sidebarDesktop.classList.contains('mobile-open') ? '✕' : '☰';
     }
   }
 
@@ -964,17 +950,20 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Cerrar panel al hacer clic en un botón o enlace (excepto editar/eliminar)
-  if (mobilePanel) {
-    mobilePanel.addEventListener('click', function(e) {
+  if (sidebarDesktop) {
+    sidebarDesktop.addEventListener('click', function(e) {
+      // Solo si está abierto en móvil (clase mobile-open)
+      if (!this.classList.contains('mobile-open')) return;
       const target = e.target.closest('.btn, a');
       if (target) {
+        // Si es un botón de edición/eliminación, no cerramos automáticamente
         if (target.classList.contains('edit-event') || target.classList.contains('delete-event') || 
             target.classList.contains('edit-event-finished') || target.classList.contains('delete-event-finished') ||
             target.classList.contains('edit-categoria') || target.classList.contains('delete-categoria')) {
           return;
         }
         setTimeout(() => {
-          mobilePanel.classList.remove('open');
+          this.classList.remove('mobile-open');
           if (menuToggle) menuToggle.textContent = '☰';
         }, 300);
       }
