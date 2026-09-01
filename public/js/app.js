@@ -847,3 +847,232 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function saveEvent() {
     const id = eventIdInput.value;
+    const title = titleInput.value.trim();
+    const description = descriptionInput.value.trim();
+    const start = startInput.value;
+    const end = endInput.value;
+    const allDay = allDayInput.checked;
+    const color = colorInput.value;
+    const status = statusSelect.value;
+    const categoria_id = eventCategoria.value || null;
+
+    if (!title || !start || !end) {
+      alert('Título, inicio y fin son obligatorios');
+      return;
+    }
+
+    const payload = { title, description, start, end, allDay, color, status, categoria_id };
+
+    try {
+      const url = id ? `/api/events/${id}` : '/api/events';
+      const method = id ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        modalEvent.hide();
+        loadEventsFromServer();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'desconocido'));
+      }
+    } catch (error) {
+      console.error('Error al guardar evento:', error);
+      alert('Error al guardar');
+    }
+  }
+
+  async function deleteEvent(id) {
+    try {
+      const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        loadEventsFromServer();
+        modalEvent.hide();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'desconocido'));
+      }
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      alert('Error al eliminar');
+    }
+  }
+
+  // ========== NAVEGACIÓN ==========
+  function prev() {
+    switch (currentView) {
+      case 'day':   currentDate.setDate(currentDate.getDate() - 1); break;
+      case 'week':  currentDate.setDate(currentDate.getDate() - 7); break;
+      case 'month': currentDate.setMonth(currentDate.getMonth() - 1); break;
+      case 'year':  currentDate.setFullYear(currentDate.getFullYear() - 1); break;
+    }
+    renderView();
+  }
+
+  function next() {
+    switch (currentView) {
+      case 'day':   currentDate.setDate(currentDate.getDate() + 1); break;
+      case 'week':  currentDate.setDate(currentDate.getDate() + 7); break;
+      case 'month': currentDate.setMonth(currentDate.getMonth() + 1); break;
+      case 'year':  currentDate.setFullYear(currentDate.getFullYear() + 1); break;
+    }
+    renderView();
+  }
+
+  function updateViewButtons() {
+    viewBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.view === currentView));
+  }
+
+  function setView(view) {
+    currentView = view;
+    updateViewButtons();
+    renderView();
+  }
+
+  // ========== MENÚ HAMBURGUESA (SOLO MÓVIL) ==========
+  const menuToggle = document.getElementById('menuToggle');
+  const sidebarDesktop = document.getElementById('sidebarDesktop');
+
+  // Crear panel móvil si no existe
+  let mobilePanel = document.querySelector('.mobile-sidebar-panel');
+  if (!mobilePanel && window.innerWidth < 768) {
+    mobilePanel = document.createElement('div');
+    mobilePanel.className = 'mobile-sidebar-panel';
+    if (sidebarDesktop) {
+      const clone = sidebarDesktop.cloneNode(true);
+      const desktopTitle = clone.querySelector('.d-none.d-md-block');
+      if (desktopTitle) desktopTitle.remove();
+      mobilePanel.innerHTML = clone.innerHTML;
+      document.body.appendChild(mobilePanel);
+    }
+  }
+
+  // Función para abrir/cerrar el panel móvil
+  function toggleMobileSidebar() {
+    if (!mobilePanel) return;
+    mobilePanel.classList.toggle('open');
+    if (menuToggle) {
+      menuToggle.textContent = mobilePanel.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+
+  // Evento del botón hamburguesa
+  if (menuToggle) {
+    menuToggle.addEventListener('click', toggleMobileSidebar);
+  }
+
+  // Cerrar panel al hacer clic en un botón o enlace (excepto editar/eliminar)
+  if (mobilePanel) {
+    mobilePanel.addEventListener('click', function(e) {
+      const target = e.target.closest('.btn, a');
+      if (target) {
+        if (target.classList.contains('edit-event') || target.classList.contains('delete-event') || 
+            target.classList.contains('edit-event-finished') || target.classList.contains('delete-event-finished') ||
+            target.classList.contains('edit-categoria') || target.classList.contains('delete-categoria')) {
+          return;
+        }
+        setTimeout(() => {
+          mobilePanel.classList.remove('open');
+          if (menuToggle) menuToggle.textContent = '☰';
+        }, 300);
+      }
+    });
+  }
+
+  // ========== EVENT LISTENERS ==========
+  if (toggleFinishedBtn) {
+    toggleFinishedBtn.addEventListener('click', function() {
+      finishedVisible = !finishedVisible;
+      if (finishedListEl) {
+        finishedListEl.style.display = finishedVisible ? 'block' : 'none';
+      }
+      this.textContent = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
+      const desktopBtn = document.getElementById('toggleFinishedBtnDesktop');
+      if (desktopBtn) {
+        desktopBtn.textContent = this.textContent;
+      }
+    });
+  }
+
+  if (prevBtn) prevBtn.addEventListener('click', prev);
+  if (nextBtn) nextBtn.addEventListener('click', next);
+  viewBtns.forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
+
+  // Nuevo evento desde el sidebar (desktop)
+  const newEventBtnDesktop = document.getElementById('newEventBtnDesktop');
+  if (newEventBtnDesktop) {
+    newEventBtnDesktop.addEventListener('click', () => openCreateModal(null));
+  }
+
+  // Configuración
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', function() {
+      if (timeFormatSelect) timeFormatSelect.value = timeFormat;
+      if (themeSelect) themeSelect.value = tema;
+      settingsModal.show();
+    });
+  }
+
+  const settingsBtnDesktop = document.getElementById('settingsBtnDesktop');
+  if (settingsBtnDesktop) {
+    settingsBtnDesktop.addEventListener('click', function() {
+      if (timeFormatSelect) timeFormatSelect.value = timeFormat;
+      if (themeSelect) themeSelect.value = tema;
+      settingsModal.show();
+    });
+  }
+
+  // Categorías
+  if (categoriasBtn) {
+    categoriasBtn.addEventListener('click', function() {
+      loadCategorias().then(() => {
+        renderCategoriasList();
+        if (categoriaForm) categoriaForm.reset();
+        if (categoriaEditId) categoriaEditId.value = '';
+        if (categoriaSaveBtn) categoriaSaveBtn.textContent = 'Guardar';
+        if (categoriaError) categoriaError.style.display = 'none';
+        categoriasModal.show();
+      });
+    });
+  }
+
+  const categoriasBtnDesktop = document.getElementById('categoriasBtnDesktop');
+  if (categoriasBtnDesktop) {
+    categoriasBtnDesktop.addEventListener('click', function() {
+      loadCategorias().then(() => {
+        renderCategoriasList();
+        if (categoriaForm) categoriaForm.reset();
+        if (categoriaEditId) categoriaEditId.value = '';
+        if (categoriaSaveBtn) categoriaSaveBtn.textContent = 'Guardar';
+        if (categoriaError) categoriaError.style.display = 'none';
+        categoriasModal.show();
+      });
+    });
+  }
+
+  if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', savePreferences);
+  if (categoriaForm) categoriaForm.addEventListener('submit', saveCategoria);
+
+  if (saveBtn) saveBtn.addEventListener('click', saveEvent);
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function() {
+      if (currentEventId && confirm('¿Eliminar este evento?')) deleteEvent(currentEventId);
+    });
+  }
+
+  if (modalEvent && modalEvent._element) {
+    modalEvent._element.addEventListener('hidden.bs.modal', function() {
+      currentEventId = null;
+      if (deleteBtn) deleteBtn.style.display = 'none';
+    });
+  }
+
+  // ========== INICIO ==========
+  loadPreferences().then(() => {
+    loadCategorias().then(() => {
+      loadEventsFromServer();
+    });
+  });
+});
