@@ -10,88 +10,89 @@
 </head>
 <body>
 
-<div class="container-fluid p-0 vh-100 d-flex flex-column">
+<div class="container-fluid p-0 vh-100">
 
-  <!-- ========== CABECERA MOBILE (siempre visible) ========== -->
-  <div class="mobile-header d-md-none">
-    <div class="d-flex align-items-center justify-content-between p-2">
-      <h5 class="m-0">📅 Calendario</h5>
-      <div class="d-flex gap-1">
-        <button id="newEventBtn" class="btn btn-sm btn-primary" title="Nuevo evento">+</button>
-        <button id="toggleFinishedBtn" class="btn btn-sm btn-outline-secondary" title="Eventos terminados">📋</button>
-        <button id="categoriasBtn" class="btn btn-sm btn-outline-secondary" title="Categorías">🏷️</button>
-        <button id="settingsBtn" class="btn btn-sm btn-outline-secondary" title="Configuración">⚙️</button>
-        <a href="/logout" class="btn btn-sm btn-outline-danger" title="Cerrar sesión">✕</a>
-      </div>
+  <!-- ========== CABECERA SUPERIOR (siempre visible) ========== -->
+  <div class="mobile-header d-flex align-items-center justify-content-between px-3 py-2">
+    <div class="d-flex align-items-center gap-2">
+      <button id="menuToggle" class="btn btn-outline-secondary btn-sm" aria-label="Menú">
+        ☰
+      </button>
+      <h5 class="m-0" id="headerTitle">📅 Calendario</h5>
     </div>
-    <div class="px-2 pb-1">
-      <span class="text-muted small">Bienvenido, <strong><%= username %></strong></span>
+    <div class="d-flex gap-1">
+      <button id="newEventBtn" class="btn btn-sm btn-primary" title="Nuevo evento">+</button>
     </div>
   </div>
 
-  <!-- ========== CONTENIDO PRINCIPAL (scroll único) ========== -->
-  <div class="main-content flex-grow-1 overflow-auto">
+  <!-- ========== CONTENIDO PRINCIPAL ========== -->
+  <div class="main-content" style="height: calc(100vh - 56px); overflow: hidden;">
 
-    <div class="row g-0 h-100">
+    <!-- ===== VISTA 1: CALENDARIO (visible por defecto) ===== -->
+    <div id="viewCalendar" class="view-panel h-100 overflow-auto p-3">
+      <!-- Controles de navegación -->
+      <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center gap-2">
+          <button id="prevView" class="btn btn-secondary btn-sm">‹</button>
+          <button id="nextView" class="btn btn-secondary btn-sm">›</button>
+          <span id="viewTitle" class="ms-1 h5 mb-0"></span>
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Vistas">
+          <button class="btn btn-outline-primary view-btn" data-view="day">Día</button>
+          <button class="btn btn-outline-primary view-btn" data-view="week">Semana</button>
+          <button class="btn btn-outline-primary view-btn active" data-view="month">Mes</button>
+          <button class="btn btn-outline-primary view-btn" data-view="year">Año</button>
+        </div>
+      </div>
 
-      <!-- ========== COLUMNA IZQUIERDA (SIDEBAR) ========== -->
-      <div class="col-12 col-md-3 col-lg-2 sidebar p-3">
-        <!-- Título y usuario (solo desktop) -->
-        <div class="d-none d-md-block">
-          <h4 class="mb-4">📅 Calendario</h4>
-          <p class="text-muted small">Bienvenido, <strong><%= username %></strong></p>
-          <hr class="border-secondary" />
+      <!-- Grid del calendario -->
+      <div id="calendarGrid" class="calendar-grid"></div>
+
+      <!-- Footer -->
+      <div id="debug-message" class="debug-message">Powered by actols.com</div>
+    </div>
+
+    <!-- ===== VISTA 2: GESTIÓN (sidebar) ===== -->
+    <div id="viewManagement" class="view-panel h-100 overflow-auto p-3" style="display:none; background-color: var(--sidebar-bg);">
+      <div class="sidebar-content">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5 class="m-0">📋 Gestión</h5>
+          <button id="closeManagement" class="btn btn-sm btn-outline-secondary">✕ Cerrar</button>
         </div>
 
-        <!-- Botón Nuevo Evento (desktop) -->
-        <div class="d-grid gap-2">
-          <button id="newEventBtnDesktop" class="btn btn-primary w-100 mb-2 d-none d-md-block">+ Nuevo evento</button>
-          <button id="toggleFinishedBtnDesktop" class="btn btn-outline-secondary w-100 mb-2 d-none d-md-block">📋 Eventos terminados</button>
+        <div class="mb-3">
+          <p class="text-muted small">Bienvenido, <strong><%= username %></strong></p>
+        </div>
+
+        <hr class="border-secondary" />
+
+        <!-- Botones de acción -->
+        <div class="d-grid gap-2 mb-3">
+          <button id="newEventBtnSidebar" class="btn btn-primary">+ Nuevo evento</button>
+          <button id="toggleFinishedBtnSidebar" class="btn btn-outline-secondary">📋 Eventos terminados</button>
         </div>
 
         <!-- Lista de eventos terminados -->
         <div id="finishedEventsList" class="list-group list-group-flush mt-2" style="display:none;"></div>
 
-        <!-- Título de eventos activos -->
-        <h6 class="mt-3 d-none d-md-block">Mis eventos activos</h6>
+        <!-- Eventos activos -->
+        <h6 class="mt-3">Mis eventos activos</h6>
         <div id="eventList" class="list-group list-group-flush mt-2"></div>
 
-        <!-- Botones de gestión (solo desktop) -->
-        <hr class="border-secondary d-none d-md-block" />
-        <button id="categoriasBtnDesktop" class="btn btn-outline-secondary w-100 mb-2 d-none d-md-block">🏷️ Categorías</button>
-        <button id="settingsBtnDesktop" class="btn btn-outline-secondary w-100 mb-3 d-none d-md-block">⚙️ Configuración</button>
-        <a href="/logout" class="btn btn-outline-danger w-100 d-none d-md-block">Cerrar sesión</a>
+        <hr class="border-secondary" />
+
+        <!-- Botones de gestión -->
+        <button id="categoriasBtnSidebar" class="btn btn-outline-secondary w-100 mb-2">🏷️ Categorías</button>
+        <button id="settingsBtnSidebar" class="btn btn-outline-secondary w-100 mb-3">⚙️ Configuración</button>
+        <a href="/logout" class="btn btn-outline-danger w-100">Cerrar sesión</a>
       </div>
-
-      <!-- ========== COLUMNA DERECHA (CALENDARIO) ========== -->
-      <div class="col-12 col-md-9 col-lg-10 p-3 calendar-container">
-        <!-- Controles de navegación -->
-        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
-          <div class="d-flex align-items-center gap-2">
-            <button id="prevView" class="btn btn-secondary btn-sm">‹</button>
-            <button id="nextView" class="btn btn-secondary btn-sm">›</button>
-            <span id="viewTitle" class="ms-1 h5 mb-0"></span>
-          </div>
-          <div class="btn-group btn-group-sm" role="group" aria-label="Vistas">
-            <button class="btn btn-outline-primary view-btn" data-view="day">Día</button>
-            <button class="btn btn-outline-primary view-btn" data-view="week">Semana</button>
-            <button class="btn btn-outline-primary view-btn active" data-view="month">Mes</button>
-            <button class="btn btn-outline-primary view-btn" data-view="year">Año</button>
-          </div>
-        </div>
-
-        <!-- Grid del calendario -->
-        <div id="calendarGrid" class="calendar-grid"></div>
-
-        <!-- Footer -->
-        <div id="debug-message" class="debug-message">Powered by actols.com</div>
-      </div>
-
     </div>
+
   </div>
 </div>
 
-<!-- ========== MODAL PARA EVENTOS ========== -->
+<!-- ========== MODALES (sin cambios) ========== -->
+<!-- MODAL PARA EVENTOS -->
 <div class="modal fade" id="eventModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
@@ -124,7 +125,6 @@
             <input type="checkbox" class="form-check-input" id="allDay" />
             <label class="form-check-label" for="allDay">Todo el día</label>
           </div>
-          <!-- Selector de categoría -->
           <div class="mb-2">
             <label for="eventCategoria" class="form-label small">Categoría</label>
             <select id="eventCategoria" class="form-select form-select-sm">
@@ -155,7 +155,7 @@
   </div>
 </div>
 
-<!-- ========== MODAL DE CATEGORÍAS ========== -->
+<!-- MODAL DE CATEGORÍAS -->
 <div class="modal fade" id="categoriasModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
@@ -164,11 +164,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <!-- Lista de categorías -->
-        <div id="categoriasList" class="list-group list-group-flush mb-3">
-          <!-- Se llena con JS -->
-        </div>
-        <!-- Formulario para nueva categoría -->
+        <div id="categoriasList" class="list-group list-group-flush mb-3"></div>
         <form id="categoriaForm">
           <input type="hidden" id="categoriaEditId" />
           <div class="row g-2">
@@ -192,7 +188,7 @@
   </div>
 </div>
 
-<!-- ========== MODAL DE CONFIGURACIÓN ========== -->
+<!-- MODAL DE CONFIGURACIÓN -->
 <div class="modal fade" id="settingsModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
@@ -224,7 +220,6 @@
   </div>
 </div>
 
-<!-- ========== SCRIPTS ========== -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/js/app.js"></script>
 </body>
