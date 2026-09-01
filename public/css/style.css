@@ -726,3 +726,115 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     font-size: 0.8rem;
   }
 }
+/* ============================================================
+   CORRECCIÓN: VISTAS EN BLANCO
+   ============================================================ */
+#calendarGrid {
+  display: flex !important;
+  flex-direction: column !important;
+  background-color: var(--calendar-bg) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  min-height: 400px !important;
+  border: 1px solid var(--calendar-border) !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.calendar-grid {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Asegurar que los contenedores internos tengan visibilidad */
+.day-time-grid,
+.week-time-grid,
+.calendar-weekdays,
+.calendar-days,
+.year-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+}
+
+.calendar-days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  flex: 1 !important;
+}
+
+/* Vista mes: asegurar que las celdas se vean */
+.day {
+  border: 1px solid var(--calendar-border) !important;
+  min-height: 60px !important;
+  padding: 4px !important;
+  cursor: pointer !important;
+  background-color: var(--calendar-bg) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.day-number {
+  font-size: 0.9rem !important;
+  font-weight: bold !important;
+  color: var(--text-body) !important;
+}
+
+/* Vista año: asegurar visibilidad */
+.year-month {
+  background: var(--sidebar-bg) !important;
+  border: 1px solid var(--calendar-border) !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  cursor: pointer !important;
+}
+
+.year-month-title {
+  font-weight: bold !important;
+  text-align: center !important;
+  margin-bottom: 8px !important;
+  color: var(--text-body) !important;
+}
+
+.year-month-days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 2px !important;
+  justify-items: center !important;
+}
+
+.year-day {
+  width: 100% !important;
+  aspect-ratio: 1/1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.7rem !important;
+  background-color: var(--bg-body) !important;
+  border-radius: 4px !important;
+}
+
+/* Corrección para móvil: el calendario debe ocupar toda la altura */
+@media (max-width: 768px) {
+  .calendar-container {
+    height: calc(100vh - 56px) !important;
+    padding: 0.5rem !important;
+    overflow-y: auto !important;
+  }
+  
+  #calendarGrid {
+    min-height: 300px !important;
+    height: auto !important;
+  }
+  
+  .day {
+    min-height: 35px !important;
+    padding: 2px !important;
+  }
+  
+  .day-number {
+    font-size: 0.7rem !important;
+  }
+}
