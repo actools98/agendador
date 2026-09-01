@@ -64,6 +64,7 @@
 body {
   background-color: var(--bg-body);
   color: var(--text-body);
+  overflow-x: hidden; /* Evita scroll horizontal por el menú */
 }
 
 body, .card, .modal-content, .sidebar,
@@ -247,6 +248,35 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
+   EVENTOS DE TODO EL DÍA (estilo Google Calendar)
+   ============================================================ */
+.all-day-events-section {
+  background-color: var(--header-bg);
+  border-bottom: 2px solid var(--calendar-border);
+  padding: 4px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.all-day-event-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  color: #fff !important;
+}
+.week-all-day-cell {
+  background-color: var(--header-bg);
+  border-left: 1px solid var(--calendar-border);
+  padding: 2px;
+  min-height: 30px;
+}
+.all-day-row td {
+  border-bottom: 2px solid var(--calendar-border);
+}
+
+/* ============================================================
    VISTA SEMANA
    ============================================================ */
 .week-container {
@@ -346,20 +376,20 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA AÑO
+   VISTA AÑO - 3 COLUMNAS (CORREGIDO)
    ============================================================ */
 .year-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  padding: 15px;
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 15px !important;
+  padding: 10px !important;
   overflow-y: auto;
 }
 .year-month {
   background: var(--sidebar-bg);
   border: 1px solid var(--calendar-border);
   border-radius: 8px;
-  padding: 15px;
+  padding: 10px;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -367,14 +397,14 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 .year-month-title {
   font-weight: bold;
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: var(--text-body);
   font-size: 1.1rem;
 }
 .year-month-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  gap: 2px;
   justify-items: center;
 }
 .year-day {
@@ -384,7 +414,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--header-text);
   border-radius: 4px;
   position: relative;
@@ -574,7 +604,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   DISEÑO MOBILE CON MENÚ HAMBURGUESA (SOLO MÓVIL)
+   DISEÑO MOBILE CON MENÚ HAMBURGUESA (CORREGIDO)
    ============================================================ */
 @media (max-width: 768px) {
   /* Cabecera superior */
@@ -588,12 +618,30 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     z-index: 100;
   }
 
-  /* Ocultar sidebar en móvil (se muestra como panel flotante) */
+  /* El sidebar se convierte en panel móvil desde la derecha */
   #sidebarDesktop {
-    display: none !important;
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    width: 300px;
+    max-width: 80%;
+    background-color: var(--sidebar-bg);
+    border-left: 1px solid var(--sidebar-border);
+    transform: translateX(100%); /* Oculto completamente */
+    transition: transform 0.3s ease;
+    z-index: 999;
+    overflow-y: auto;
+    padding: 1rem !important;
+    display: block !important;
+    box-shadow: -4px 0 10px rgba(0,0,0,0.2);
   }
 
-  /* El calendario ocupa todo el ancho en móvil */
+  #sidebarDesktop.mobile-open {
+    transform: translateX(0); /* Visible */
+  }
+
+  /* El calendario ocupa todo el ancho */
   .calendar-container {
     padding: 0.5rem !important;
     width: 100% !important;
@@ -605,46 +653,53 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     min-height: 200px !important;
   }
 
-  /* Panel de gestión (sidebar) que se muestra al hacer clic en hamburguesa */
-  .mobile-sidebar-panel {
-    position: fixed;
-    top: 56px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--sidebar-bg);
-    z-index: 999;
-    overflow-y: auto;
-    padding: 1rem;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    border-right: 1px solid var(--sidebar-border);
+  /* Ajustes de vista año en móvil (2 columnas) */
+  .year-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    padding: 5px !important;
+  }
+  .year-month {
+    padding: 6px !important;
+  }
+  .year-month-title {
+    font-size: 0.7rem !important;
+    margin-bottom: 4px !important;
+  }
+  .year-day {
+    font-size: 0.5rem !important;
+  }
+  .year-day-number {
+    font-size: 0.5rem !important;
+  }
+  .year-dot {
+    width: 3px !important;
+    height: 3px !important;
+  }
+  .year-dot-more {
+    font-size: 0.3rem !important;
   }
 
-  .mobile-sidebar-panel.open {
-    transform: translateX(0);
+  /* Ajustes de eventos de todo el día en móvil */
+  .all-day-event-badge {
+    font-size: 0.55rem !important;
+    padding: 1px 4px !important;
+  }
+  .week-all-day-cell {
+    min-height: 20px !important;
+  }
+  .all-day-events-section {
+    padding: 2px 4px !important;
   }
 
-  .mobile-sidebar-panel .sidebar-content {
-    max-width: 100%;
-  }
-
-  .mobile-sidebar-panel .list-group-item {
-    padding: 0.3rem 0.15rem;
-    font-size: 0.8rem;
-  }
-  .mobile-sidebar-panel .list-group-item .event-title strong {
-    font-size: 0.85rem;
-  }
-
-  /* Ajustes de calendario en móvil */
-  .day-time-column, .week-hours-column, .week-header-empty {
+  /* Ajustes de vistas día/semana */
+  .day-time-column, .week-header-empty {
     width: 38px !important;
   }
   .day-hour-label, .week-hour-label {
     font-size: 0.55rem !important;
   }
-  .day, .week-day-column {
+  .day, .week-day-cell {
     min-height: 38px !important;
   }
   .week-header-day {
@@ -655,10 +710,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     font-size: 0.45rem !important;
     padding: 1px 2px !important;
     min-height: 8px !important;
-  }
-  .day-all-day-event, .week-all-day-event {
-    font-size: 0.45rem !important;
-    padding: 1px 4px !important;
   }
 
   /* Vista mes */
@@ -671,37 +722,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   }
   .event-bar {
     height: 2px !important;
-  }
-
-  /* Vista año */
-  .year-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
-    padding: 4px;
-  }
-  .year-month {
-    padding: 4px 3px;
-  }
-  .year-month-title {
-    font-size: 0.6rem;
-    margin-bottom: 3px;
-  }
-  .year-month-days {
-    gap: 1px;
-  }
-  .year-day {
-    font-size: 0.4rem;
-    border-radius: 2px;
-  }
-  .year-day-number {
-    font-size: 0.4rem;
-  }
-  .year-dot {
-    width: 3px;
-    height: 3px;
-  }
-  .year-dot-more {
-    font-size: 0.3rem;
   }
 
   /* Botones de navegación */
@@ -724,309 +744,5 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   }
   .modal-body .form-control-sm {
     font-size: 0.8rem;
-  }
-}
-/* ============================================================
-   CORRECCIÓN: VISTAS EN BLANCO
-   ============================================================ */
-#calendarGrid {
-  display: flex !important;
-  flex-direction: column !important;
-  background-color: var(--calendar-bg) !important;
-  border-radius: 8px !important;
-  overflow: hidden !important;
-  min-height: 400px !important;
-  border: 1px solid var(--calendar-border) !important;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.calendar-grid {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* Asegurar que los contenedores internos tengan visibilidad */
-.day-time-grid,
-.week-time-grid,
-.calendar-weekdays,
-.calendar-days,
-.year-grid {
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-}
-
-.calendar-days {
-  display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
-  flex: 1 !important;
-}
-
-/* Vista mes: asegurar que las celdas se vean */
-.day {
-  border: 1px solid var(--calendar-border) !important;
-  min-height: 60px !important;
-  padding: 4px !important;
-  cursor: pointer !important;
-  background-color: var(--calendar-bg) !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-.day-number {
-  font-size: 0.9rem !important;
-  font-weight: bold !important;
-  color: var(--text-body) !important;
-}
-
-/* Vista año: asegurar visibilidad */
-.year-month {
-  background: var(--sidebar-bg) !important;
-  border: 1px solid var(--calendar-border) !important;
-  border-radius: 8px !important;
-  padding: 10px !important;
-  cursor: pointer !important;
-}
-
-.year-month-title {
-  font-weight: bold !important;
-  text-align: center !important;
-  margin-bottom: 8px !important;
-  color: var(--text-body) !important;
-}
-
-.year-month-days {
-  display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
-  gap: 2px !important;
-  justify-items: center !important;
-}
-
-.year-day {
-  width: 100% !important;
-  aspect-ratio: 1/1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: 0.7rem !important;
-  background-color: var(--bg-body) !important;
-  border-radius: 4px !important;
-}
-
-/* Corrección para móvil: el calendario debe ocupar toda la altura */
-@media (max-width: 768px) {
-  .calendar-container {
-    height: calc(100vh - 56px) !important;
-    padding: 0.5rem !important;
-    overflow-y: auto !important;
-  }
-  
-  #calendarGrid {
-    min-height: 300px !important;
-    height: auto !important;
-  }
-  
-  .day {
-    min-height: 35px !important;
-    padding: 2px !important;
-  }
-  
-  .day-number {
-    font-size: 0.7rem !important;
-  }
-}
-/* ============================================================
-   CORRECCIÓN: VISIBILIDAD DEL CALENDARIO
-   ============================================================ */
-#calendarGrid {
-  display: flex !important;
-  flex-direction: column !important;
-  background-color: var(--calendar-bg) !important;
-  border-radius: 8px !important;
-  overflow: hidden !important;
-  min-height: 400px !important;
-  border: 1px solid var(--calendar-border) !important;
-  width: 100% !important;
-}
-
-.calendar-grid {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-.calendar-weekdays {
-  display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
-  background-color: var(--header-bg) !important;
-  color: var(--header-text) !important;
-  font-weight: bold !important;
-  text-align: center !important;
-  padding: 8px 0 !important;
-  border-bottom: 1px solid var(--calendar-border) !important;
-}
-
-.calendar-days {
-  display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
-  flex: 1 !important;
-}
-
-.day {
-  border: 1px solid var(--calendar-border) !important;
-  min-height: 60px !important;
-  padding: 4px !important;
-  cursor: pointer !important;
-  background-color: var(--calendar-bg) !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-.day-number {
-  font-size: 0.9rem !important;
-  font-weight: bold !important;
-  color: var(--text-body) !important;
-}
-
-@media (max-width: 768px) {
-  .calendar-container {
-    height: calc(100vh - 56px) !important;
-    padding: 0.5rem !important;
-    overflow-y: auto !important;
-  }
-  
-  #calendarGrid {
-    min-height: 200px !important;
-  }
-  
-  .day {
-    min-height: 35px !important;
-    padding: 2px !important;
-  }
-  
-  .day-number {
-    font-size: 0.7rem !important;
-  }
-}
-
-/* ============================================================
-   PANEL MÓVIL (reutilizando el sidebar con CSS)
-   ============================================================ */
-@media (max-width: 768px) {
-  /* Cabecera superior */
-  .mobile-header {
-    background-color: var(--sidebar-bg);
-    border-bottom: 1px solid var(--sidebar-border);
-    height: 56px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  /* El sidebar se convierte en panel móvil */
-  #sidebarDesktop {
-    position: fixed;
-    top: 56px;
-    left: 0;
-    bottom: 0;
-    width: 300px;
-    max-width: 80%;
-    background-color: var(--sidebar-bg);
-    border-right: 1px solid var(--sidebar-border);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: 999;
-    overflow-y: auto;
-    padding: 1rem !important;
-    display: block !important; /* visible en móvil solo cuando se abre */
-  }
-
-  #sidebarDesktop.mobile-open {
-    transform: translateX(0);
-  }
-
-  /* El calendario ocupa todo el ancho */
-  .calendar-container {
-    padding: 0.5rem !important;
-    width: 100% !important;
-    flex: 1 !important;
-    height: calc(100vh - 56px) !important;
-  }
-
-  /* Ajustes de tamaño de fuentes y celdas... (mantén los que ya tenías) */
-}
-
-/* ============================================================
-   VISTA AÑO - 3 COLUMNAS
-   ============================================================ */
-@media (min-width: 768px) {
-  .year-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-  }
-}
-@media (max-width: 767px) {
-  .year-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-    padding: 5px !important;
-  }
-}
-
-/* ============================================================
-   PANEL MÓVIL (a la derecha)
-   ============================================================ */
-@media (max-width: 768px) {
-  .mobile-header {
-    background-color: var(--sidebar-bg);
-    border-bottom: 1px solid var(--sidebar-border);
-    height: 56px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  #sidebarDesktop {
-    position: fixed;
-    top: 56px;
-    right: 0; /* Cambiado de left a right */
-    bottom: 0;
-    width: 300px;
-    max-width: 80%;
-    background-color: var(--sidebar-bg);
-    border-left: 1px solid var(--sidebar-border); /* Cambiado de right a left */
-    transform: translateX(100%); /* Desplazado desde la derecha */
-    transition: transform 0.3s ease;
-    z-index: 999;
-    overflow-y: auto;
-    padding: 1rem !important;
-    display: block !important;
-  }
-
-  #sidebarDesktop.mobile-open {
-    transform: translateX(0);
-  }
-
-  .calendar-container {
-    padding: 0.5rem !important;
-    width: 100% !important;
-    flex: 1 !important;
-    height: calc(100vh - 56px) !important;
-  }
-
-  /* Ajustes de eventos de todo el día en móvil */
-  .all-day-event-badge {
-    font-size: 0.55rem !important;
-    padding: 1px 4px !important;
-  }
-  .week-all-day-cell {
-    min-height: 20px !important;
-  }
-  .all-day-events-section {
-    padding: 2px 4px !important;
   }
 }
