@@ -965,7 +965,51 @@ document.addEventListener('DOMContentLoaded', function() {
     currentEventId = null;
     deleteBtn.style.display = 'none';
   });
-
+  // ========== SINCRONIZAR BOTONES MOBILE Y DESKTOP ==========
+  // Botón Nuevo Evento
+  const newEventBtnDesktop = document.getElementById('newEventBtnDesktop');
+  if (newEventBtnDesktop) {
+    newEventBtnDesktop.addEventListener('click', () => openCreateModal(null));
+  }
+  // Botón Eventos Terminados
+  const toggleFinishedBtnDesktop = document.getElementById('toggleFinishedBtnDesktop');
+  if (toggleFinishedBtnDesktop) {
+    toggleFinishedBtnDesktop.addEventListener('click', function() {
+      finishedVisible = !finishedVisible;
+      finishedListEl.style.display = finishedVisible ? 'block' : 'none';
+      this.textContent = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
+      // También sincronizar el botón mobile
+      const mobileBtn = document.getElementById('toggleFinishedBtn');
+      if (mobileBtn) {
+        mobileBtn.textContent = finishedVisible ? '📋' : '📋';
+        mobileBtn.classList.toggle('btn-outline-secondary', !finishedVisible);
+        mobileBtn.classList.toggle('btn-secondary', finishedVisible);
+      }
+    });
+  }
+  // Botón Categorías
+  const categoriasBtnDesktop = document.getElementById('categoriasBtnDesktop');
+  if (categoriasBtnDesktop) {
+    categoriasBtnDesktop.addEventListener('click', function() {
+      loadCategorias().then(() => {
+        renderCategoriasList();
+        categoriaForm.reset();
+        categoriaEditId.value = '';
+        categoriaSaveBtn.textContent = 'Guardar';
+        categoriaError.style.display = 'none';
+        categoriasModal.show();
+      });
+    });
+  }
+  // Botón Configuración
+  const settingsBtnDesktop = document.getElementById('settingsBtnDesktop');
+  if (settingsBtnDesktop) {
+    settingsBtnDesktop.addEventListener('click', function() {
+      timeFormatSelect.value = timeFormat;
+      themeSelect.value = tema;
+      settingsModal.show();
+    });
+  }
   // ========== INICIO ==========
   loadPreferences().then(() => {
     loadCategorias().then(() => {
