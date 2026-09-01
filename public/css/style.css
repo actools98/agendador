@@ -788,3 +788,156 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     font-size: 0.9rem;
   }
 }
+/* ============================================================
+   DISEÑO MOBILE INTEGRADO (rediseño completo)
+   ============================================================ */
+@media (max-width: 768px) {
+  /* ===== CABECERA MOBILE ===== */
+  .mobile-header {
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--sidebar-border);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .mobile-header .btn {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    min-height: 32px;
+    min-width: 32px;
+  }
+
+  /* ===== CONTENIDO PRINCIPAL ===== */
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ===== SIDEBAR EN MOBILE (se integra en el scroll) ===== */
+  .sidebar {
+    padding: 0.5rem 0.75rem !important;
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--sidebar-border);
+    flex: 0 0 auto;
+  }
+
+  .sidebar h6 {
+    font-size: 0.8rem;
+    margin-top: 0.75rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .sidebar .list-group-item {
+    padding: 0.2rem 0.1rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .sidebar .list-group-item .event-title strong {
+    font-size: 0.8rem !important;
+  }
+
+  .sidebar .btn {
+    font-size: 0.75rem !important;
+    padding: 0.2rem 0.4rem !important;
+    min-height: 32px !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  /* ===== CALENDARIO ===== */
+  .calendar-container {
+    padding: 0.75rem !important;
+    background-color: var(--bg-body);
+  }
+
+  /* ===== AJUSTES DE VISTAS ===== */
+  .day-time-column, .week-hours-column, .week-header-empty {
+    width: 38px !important;
+  }
+  .day-hour-label, .week-hour-label {
+    font-size: 0.55rem !important;
+  }
+  .day, .week-day-column {
+    min-height: 38px !important;
+  }
+  .week-header-day {
+    font-size: 0.5rem !important;
+    padding: 3px 0 !important;
+  }
+  .day-event-block, .week-event-block {
+    font-size: 0.45rem !important;
+    padding: 1px 2px !important;
+    min-height: 8px !important;
+  }
+  .day-all-day-event, .week-all-day-event {
+    font-size: 0.45rem !important;
+    padding: 1px 4px !important;
+  }
+
+  /* ===== VISTA MES ===== */
+  .day {
+    min-height: 38px !important;
+    padding: 2px !important;
+  }
+  .day-number {
+    font-size: 0.7rem !important;
+  }
+  .event-bar {
+    height: 2px !important;
+  }
+
+  /* ===== VISTA AÑO ===== */
+  .year-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    padding: 4px;
+  }
+  .year-month {
+    padding: 4px 3px;
+  }
+  .year-month-title {
+    font-size: 0.6rem;
+    margin-bottom: 3px;
+  }
+  .year-month-days {
+    gap: 1px;
+  }
+  .year-day {
+    font-size: 0.4rem;
+    border-radius: 2px;
+  }
+  .year-day-number {
+    font-size: 0.4rem;
+  }
+  .year-dot {
+    width: 3px;
+    height: 3px;
+  }
+  .year-dot-more {
+    font-size: 0.3rem;
+  }
+
+  /* ===== BOTONES DE NAVEGACIÓN ===== */
+  .calendar-container .btn-group .btn {
+    font-size: 0.6rem !important;
+    padding: 0.15rem 0.25rem !important;
+    min-height: 30px !important;
+  }
+  .calendar-container .btn-secondary {
+    font-size: 0.9rem !important;
+    padding: 0.1rem 0.3rem !important;
+  }
+  #viewTitle {
+    font-size: 0.85rem !important;
+  }
+
+  /* ===== MODALES ===== */
+  .modal-dialog {
+    margin: 0.3rem;
+  }
+  .modal-body .form-control-sm {
+    font-size: 0.8rem;
+  }
+}
