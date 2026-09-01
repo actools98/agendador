@@ -1119,3 +1119,113 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+  // ========== MENÚ HAMBURGUESA (SOLO MÓVIL) ==========
+  const menuToggle = document.getElementById('menuToggle');
+  const sidebarDesktop = document.getElementById('sidebarDesktop');
+
+  // Crear panel móvil si no existe
+  let mobilePanel = document.querySelector('.mobile-sidebar-panel');
+  if (!mobilePanel && window.innerWidth < 768) {
+    mobilePanel = document.createElement('div');
+    mobilePanel.className = 'mobile-sidebar-panel';
+    mobilePanel.innerHTML = sidebarDesktop.innerHTML;
+    document.body.appendChild(mobilePanel);
+  }
+
+  // Función para abrir/cerrar el panel móvil
+  function toggleMobileSidebar() {
+    if (!mobilePanel) return;
+    mobilePanel.classList.toggle('open');
+    menuToggle.textContent = mobilePanel.classList.contains('open') ? '✕' : '☰';
+  }
+
+  // Evento del botón hamburguesa
+  if (menuToggle) {
+    menuToggle.addEventListener('click', toggleMobileSidebar);
+  }
+
+  // Cerrar panel al hacer clic fuera o en un enlace interno (después de ciertas acciones)
+  if (mobilePanel) {
+    // Cerrar al hacer clic en un botón de acción
+    mobilePanel.querySelectorAll('.btn, a').forEach(el => {
+      el.addEventListener('click', function() {
+        if (window.innerWidth < 768) {
+          setTimeout(() => {
+            mobilePanel.classList.remove('open');
+            menuToggle.textContent = '☰';
+          }, 300);
+        }
+      });
+    });
+  }
+
+  // Sincronizar botones del sidebar en móvil
+  // (Los botones ya existen en el panel móvil, solo hay que asegurar que sus eventos funcionen)
+  // Como los botones se clonan, los eventos se pierden. Los reasignamos.
+  function syncMobileSidebarButtons() {
+    if (!mobilePanel) return;
+
+    // Nuevo evento
+    const newEventBtnMobile = mobilePanel.querySelector('#newEventBtnDesktop');
+    if (newEventBtnMobile) {
+      newEventBtnMobile.id = 'newEventBtnMobile';
+      newEventBtnMobile.addEventListener('click', () => {
+        openCreateModal(null);
+        // Cerrar panel
+        mobilePanel.classList.remove('open');
+        menuToggle.textContent = '☰';
+      });
+    }
+
+    // Eventos terminados
+    const toggleFinishedBtnMobile = mobilePanel.querySelector('#toggleFinishedBtnDesktop');
+    if (toggleFinishedBtnMobile) {
+      toggleFinishedBtnMobile.id = 'toggleFinishedBtnMobile';
+      toggleFinishedBtnMobile.addEventListener('click', function() {
+        finishedVisible = !finishedVisible;
+        finishedListEl.style.display = finishedVisible ? 'block' : 'none';
+        this.textContent = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
+        // Sincronizar también el botón en escritorio
+        const desktopBtn = document.getElementById('toggleFinishedBtnDesktop');
+        if (desktopBtn) {
+          desktopBtn.textContent = this.textContent;
+        }
+        mobilePanel.classList.remove('open');
+        menuToggle.textContent = '☰';
+      });
+    }
+
+    // Categorías
+    const categoriasBtnMobile = mobilePanel.querySelector('#categoriasBtnDesktop');
+    if (categoriasBtnMobile) {
+      categoriasBtnMobile.id = 'categoriasBtnMobile';
+      categoriasBtnMobile.addEventListener('click', function() {
+        loadCategorias().then(() => {
+          renderCategoriasList();
+          categoriaForm.reset();
+          categoriaEditId.value = '';
+          categoriaSaveBtn.textContent = 'Guardar';
+          categoriaError.style.display = 'none';
+          categoriasModal.show();
+          mobilePanel.classList.remove('open');
+          menuToggle.textContent = '☰';
+        });
+      });
+    }
+
+    // Configuración
+    const settingsBtnMobile = mobilePanel.querySelector('#settingsBtnDesktop');
+    if (settingsBtnMobile) {
+      settingsBtnMobile.id = 'settingsBtnMobile';
+      settingsBtnMobile.addEventListener('click', function() {
+        timeFormatSelect.value = timeFormat;
+        themeSelect.value = tema;
+        settingsModal.show();
+        mobilePanel.classList.remove('open');
+        menuToggle.textContent = '☰';
+      });
+    }
+  }
+
+  // Llamar a la sincronización después de cargar
+  setTimeout(syncMobileSidebarButtons, 500);
