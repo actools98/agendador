@@ -10,45 +10,84 @@
 </head>
 <body>
 
-<div class="container-fluid vh-100 d-flex flex-column p-0">
-  <div class="row flex-grow-1 g-0">
+<div class="container-fluid p-0 vh-100 d-flex flex-column">
 
-    <!-- ========== COLUMNA IZQUIERDA (SIDEBAR) ========== -->
-    <div class="col-12 col-md-3 col-lg-2 sidebar p-3">
-      <h4 class="mb-4">📅 Calendario</h4>
-      <p class="text-muted small">Bienvenido, <strong><%= username %></strong></p>
-      <hr class="border-secondary" />
-      <button id="newEventBtn" class="btn btn-primary w-100 mb-2">+ Nuevo evento</button>
-      <button id="toggleFinishedBtn" class="btn btn-outline-secondary w-100 mb-2">📋 Eventos terminados</button>
-      <div id="finishedEventsList" class="list-group list-group-flush mt-2" style="display:none;"></div>
-      <h6 class="mt-3">Mis eventos activos</h6>
-      <div id="eventList" class="list-group list-group-flush mt-2"></div>
-      <hr class="border-secondary" />
-      <!-- Botón Categorías -->
-      <button id="categoriasBtn" class="btn btn-outline-secondary w-100 mb-2">🏷️ Categorías</button>
-      <button id="settingsBtn" class="btn btn-outline-secondary w-100 mb-3">⚙️ Configuración</button>
-      <a href="/logout" class="btn btn-outline-danger w-100">Cerrar sesión</a>
-    </div>
-
-    <!-- ========== COLUMNA DERECHA (CALENDARIO) ========== -->
-    <div class="col-12 col-md-9 col-lg-10 p-3 calendar-container">
-      <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
-        <div class="d-flex align-items-center gap-2">
-          <button id="prevView" class="btn btn-secondary btn-sm">‹</button>
-          <button id="nextView" class="btn btn-secondary btn-sm">›</button>
-          <span id="viewTitle" class="ms-1 h5 mb-0"></span>
-        </div>
-        <div class="btn-group btn-group-sm" role="group" aria-label="Vistas">
-          <button class="btn btn-outline-primary view-btn" data-view="day">Día</button>
-          <button class="btn btn-outline-primary view-btn" data-view="week">Semana</button>
-          <button class="btn btn-outline-primary view-btn active" data-view="month">Mes</button>
-          <button class="btn btn-outline-primary view-btn" data-view="year">Año</button>
-        </div>
+  <!-- ========== CABECERA MOBILE (siempre visible) ========== -->
+  <div class="mobile-header d-md-none">
+    <div class="d-flex align-items-center justify-content-between p-2">
+      <h5 class="m-0">📅 Calendario</h5>
+      <div class="d-flex gap-1">
+        <button id="newEventBtn" class="btn btn-sm btn-primary" title="Nuevo evento">+</button>
+        <button id="toggleFinishedBtn" class="btn btn-sm btn-outline-secondary" title="Eventos terminados">📋</button>
+        <button id="categoriasBtn" class="btn btn-sm btn-outline-secondary" title="Categorías">🏷️</button>
+        <button id="settingsBtn" class="btn btn-sm btn-outline-secondary" title="Configuración">⚙️</button>
+        <a href="/logout" class="btn btn-sm btn-outline-danger" title="Cerrar sesión">✕</a>
       </div>
-      <div id="calendarGrid" class="calendar-grid"></div>
-      <div id="debug-message" class="debug-message">Powered by actols.com</div>
     </div>
+    <div class="px-2 pb-1">
+      <span class="text-muted small">Bienvenido, <strong><%= username %></strong></span>
+    </div>
+  </div>
 
+  <!-- ========== CONTENIDO PRINCIPAL (scroll único) ========== -->
+  <div class="main-content flex-grow-1 overflow-auto">
+
+    <div class="row g-0 h-100">
+
+      <!-- ========== COLUMNA IZQUIERDA (SIDEBAR) ========== -->
+      <div class="col-12 col-md-3 col-lg-2 sidebar p-3">
+        <!-- Título y usuario (solo desktop) -->
+        <div class="d-none d-md-block">
+          <h4 class="mb-4">📅 Calendario</h4>
+          <p class="text-muted small">Bienvenido, <strong><%= username %></strong></p>
+          <hr class="border-secondary" />
+        </div>
+
+        <!-- Botón Nuevo Evento (desktop) -->
+        <div class="d-grid gap-2">
+          <button id="newEventBtnDesktop" class="btn btn-primary w-100 mb-2 d-none d-md-block">+ Nuevo evento</button>
+          <button id="toggleFinishedBtnDesktop" class="btn btn-outline-secondary w-100 mb-2 d-none d-md-block">📋 Eventos terminados</button>
+        </div>
+
+        <!-- Lista de eventos terminados -->
+        <div id="finishedEventsList" class="list-group list-group-flush mt-2" style="display:none;"></div>
+
+        <!-- Título de eventos activos -->
+        <h6 class="mt-3 d-none d-md-block">Mis eventos activos</h6>
+        <div id="eventList" class="list-group list-group-flush mt-2"></div>
+
+        <!-- Botones de gestión (solo desktop) -->
+        <hr class="border-secondary d-none d-md-block" />
+        <button id="categoriasBtnDesktop" class="btn btn-outline-secondary w-100 mb-2 d-none d-md-block">🏷️ Categorías</button>
+        <button id="settingsBtnDesktop" class="btn btn-outline-secondary w-100 mb-3 d-none d-md-block">⚙️ Configuración</button>
+        <a href="/logout" class="btn btn-outline-danger w-100 d-none d-md-block">Cerrar sesión</a>
+      </div>
+
+      <!-- ========== COLUMNA DERECHA (CALENDARIO) ========== -->
+      <div class="col-12 col-md-9 col-lg-10 p-3 calendar-container">
+        <!-- Controles de navegación -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <button id="prevView" class="btn btn-secondary btn-sm">‹</button>
+            <button id="nextView" class="btn btn-secondary btn-sm">›</button>
+            <span id="viewTitle" class="ms-1 h5 mb-0"></span>
+          </div>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Vistas">
+            <button class="btn btn-outline-primary view-btn" data-view="day">Día</button>
+            <button class="btn btn-outline-primary view-btn" data-view="week">Semana</button>
+            <button class="btn btn-outline-primary view-btn active" data-view="month">Mes</button>
+            <button class="btn btn-outline-primary view-btn" data-view="year">Año</button>
+          </div>
+        </div>
+
+        <!-- Grid del calendario -->
+        <div id="calendarGrid" class="calendar-grid"></div>
+
+        <!-- Footer -->
+        <div id="debug-message" class="debug-message">Powered by actols.com</div>
+      </div>
+
+    </div>
   </div>
 </div>
 
