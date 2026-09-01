@@ -14,13 +14,12 @@
 
   <!-- ========== CABECERA SUPERIOR (siempre visible) ========== -->
   <div class="mobile-header d-flex align-items-center justify-content-between px-3 py-2">
+    <h5 class="m-0" id="headerTitle">📅 Calendario</h5>
     <div class="d-flex align-items-center gap-2">
       <button id="menuToggle" class="btn btn-outline-secondary btn-sm d-md-none" aria-label="Menú">
         ☰
       </button>
-      <h5 class="m-0" id="headerTitle">📅 Calendario</h5>
     </div>
-    <!-- El botón "+" solo se muestra en escritorio (está en el sidebar) -->
   </div>
 
   <!-- ========== CONTENIDO PRINCIPAL ========== -->
@@ -28,7 +27,7 @@
 
     <div class="row g-0 h-100">
 
-      <!-- ========== COLUMNA IZQUIERDA (SIDEBAR) - siempre visible en escritorio ========== -->
+      <!-- ========== COLUMNA IZQUIERDA (SIDEBAR) - siempre visible en escritorio, panel móvil a la derecha ========== -->
       <div class="col-12 col-md-3 col-lg-2 sidebar p-3" id="sidebarDesktop">
         <div class="d-none d-md-block">
           <h4 class="mb-4">📅 Calendario</h4>
@@ -80,7 +79,7 @@
   </div>
 </div>
 
-<!-- ========== MODALES (sin cambios) ========== -->
+<!-- ========== MODALES ========== -->
 <!-- MODAL PARA EVENTOS -->
 <div class="modal fade" id="eventModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
