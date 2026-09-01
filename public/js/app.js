@@ -90,7 +90,109 @@ document.addEventListener('DOMContentLoaded', function() {
       document.body.classList.remove('theme-dark');
     }
   }
+  // ========== NAVEGACIÓN MÓVIL (menu hamburguesa) ==========
+  const menuToggle = document.getElementById('menuToggle');
+  const viewCalendar = document.getElementById('viewCalendar');
+  const viewManagement = document.getElementById('viewManagement');
+  const closeManagement = document.getElementById('closeManagement');
+  const headerTitle = document.getElementById('headerTitle');
 
+  // Función para cambiar de vista
+  function toggleView(showCalendar) {
+    if (showCalendar) {
+      viewCalendar.style.display = 'block';
+      viewManagement.style.display = 'none';
+      headerTitle.textContent = '📅 Calendario';
+      menuToggle.textContent = '☰';
+    } else {
+      viewCalendar.style.display = 'none';
+      viewManagement.style.display = 'block';
+      headerTitle.textContent = '📋 Gestión';
+      menuToggle.textContent = '✕';
+    }
+    // Actualizar listas al abrir gestión
+    if (!showCalendar) {
+      renderEventList();
+      renderFinishedList();
+    }
+  }
+
+  // Evento del botón hamburguesa
+  if (menuToggle) {
+    menuToggle.addEventListener('click', function() {
+      const isCalendarVisible = viewCalendar.style.display !== 'none';
+      toggleView(!isCalendarVisible);
+    });
+  }
+
+  // Evento del botón cerrar en la vista de gestión
+  if (closeManagement) {
+    closeManagement.addEventListener('click', function() {
+      toggleView(true);
+    });
+  }
+
+  // Sincronizar botones del sidebar
+  const newEventBtnSidebar = document.getElementById('newEventBtnSidebar');
+  if (newEventBtnSidebar) {
+    newEventBtnSidebar.addEventListener('click', () => {
+      openCreateModal(null);
+      // Cerrar gestión y volver al calendario en móvil
+      if (window.innerWidth < 768) {
+        toggleView(true);
+      }
+    });
+  }
+
+  const toggleFinishedBtnSidebar = document.getElementById('toggleFinishedBtnSidebar');
+  if (toggleFinishedBtnSidebar) {
+    toggleFinishedBtnSidebar.addEventListener('click', function() {
+      finishedVisible = !finishedVisible;
+      finishedListEl.style.display = finishedVisible ? 'block' : 'none';
+      this.textContent = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
+      // Sincronizar el botón de la cabecera
+      const mobileBtn = document.getElementById('toggleFinishedBtn');
+      if (mobileBtn) {
+        mobileBtn.textContent = finishedVisible ? '📋' : '📋';
+      }
+    });
+  }
+
+  const categoriasBtnSidebar = document.getElementById('categoriasBtnSidebar');
+  if (categoriasBtnSidebar) {
+    categoriasBtnSidebar.addEventListener('click', function() {
+      loadCategorias().then(() => {
+        renderCategoriasList();
+        categoriaForm.reset();
+        categoriaEditId.value = '';
+        categoriaSaveBtn.textContent = 'Guardar';
+        categoriaError.style.display = 'none';
+        categoriasModal.show();
+        // Cerrar gestión y volver al calendario en móvil
+        if (window.innerWidth < 768) {
+          toggleView(true);
+        }
+      });
+    });
+  }
+
+  const settingsBtnSidebar = document.getElementById('settingsBtnSidebar');
+  if (settingsBtnSidebar) {
+    settingsBtnSidebar.addEventListener('click', function() {
+      timeFormatSelect.value = timeFormat;
+      themeSelect.value = tema;
+      settingsModal.show();
+      // Cerrar gestión y volver al calendario en móvil
+      if (window.innerWidth < 768) {
+        toggleView(true);
+      }
+    });
+  }
+
+  // Inicializar en móvil: mostrar calendario por defecto
+  if (window.innerWidth < 768) {
+    toggleView(true);
+  }
   // ========== PREFERENCIAS ==========
   async function loadPreferences() {
     try {
