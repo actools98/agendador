@@ -941,3 +941,142 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     font-size: 0.8rem;
   }
 }
+/* ============================================================
+   DISEÑO MOBILE CON NAVEGACIÓN POR PESTAÑAS
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Cabecera superior */
+  .mobile-header {
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--sidebar-border);
+    height: 56px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .mobile-header .btn {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+    min-height: 36px;
+  }
+
+  /* Vistas */
+  .view-panel {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Vista de gestión */
+  #viewManagement {
+    background-color: var(--sidebar-bg);
+  }
+
+  .sidebar-content {
+    max-width: 100%;
+    padding: 0.5rem 0;
+  }
+
+  .sidebar-content .list-group-item {
+    padding: 0.3rem 0.15rem;
+    font-size: 0.8rem;
+  }
+  .sidebar-content .list-group-item .event-title strong {
+    font-size: 0.85rem;
+  }
+
+  /* Ajustes de calendario en móvil */
+  .calendar-container {
+    padding: 0.5rem !important;
+  }
+
+  .day-time-column, .week-hours-column, .week-header-empty {
+    width: 38px !important;
+  }
+  .day-hour-label, .week-hour-label {
+    font-size: 0.55rem !important;
+  }
+  .day, .week-day-column {
+    min-height: 38px !important;
+  }
+  .week-header-day {
+    font-size: 0.5rem !important;
+    padding: 3px 0 !important;
+  }
+  .day-event-block, .week-event-block {
+    font-size: 0.45rem !important;
+    padding: 1px 2px !important;
+    min-height: 8px !important;
+  }
+  .day-all-day-event, .week-all-day-event {
+    font-size: 0.45rem !important;
+    padding: 1px 4px !important;
+  }
+
+  /* Vista mes */
+  .day {
+    min-height: 38px !important;
+    padding: 2px !important;
+  }
+  .day-number {
+    font-size: 0.7rem !important;
+  }
+  .event-bar {
+    height: 2px !important;
+  }
+
+  /* Vista año */
+  .year-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    padding: 4px;
+  }
+  .year-month {
+    padding: 4px 3px;
+  }
+  .year-month-title {
+    font-size: 0.6rem;
+    margin-bottom: 3px;
+  }
+  .year-month-days {
+    gap: 1px;
+  }
+  .year-day {
+    font-size: 0.4rem;
+    border-radius: 2px;
+  }
+  .year-day-number {
+    font-size: 0.4rem;
+  }
+  .year-dot {
+    width: 3px;
+    height: 3px;
+  }
+  .year-dot-more {
+    font-size: 0.3rem;
+  }
+
+  /* Botones de navegación */
+  .calendar-container .btn-group .btn {
+    font-size: 0.6rem !important;
+    padding: 0.15rem 0.25rem !important;
+    min-height: 30px !important;
+  }
+  .calendar-container .btn-secondary {
+    font-size: 0.9rem !important;
+    padding: 0.1rem 0.3rem !important;
+  }
+  #viewTitle {
+    font-size: 0.85rem !important;
+  }
+
+  /* Modales */
+  .modal-dialog {
+    margin: 0.3rem;
+  }
+  .modal-body .form-control-sm {
+    font-size: 0.8rem;
+  }
+}
