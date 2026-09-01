@@ -247,7 +247,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA SEMANA (con tabla y cabecera fija)
+   VISTA SEMANA
    ============================================================ */
 .week-container {
   flex: 1;
@@ -259,30 +259,24 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border: 1px solid var(--calendar-border);
   overflow: hidden;
 }
-
 .week-table-scroll {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
 }
-
 .week-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
-
-/* Cabecera fija */
 .week-table thead {
   position: sticky;
   top: 0;
   z-index: 20;
 }
-
 .week-table thead tr {
   background-color: var(--header-bg);
 }
-
 .week-header-empty {
   width: 70px;
   min-width: 70px;
@@ -291,7 +285,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-bottom: 2px solid var(--calendar-border);
   background-color: var(--header-bg);
 }
-
 .week-header-day {
   padding: 8px 0;
   font-weight: bold;
@@ -301,16 +294,12 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-left: 1px solid var(--calendar-border);
   text-align: center;
 }
-
 .week-header-day.today {
   color: var(--today-border);
 }
-
-/* Cuerpo */
 .week-table tbody tr {
   border-bottom: 1px solid var(--slot-border);
 }
-
 .week-hour-label {
   width: 70px;
   min-width: 70px;
@@ -325,7 +314,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   border-right: 1px solid var(--slot-border);
   box-sizing: border-box;
 }
-
 .week-day-cell {
   height: 70px;
   padding: 0;
@@ -336,12 +324,9 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   background-color: var(--calendar-bg);
   vertical-align: top;
 }
-
 .week-day-cell:hover {
   background-color: var(--slot-hover);
 }
-
-/* Eventos */
 .week-event-block {
   position: absolute;
   border-radius: 4px;
@@ -356,31 +341,10 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   box-sizing: border-box;
   z-index: 5;
 }
-
 .week-event-block:hover {
   opacity: 0.85;
 }
 
-.event-title-inline {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: bold;
-  color: #fff;
-}
-
-/* Línea roja */
-.current-time-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: red;
-  z-index: 10;
-  pointer-events: none;
-  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
-}
 /* ============================================================
    VISTA AÑO
    ============================================================ */
@@ -610,338 +574,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   RESPONSIVE (MÓVIL) - CORREGIDO DEFINITIVO
-   ============================================================ */
-@media (max-width: 768px) {
-  .container-fluid {
-    height: 100vh;
-    overflow: hidden;
-  }
-
-  .row {
-    height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sidebar {
-    flex: 0 0 auto;
-    overflow-y: visible;
-    height: auto;
-    max-height: none;
-    border-right: none;
-    border-bottom: 1px solid var(--sidebar-border);
-    padding: 0.75rem 1rem !important;
-    background-color: var(--sidebar-bg);
-  }
-
-  .sidebar h4 {
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
-  }
-  .sidebar .text-muted {
-    font-size: 0.8rem;
-    margin-bottom: 0.5rem;
-  }
-  .sidebar .btn {
-    font-size: 0.8rem;
-    padding: 0.3rem 0.5rem;
-    margin-bottom: 0.3rem;
-    min-height: 44px;
-  }
-  .sidebar .list-group-item {
-    padding: 0.3rem 0.15rem;
-    font-size: 0.8rem;
-  }
-  .sidebar .list-group-item .event-title strong {
-    font-size: 0.85rem;
-  }
-  .sidebar hr {
-    margin: 0.5rem 0;
-  }
-
-  .calendar-container {
-    flex: 1;
-    min-height: 0;
-    padding: 10px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background-color: var(--bg-body);
-  }
-
-  /* Ajustes de día y semana */
-  .day-time-column, .week-hours-column, .week-header-empty {
-    width: 45px !important;
-  }
-  .day-hour-label, .week-hour-label {
-    font-size: 0.7rem !important;
-  }
-  .day, .week-day-column {
-    min-height: 50px !important;
-  }
-  .week-header-day {
-    font-size: 0.65rem !important;
-    padding: 6px 0 !important;
-  }
-  .day-event-block, .week-event-block {
-    font-size: 0.6rem !important;
-    padding: 2px 4px !important;
-    min-height: 14px !important;
-  }
-  .day-all-day-event, .week-all-day-event {
-    font-size: 0.6rem !important;
-    padding: 2px 6px !important;
-  }
-
-  /* ========== VISTA AÑO CORREGIDA ========== */
-  .year-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 columnas fijas */
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .year-month {
-    padding: 8px 6px;
-    border-radius: 6px;
-  }
-
-  .year-month-title {
-    font-size: 0.85rem;
-    margin-bottom: 6px;
-  }
-
-  .year-month-days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 7 columnas fijas para los días */
-    gap: 2px;
-    justify-items: center;
-  }
-
-  .year-day {
-    width: 100%;
-    aspect-ratio: 1/1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.55rem;
-    border-radius: 3px;
-    background-color: var(--bg-body);
-  }
-
-  .year-day-number {
-    font-size: 0.55rem;
-    line-height: 1;
-  }
-
-  .year-day-dots {
-    display: flex;
-    gap: 1px;
-    margin-top: 1px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .year-dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-  }
-
-  .year-dot-more {
-    font-size: 0.4rem;
-    line-height: 1;
-  }
-
-  .year-day.empty {
-    background: transparent;
-  }
-
-  /* Botones de vista en móvil */
-  .calendar-container .btn-group {
-    margin-left: 0;
-    width: 100%;
-    justify-content: center;
-  }
-  .calendar-container .btn-group .btn {
-    flex: 1;
-    font-size: 0.7rem;
-    padding: 0.3rem 0.4rem;
-    min-height: 40px;
-  }
-
-  .calendar-container .btn-secondary {
-    font-size: 1.2rem;
-    padding: 0.2rem 0.6rem;
-  }
-
-  #viewTitle {
-    font-size: 1rem !important;
-  }
-
-  .modal-dialog {
-    margin: 0.5rem;
-  }
-  .modal-body .form-control-sm {
-    font-size: 0.9rem;
-  }
-}
-/* ============================================================
-   DISEÑO MOBILE INTEGRADO (rediseño completo)
-   ============================================================ */
-@media (max-width: 768px) {
-  /* ===== CABECERA MOBILE ===== */
-  .mobile-header {
-    background-color: var(--sidebar-bg);
-    border-bottom: 1px solid var(--sidebar-border);
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .mobile-header .btn {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.4rem;
-    min-height: 32px;
-    min-width: 32px;
-  }
-
-  /* ===== CONTENIDO PRINCIPAL ===== */
-  .main-content {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* ===== SIDEBAR EN MOBILE (se integra en el scroll) ===== */
-  .sidebar {
-    padding: 0.5rem 0.75rem !important;
-    background-color: var(--sidebar-bg);
-    border-bottom: 1px solid var(--sidebar-border);
-    flex: 0 0 auto;
-  }
-
-  .sidebar h6 {
-    font-size: 0.8rem;
-    margin-top: 0.75rem !important;
-    margin-bottom: 0.25rem !important;
-  }
-
-  .sidebar .list-group-item {
-    padding: 0.2rem 0.1rem !important;
-    font-size: 0.75rem !important;
-  }
-
-  .sidebar .list-group-item .event-title strong {
-    font-size: 0.8rem !important;
-  }
-
-  .sidebar .btn {
-    font-size: 0.75rem !important;
-    padding: 0.2rem 0.4rem !important;
-    min-height: 32px !important;
-    margin-bottom: 0.2rem !important;
-  }
-
-  /* ===== CALENDARIO ===== */
-  .calendar-container {
-    padding: 0.75rem !important;
-    background-color: var(--bg-body);
-  }
-
-  /* ===== AJUSTES DE VISTAS ===== */
-  .day-time-column, .week-hours-column, .week-header-empty {
-    width: 38px !important;
-  }
-  .day-hour-label, .week-hour-label {
-    font-size: 0.55rem !important;
-  }
-  .day, .week-day-column {
-    min-height: 38px !important;
-  }
-  .week-header-day {
-    font-size: 0.5rem !important;
-    padding: 3px 0 !important;
-  }
-  .day-event-block, .week-event-block {
-    font-size: 0.45rem !important;
-    padding: 1px 2px !important;
-    min-height: 8px !important;
-  }
-  .day-all-day-event, .week-all-day-event {
-    font-size: 0.45rem !important;
-    padding: 1px 4px !important;
-  }
-
-  /* ===== VISTA MES ===== */
-  .day {
-    min-height: 38px !important;
-    padding: 2px !important;
-  }
-  .day-number {
-    font-size: 0.7rem !important;
-  }
-  .event-bar {
-    height: 2px !important;
-  }
-
-  /* ===== VISTA AÑO ===== */
-  .year-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
-    padding: 4px;
-  }
-  .year-month {
-    padding: 4px 3px;
-  }
-  .year-month-title {
-    font-size: 0.6rem;
-    margin-bottom: 3px;
-  }
-  .year-month-days {
-    gap: 1px;
-  }
-  .year-day {
-    font-size: 0.4rem;
-    border-radius: 2px;
-  }
-  .year-day-number {
-    font-size: 0.4rem;
-  }
-  .year-dot {
-    width: 3px;
-    height: 3px;
-  }
-  .year-dot-more {
-    font-size: 0.3rem;
-  }
-
-  /* ===== BOTONES DE NAVEGACIÓN ===== */
-  .calendar-container .btn-group .btn {
-    font-size: 0.6rem !important;
-    padding: 0.15rem 0.25rem !important;
-    min-height: 30px !important;
-  }
-  .calendar-container .btn-secondary {
-    font-size: 0.9rem !important;
-    padding: 0.1rem 0.3rem !important;
-  }
-  #viewTitle {
-    font-size: 0.85rem !important;
-  }
-
-  /* ===== MODALES ===== */
-  .modal-dialog {
-    margin: 0.3rem;
-  }
-  .modal-body .form-control-sm {
-    font-size: 0.8rem;
-  }
-}
-/* ============================================================
    DISEÑO MOBILE CON MENÚ HAMBURGUESA (SOLO MÓVIL)
    ============================================================ */
 @media (max-width: 768px) {
@@ -966,6 +598,11 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     padding: 0.5rem !important;
     width: 100% !important;
     flex: 1 !important;
+    height: calc(100vh - 56px) !important;
+  }
+
+  #calendarGrid {
+    min-height: 200px !important;
   }
 
   /* Panel de gestión (sidebar) que se muestra al hacer clic en hamburguesa */
@@ -981,6 +618,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     padding: 1rem;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
+    border-right: 1px solid var(--sidebar-border);
   }
 
   .mobile-sidebar-panel.open {
@@ -1084,10 +722,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   .modal-dialog {
     margin: 0.3rem;
   }
-  .modal-body .form-control-sm {
-    font-size: 0.8rem;
-  }
-}
   .modal-body .form-control-sm {
     font-size: 0.8rem;
   }
