@@ -942,7 +942,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   }
 }
 /* ============================================================
-   DISEÑO MOBILE CON NAVEGACIÓN POR PESTAÑAS
+   DISEÑO MOBILE CON MENÚ HAMBURGUESA (SOLO MÓVIL)
    ============================================================ */
 @media (max-width: 768px) {
   /* Cabecera superior */
@@ -956,42 +956,50 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     z-index: 100;
   }
 
-  .mobile-header .btn {
-    font-size: 0.8rem;
-    padding: 0.2rem 0.5rem;
-    min-height: 36px;
+  /* Ocultar sidebar en móvil (se muestra como panel flotante) */
+  #sidebarDesktop {
+    display: none !important;
   }
 
-  /* Vistas */
-  .view-panel {
-    height: 100%;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+  /* El calendario ocupa todo el ancho en móvil */
+  .calendar-container {
+    padding: 0.5rem !important;
+    width: 100% !important;
+    flex: 1 !important;
   }
 
-  /* Vista de gestión */
-  #viewManagement {
+  /* Panel de gestión (sidebar) que se muestra al hacer clic en hamburguesa */
+  .mobile-sidebar-panel {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-color: var(--sidebar-bg);
+    z-index: 999;
+    overflow-y: auto;
+    padding: 1rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
   }
 
-  .sidebar-content {
+  .mobile-sidebar-panel.open {
+    transform: translateX(0);
+  }
+
+  .mobile-sidebar-panel .sidebar-content {
     max-width: 100%;
-    padding: 0.5rem 0;
   }
 
-  .sidebar-content .list-group-item {
+  .mobile-sidebar-panel .list-group-item {
     padding: 0.3rem 0.15rem;
     font-size: 0.8rem;
   }
-  .sidebar-content .list-group-item .event-title strong {
+  .mobile-sidebar-panel .list-group-item .event-title strong {
     font-size: 0.85rem;
   }
 
   /* Ajustes de calendario en móvil */
-  .calendar-container {
-    padding: 0.5rem !important;
-  }
-
   .day-time-column, .week-hours-column, .week-header-empty {
     width: 38px !important;
   }
@@ -1076,6 +1084,10 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   .modal-dialog {
     margin: 0.3rem;
   }
+  .modal-body .form-control-sm {
+    font-size: 0.8rem;
+  }
+}
   .modal-body .form-control-sm {
     font-size: 0.8rem;
   }
