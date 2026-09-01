@@ -959,3 +959,74 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 
   /* Ajustes de tamaño de fuentes y celdas... (mantén los que ya tenías) */
 }
+
+/* ============================================================
+   VISTA AÑO - 3 COLUMNAS
+   ============================================================ */
+@media (min-width: 768px) {
+  .year-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (max-width: 767px) {
+  .year-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    padding: 5px !important;
+  }
+}
+
+/* ============================================================
+   PANEL MÓVIL (a la derecha)
+   ============================================================ */
+@media (max-width: 768px) {
+  .mobile-header {
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--sidebar-border);
+    height: 56px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  #sidebarDesktop {
+    position: fixed;
+    top: 56px;
+    right: 0; /* Cambiado de left a right */
+    bottom: 0;
+    width: 300px;
+    max-width: 80%;
+    background-color: var(--sidebar-bg);
+    border-left: 1px solid var(--sidebar-border); /* Cambiado de right a left */
+    transform: translateX(100%); /* Desplazado desde la derecha */
+    transition: transform 0.3s ease;
+    z-index: 999;
+    overflow-y: auto;
+    padding: 1rem !important;
+    display: block !important;
+  }
+
+  #sidebarDesktop.mobile-open {
+    transform: translateX(0);
+  }
+
+  .calendar-container {
+    padding: 0.5rem !important;
+    width: 100% !important;
+    flex: 1 !important;
+    height: calc(100vh - 56px) !important;
+  }
+
+  /* Ajustes de eventos de todo el día en móvil */
+  .all-day-event-badge {
+    font-size: 0.55rem !important;
+    padding: 1px 4px !important;
+  }
+  .week-all-day-cell {
+    min-height: 20px !important;
+  }
+  .all-day-events-section {
+    padding: 2px 4px !important;
+  }
+}
