@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', function() {
   let timeFormat = '24';
   let tema = 'claro';
 
-  // Altura fija por hora (en píxeles)
   const HOUR_HEIGHT = 70;
 
   // ========== ELEMENTOS DOM ==========
@@ -23,24 +22,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const prevBtn = $('#prevView');
   const nextBtn = $('#nextView');
   const viewBtns = $$('.view-btn');
-  const newEventBtn = $('#newEventBtn');
-  const settingsBtn = $('#settingsBtn');
   const toggleFinishedBtn = $('#toggleFinishedBtn');
-  const categoriasBtn = $('#categoriasBtn');
   const eventListEl = $('#eventList');
   const finishedListEl = $('#finishedEventsList');
 
-  // Modales
   const settingsModal = new bootstrap.Modal($('#settingsModal'));
   const categoriasModal = new bootstrap.Modal($('#categoriasModal'));
   const modalEvent = new bootstrap.Modal($('#eventModal'));
 
-  // Elementos configuración
   const timeFormatSelect = $('#timeFormatSelect');
   const themeSelect = $('#themeSelect');
   const saveSettingsBtn = $('#saveSettingsBtn');
 
-  // Elementos categorías
   const categoriasList = $('#categoriasList');
   const categoriaForm = $('#categoriaForm');
   const categoriaEditId = $('#categoriaEditId');
@@ -49,7 +42,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const categoriaSaveBtn = $('#categoriaSaveBtn');
   const categoriaError = $('#categoriaError');
 
-  // Elementos evento
   const modalTitle = $('#modalTitle');
   const form = $('#eventForm');
   const eventIdInput = $('#eventId');
@@ -67,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentEventId = null;
   let finishedVisible = false;
 
-  // ========== FUNCIONES DE FORMATO DE HORA ==========
+  // ========== FUNCIONES ==========
   function formatTime(date, format = timeFormat) {
     if (format === '12') {
       let hours = date.getHours();
@@ -83,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
     return `${formatTime(start)} - ${formatTime(end)}`;
   }
 
-  // ========== APLICAR TEMA ==========
   function applyTheme(theme) {
     if (theme === 'oscuro') {
       document.body.classList.add('theme-dark');
@@ -399,8 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   }
-
-  // ========== RENDER VISTAS ==========
+    // ========== RENDER VISTAS ==========
   function renderView() {
     if (!grid) return;
     switch (currentView) {
@@ -445,7 +435,8 @@ document.addEventListener('DOMContentLoaded', function() {
       line.style.top = `${Math.min(100, topPercent)}%`;
     });
   }
-    // ========== VISTA DÍA ==========
+
+  // ========== VISTA DÍA ==========
   function renderDayView() {
     const date = currentDate;
     const dateStr = date.toISOString().split('T')[0];
@@ -458,12 +449,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalHeight = 24 * HOUR_HEIGHT;
     let html = `<div class="day-time-grid">`;
 
-    // --- Sección de eventos de todo el día (como Google Calendar) ---
+    // Eventos de todo el día
     if (allDayEvents.length > 0) {
-      html += `<div class="all-day-events-section" style="background-color: var(--header-bg); border-bottom: 2px solid var(--calendar-border); padding: 4px 8px; display: flex; flex-wrap: wrap; gap: 4px;">`;
+      html += `<div class="all-day-events-section">`;
       allDayEvents.forEach(e => {
         html += `
-          <div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'}; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;" data-id="${e.id}">
+          <div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'};" data-id="${e.id}">
             ${e.title}
           </div>
         `;
@@ -472,7 +463,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     html += `<div class="day-time-grid-inner">`;
-
     // Columna de horas
     html += `<div class="day-time-column" style="height: ${totalHeight}px;">`;
     for (let hour = 0; hour < 24; hour++) {
@@ -494,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
       html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
     }
 
-    // Línea roja (hoy)
+    // Línea roja
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateStr === todayStr) {
       const now = new Date();
@@ -546,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
-    // Event listeners para slots y bloques
+    // Listeners
     $$('.day-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
@@ -555,7 +545,6 @@ document.addEventListener('DOMContentLoaded', function() {
         openCreateModal(dateObj.toISOString().split('T')[0], hour);
       });
     });
-    // Eventos de todo el día (click para editar)
     $$('.all-day-event-badge').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -594,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {
       html += `<th class="week-header-day ${isToday ? 'today' : ''}">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</th>`;
     }
     html += `</tr>`;
-    // Fila de eventos de todo el día (debajo de la cabecera, como Google Calendar)
+    // Fila de eventos de todo el día
     html += `<tr class="all-day-row">`;
     html += `<td class="week-header-empty" style="background-color: var(--header-bg); border-right: 1px solid var(--calendar-border);"></td>`;
     for (let i = 0; i < 7; i++) {
@@ -603,11 +592,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const dateStr = d.toISOString().split('T')[0];
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
-      html += `<td class="week-all-day-cell" style="background-color: var(--header-bg); border-left: 1px solid var(--calendar-border); padding: 2px; min-height: 30px;">`;
+      html += `<td class="week-all-day-cell">`;
       if (allDayEvents.length > 0) {
         allDayEvents.forEach(e => {
           html += `
-            <div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'}; color: #fff; padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; margin: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" data-id="${e.id}">
+            <div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'};" data-id="${e.id}">
               ${e.title}
             </div>
           `;
@@ -642,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         html += `<td class="week-day-cell" data-date="${dateStr}" data-hour="${hour}">`;
         
-        // Línea roja (solo en el día y hora actual)
+        // Línea roja
         const todayStr = new Date().toISOString().split('T')[0];
         if (dateStr === todayStr) {
           const now = new Date();
@@ -693,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
-    // Event listeners
+    // Listeners
     $$('.week-day-cell').forEach(cell => {
       cell.addEventListener('click', function(e) {
         if (e.target.closest('.week-event-block') || e.target.closest('.all-day-event-badge')) return;
@@ -770,21 +759,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (3 columnas) ==========
+  // ========== VISTA AÑO (3 COLUMNAS) ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
 
-    let html = `<div class="year-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 10px;">`;
+    let html = `<div class="year-grid">`;
     for (let m = 0; m < 12; m++) {
       const monthDate = new Date(year, m, 1);
       const monthName = monthDate.toLocaleString('es', { month: 'long' });
       const daysInMonth = new Date(year, m + 1, 0).getDate();
       const firstDayOfMonth = new Date(year, m, 1).getDay();
 
-      html += `<div class="year-month" data-month="${m}" style="background: var(--sidebar-bg); border: 1px solid var(--calendar-border); border-radius: 8px; padding: 10px; cursor: pointer; transition: background 0.2s;">`;
-      html += `<div class="year-month-title" style="font-weight: bold; text-align: center; margin-bottom: 8px; color: var(--text-body);">${monthName}</div>`;
-      html += `<div class="year-month-days" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; justify-items: center;">`;
+      html += `<div class="year-month" data-month="${m}">`;
+      html += `<div class="year-month-title">${monthName}</div>`;
+      html += `<div class="year-month-days">`;
       for (let i = 0; i < firstDayOfMonth; i++) {
         html += `<div class="year-day empty"></div>`;
       }
@@ -794,15 +783,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const dayEvents = events.filter(e => e.start.startsWith(dateStr));
         const hasEvent = dayEvents.length > 0;
 
-        html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-date="${dateStr}" style="width: 100%; aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; background-color: var(--bg-body); border-radius: 4px; position: relative; cursor: pointer;">`;
+        html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-date="${dateStr}">`;
         html += `<span class="year-day-number">${d}</span>`;
         if (hasEvent) {
-          html += `<div class="year-day-dots" style="display: flex; gap: 2px; margin-top: 1px; flex-wrap: wrap; justify-content: center;">`;
+          html += `<div class="year-day-dots">`;
           const maxDots = Math.min(dayEvents.length, 3);
           for (let i = 0; i < maxDots; i++) {
-            html += `<span class="year-dot" style="width: 5px; height: 5px; border-radius: 50%; display: inline-block; background-color: ${dayEvents[i].color || '#3788d8'};"></span>`;
+            html += `<span class="year-dot" style="background-color: ${dayEvents[i].color || '#3788d8'};"></span>`;
           }
-          if (dayEvents.length > 3) html += `<span class="year-dot-more" style="font-size: 0.5rem; color: var(--text-muted);">+${dayEvents.length - 3}</span>`;
+          if (dayEvents.length > 3) html += `<span class="year-dot-more">+${dayEvents.length - 3}</span>`;
           html += `</div>`;
         }
         html += `</div>`;
@@ -834,8 +823,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   }
-
-  // ========== MODAL EVENTO ==========
+    // ========== MODAL EVENTO ==========
   function openCreateModal(dateStr, hour) {
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
@@ -988,12 +976,13 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
   }
 
-  // ========== MENÚ HAMBURGUESA (a la derecha) ==========
+  // ========== MENÚ HAMBURGUESA (CORREGIDO) ==========
   const menuToggle = document.getElementById('menuToggle');
   const sidebarDesktop = document.getElementById('sidebarDesktop');
 
   function toggleMobileSidebar() {
     if (!sidebarDesktop) return;
+    // Alternar la clase 'mobile-open' que controla la transformación
     sidebarDesktop.classList.toggle('mobile-open');
     if (menuToggle) {
       menuToggle.textContent = sidebarDesktop.classList.contains('mobile-open') ? '✕' : '☰';
@@ -1040,14 +1029,16 @@ document.addEventListener('DOMContentLoaded', function() {
       finishedListEl.style.display = finishedVisible ? 'block' : 'none';
     }
     const text = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
-    if (toggleFinishedBtn) toggleFinishedBtn.textContent = text;
+    const toggleBtn = document.getElementById('toggleFinishedBtn');
+    if (toggleBtn) toggleBtn.textContent = text;
     const desktopBtn = document.getElementById('toggleFinishedBtnDesktop');
     if (desktopBtn) desktopBtn.textContent = text;
   }
 
-  if (toggleFinishedBtn) {
-    toggleFinishedBtn.addEventListener('click', function(e) {
-      e.stopPropagation(); // Evita que el menú se cierre
+  const toggleFinishedBtnMobile = document.getElementById('toggleFinishedBtn');
+  if (toggleFinishedBtnMobile) {
+    toggleFinishedBtnMobile.addEventListener('click', function(e) {
+      e.stopPropagation();
       toggleFinishedEvents();
     });
   }
@@ -1069,6 +1060,7 @@ document.addEventListener('DOMContentLoaded', function() {
     newEventBtnDesktop.addEventListener('click', () => openCreateModal(null));
   }
 
+  const settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', function() {
       if (timeFormatSelect) timeFormatSelect.value = timeFormat;
@@ -1086,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  const categoriasBtn = document.getElementById('categoriasBtn');
   if (categoriasBtn) {
     categoriasBtn.addEventListener('click', function() {
       loadCategorias().then(() => {
