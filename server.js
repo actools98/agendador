@@ -6,7 +6,8 @@ const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/events');
 const preferenciasRoutes = require('./routes/preferencias');
 const categoriasRoutes = require('./routes/categorias');
-const inviteRoutes = require('./routes/invite'); // <-- Importar
+const inviteRoutes = require('./routes/invite');        // Rutas públicas
+const generateRoutes = require('./routes/generate');    // Nueva ruta para generar enlace
 const db = require('./db');
 
 const app = express();
@@ -33,13 +34,13 @@ const requireAuth = (req, res, next) => {
 
 // Rutas públicas
 app.use('/', authRoutes);
-app.use('/invite', inviteRoutes); // <-- Ruta pública SIN autenticación
+app.use('/invite', inviteRoutes);
 
-// Rutas protegidas
+// Rutas protegidas (API)
 app.use('/api/events', requireAuth, eventRoutes);
 app.use('/api/preferencias', requireAuth, preferenciasRoutes);
 app.use('/api/categorias', requireAuth, categoriasRoutes);
-app.use('/api/invite', requireAuth, inviteRoutes); // <-- Ruta protegida (generar)
+app.use('/api/generate-invite', requireAuth, generateRoutes); // <--- NUEVA RUTA
 
 app.get('/', requireAuth, (req, res) => {
   res.render('index', { username: req.session.username });
