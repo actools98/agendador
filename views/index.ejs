@@ -12,7 +12,7 @@
 
 <div class="container-fluid p-0 vh-100 d-flex flex-column">
 
-  <!-- ========== CABECERA SUPERIOR (siempre visible) ========== -->
+  <!-- ========== CABECERA SUPERIOR ========== -->
   <div class="mobile-header d-flex align-items-center justify-content-between px-3 py-2">
     <h5 class="m-0" id="headerTitle">📅 Calendario</h5>
     <div class="d-flex align-items-center gap-2">
@@ -27,7 +27,7 @@
 
     <div class="row g-0 h-100">
 
-      <!-- ========== COLUMNA IZQUIERDA (SIDEBAR) - siempre visible en escritorio, panel móvil a la derecha ========== -->
+      <!-- ========== COLUMNA IZQUIERDA (SIDEBAR) ========== -->
       <div class="col-12 col-md-3 col-lg-2 sidebar p-3" id="sidebarDesktop">
         <div class="d-none d-md-block">
           <h4 class="mb-4">📅 Calendario</h4>
@@ -79,10 +79,38 @@
   </div>
 </div>
 
-<!-- ========== MODALES ========== -->
-<!-- MODAL PARA EVENTOS -->
+<!-- ========== MODAL DE DETALLE DEL EVENTO ========== -->
+<div class="modal fade" id="eventDetailModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="detailModalTitle">Detalle del evento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="detailContent">
+          <p><strong>Título:</strong> <span id="detailTitle"></span></p>
+          <p><strong>Descripción:</strong> <span id="detailDescription"></span></p>
+          <p><strong>Categoría:</strong> <span id="detailCategory"></span></p>
+          <p><strong>Estado:</strong> <span id="detailStatus"></span></p>
+          <p><strong>Inicio:</strong> <span id="detailStart"></span></p>
+          <p><strong>Fin:</strong> <span id="detailEnd"></span></p>
+          <p><strong>Todo el día:</strong> <span id="detailAllDay"></span></p>
+          <p><strong>Enlace:</strong> <span id="detailLink"></span></p>
+          <p><strong>Dirección:</strong> <span id="detailAddress"></span></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" id="editFromDetailBtn" class="btn btn-primary btn-sm">Editar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL DE EDICIÓN/CREACIÓN DE EVENTO (MEJORADO) ========== -->
 <div class="modal fade" id="eventModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalTitle">Evento</h5>
@@ -91,46 +119,66 @@
       <div class="modal-body">
         <form id="eventForm">
           <input type="hidden" id="eventId" />
-          <div class="mb-2">
-            <label for="title" class="form-label">Título *</label>
-            <input type="text" class="form-control form-control-sm" id="title" required />
-          </div>
-          <div class="mb-2">
-            <label for="description" class="form-label">Descripción</label>
-            <textarea class="form-control form-control-sm" id="description" rows="2"></textarea>
-          </div>
           <div class="row g-2">
-            <div class="col-6">
-              <label for="start" class="form-label small">Inicio *</label>
-              <input type="datetime-local" class="form-control form-control-sm" id="start" required />
-            </div>
-            <div class="col-6">
-              <label for="end" class="form-label small">Fin *</label>
-              <input type="datetime-local" class="form-control form-control-sm" id="end" required />
+            <div class="col-12">
+              <label for="title" class="form-label">Título *</label>
+              <input type="text" class="form-control" id="title" required />
             </div>
           </div>
-          <div class="mb-2 form-check">
-            <input type="checkbox" class="form-check-input" id="allDay" />
-            <label class="form-check-label" for="allDay">Todo el día</label>
+          <div class="row g-2 mt-1">
+            <div class="col-12">
+              <label for="description" class="form-label">Descripción</label>
+              <textarea class="form-control" id="description" rows="2"></textarea>
+            </div>
           </div>
-          <div class="mb-2">
-            <label for="eventCategoria" class="form-label small">Categoría</label>
-            <select id="eventCategoria" class="form-select form-select-sm">
-              <option value="">Sin categoría</option>
-            </select>
+          <div class="row g-2 mt-1">
+            <div class="col-md-6">
+              <label for="start" class="form-label">Inicio *</label>
+              <input type="datetime-local" class="form-control" id="start" required />
+            </div>
+            <div class="col-md-6">
+              <label for="end" class="form-label">Fin *</label>
+              <input type="datetime-local" class="form-control" id="end" required />
+            </div>
           </div>
-          <div class="mb-2">
-            <label for="color" class="form-label small">Color (evento)</label>
-            <input type="color" class="form-control form-control-color form-control-sm" id="color" value="#3788d8" />
+          <div class="row g-2 mt-1">
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input type="checkbox" class="form-check-input" id="allDay" />
+                <label class="form-check-label" for="allDay">Todo el día</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label for="eventCategoria" class="form-label">Categoría</label>
+              <select id="eventCategoria" class="form-select">
+                <option value="">Sin categoría</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="color" class="form-label">Color</label>
+              <input type="color" class="form-control form-control-color" id="color" value="#3788d8" />
+            </div>
           </div>
-          <div class="mb-2">
-            <label for="eventStatus" class="form-label small">Estado</label>
-            <select id="eventStatus" class="form-select form-select-sm">
-              <option value="active">Activo</option>
-              <option value="completed">Completado</option>
-              <option value="postponed">Pospuesto</option>
-              <option value="cancelled">Cancelado</option>
-            </select>
+          <div class="row g-2 mt-1">
+            <div class="col-md-6">
+              <label for="eventStatus" class="form-label">Estado</label>
+              <select id="eventStatus" class="form-select">
+                <option value="active">Activo</option>
+                <option value="completed">Completado</option>
+                <option value="postponed">Pospuesto</option>
+                <option value="cancelled">Cancelado</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="eventLink" class="form-label">Enlace (URL)</label>
+              <input type="url" class="form-control" id="eventLink" placeholder="https://..." />
+            </div>
+          </div>
+          <div class="row g-2 mt-1">
+            <div class="col-12">
+              <label for="eventAddress" class="form-label">Dirección</label>
+              <input type="text" class="form-control" id="eventAddress" placeholder="Calle, ciudad, etc." />
+            </div>
           </div>
         </form>
       </div>
@@ -143,7 +191,7 @@
   </div>
 </div>
 
-<!-- MODAL DE CATEGORÍAS -->
+<!-- ========== MODAL DE CATEGORÍAS ========== -->
 <div class="modal fade" id="categoriasModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
@@ -176,7 +224,7 @@
   </div>
 </div>
 
-<!-- MODAL DE CONFIGURACIÓN -->
+<!-- ========== MODAL DE CONFIGURACIÓN ========== -->
 <div class="modal fade" id="settingsModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
