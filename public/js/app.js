@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let timeFormat = '24';
   let tema = 'claro';
 
+  // Altura fija por hora (en píxeles)
   const HOUR_HEIGHT = 70;
 
   // ========== ELEMENTOS DOM ==========
@@ -26,14 +27,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const eventListEl = $('#eventList');
   const finishedListEl = $('#finishedEventsList');
 
+  // Modales
   const settingsModal = new bootstrap.Modal($('#settingsModal'));
   const categoriasModal = new bootstrap.Modal($('#categoriasModal'));
   const modalEvent = new bootstrap.Modal($('#eventModal'));
 
+  // Elementos configuración
   const timeFormatSelect = $('#timeFormatSelect');
   const themeSelect = $('#themeSelect');
   const saveSettingsBtn = $('#saveSettingsBtn');
 
+  // Elementos categorías
   const categoriasList = $('#categoriasList');
   const categoriaForm = $('#categoriaForm');
   const categoriaEditId = $('#categoriaEditId');
@@ -42,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const categoriaSaveBtn = $('#categoriaSaveBtn');
   const categoriaError = $('#categoriaError');
 
+  // Elementos evento
   const modalTitle = $('#modalTitle');
   const form = $('#eventForm');
   const eventIdInput = $('#eventId');
@@ -59,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentEventId = null;
   let finishedVisible = false;
 
-  // ========== FUNCIONES ==========
+  // ========== FUNCIONES DE FORMATO DE HORA ==========
   function formatTime(date, format = timeFormat) {
     if (format === '12') {
       let hours = date.getHours();
@@ -75,6 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return `${formatTime(start)} - ${formatTime(end)}`;
   }
 
+  // ========== APLICAR TEMA ==========
   function applyTheme(theme) {
     if (theme === 'oscuro') {
       document.body.classList.add('theme-dark');
@@ -390,7 +396,8 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   }
-    // ========== RENDER VISTAS ==========
+
+  // ========== RENDER VISTAS ==========
   function renderView() {
     if (!grid) return;
     switch (currentView) {
@@ -705,7 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA MES ==========
+  // ========== VISTA MES (CORREGIDA) ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -728,7 +735,8 @@ document.addEventListener('DOMContentLoaded', function() {
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
-      html += `<div class="day ${isToday ? 'today' : ''}" data-date="${dateStr}">`;
+      // Almacenamos año, mes y día como atributos data-
+      html += `<div class="day ${isToday ? 'today' : ''}" data-year="${year}" data-month="${month}" data-day="${day}" data-date="${dateStr}">`;
       html += `<span class="day-number">${day}</span>`;
       if (dayEvents.length > 0) {
         html += `<div class="event-bars">`;
@@ -749,9 +757,13 @@ document.addEventListener('DOMContentLoaded', function() {
     html += '</div>';
     grid.innerHTML = html;
 
+    // Listener corregido: usar año, mes, día numéricos
     $$('.day:not(.empty)').forEach(el => {
       el.addEventListener('click', function() {
-        currentDate = new Date(this.dataset.date);
+        const year = parseInt(this.dataset.year);
+        const month = parseInt(this.dataset.month);
+        const day = parseInt(this.dataset.day);
+        currentDate = new Date(year, month, day);
         currentView = 'day';
         updateViewButtons();
         renderView();
@@ -759,7 +771,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (3 COLUMNAS) ==========
+  // ========== VISTA AÑO (CORREGIDA, 3 COLUMNAS) ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
@@ -783,7 +795,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const dayEvents = events.filter(e => e.start.startsWith(dateStr));
         const hasEvent = dayEvents.length > 0;
 
-        html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-date="${dateStr}">`;
+        // Almacenamos año, mes y día como atributos data-
+        html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-year="${year}" data-month="${m}" data-day="${d}" data-date="${dateStr}">`;
         html += `<span class="year-day-number">${d}</span>`;
         if (hasEvent) {
           html += `<div class="year-day-dots">`;
@@ -801,6 +814,7 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</div>`;
     grid.innerHTML = html;
 
+    // Listener para el mes (cambia a vista mes)
     $$('.year-month').forEach(el => {
       el.addEventListener('click', function() {
         const month = parseInt(this.dataset.month);
@@ -810,20 +824,23 @@ document.addEventListener('DOMContentLoaded', function() {
         renderView();
       });
     });
+
+    // Listener para el día corregido: usar año, mes, día numéricos
     $$('.year-day:not(.empty)').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
-        const date = this.dataset.date;
-        if (date) {
-          currentDate = new Date(date);
-          currentView = 'day';
-          updateViewButtons();
-          renderView();
-        }
+        const year = parseInt(this.dataset.year);
+        const month = parseInt(this.dataset.month);
+        const day = parseInt(this.dataset.day);
+        currentDate = new Date(year, month, day);
+        currentView = 'day';
+        updateViewButtons();
+        renderView();
       });
     });
   }
-    // ========== MODAL EVENTO ==========
+
+  // ========== MODAL EVENTO ==========
   function openCreateModal(dateStr, hour) {
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
@@ -840,7 +857,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     if (dateStr) {
-      const date = new Date(dateStr);
+      // Construir fecha a partir de año, mes, día y hora (evita problemas de zona horaria)
+      const parts = dateStr.split('-').map(Number);
+      const date = new Date(parts[0], parts[1] - 1, parts[2]);
       if (hour !== undefined) date.setHours(hour, 0, 0, 0);
       else date.setHours(0, 0, 0, 0);
       const end = new Date(date);
@@ -982,7 +1001,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function toggleMobileSidebar() {
     if (!sidebarDesktop) return;
-    // Alternar la clase 'mobile-open' que controla la transformación
     sidebarDesktop.classList.toggle('mobile-open');
     if (menuToggle) {
       menuToggle.textContent = sidebarDesktop.classList.contains('mobile-open') ? '✕' : '☰';
