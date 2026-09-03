@@ -1228,7 +1228,8 @@ document.addEventListener('DOMContentLoaded', function() {
   if (generateInviteBtn) {
     generateInviteBtn.addEventListener('click', async function() {
       try {
-        const res = await fetch('/api/invite/generate', {
+        // === URL CORREGIDA ===
+        const res = await fetch('/api/generate-invite', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
