@@ -1250,3 +1250,48 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+}
+  // ========== ELEMENTOS DOM (añadir) ==========
+  const generateInviteBtn = document.getElementById('generateInviteBtnDesktop');
+  const modalInvite = new bootstrap.Modal(document.getElementById('inviteModal'));
+
+  // ========== GENERAR ENLACE DE INVITACIÓN ==========
+  if (generateInviteBtn) {
+    generateInviteBtn.addEventListener('click', async function() {
+      try {
+        const res = await fetch('/api/invite/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert('Error: ' + (err.error || 'desconocido'));
+          return;
+        }
+        const data = await res.json();
+        // Mostrar modal con el enlace
+        document.getElementById('inviteLinkInput').value = data.link;
+        modalInvite.show();
+      } catch (error) {
+        console.error('Error generando enlace:', error);
+        alert('Error al generar enlace');
+      }
+    });
+  }
+
+  // ========== COPIAR ENLACE AL PORTAPAPELES ==========
+  const copyInviteBtn = document.getElementById('copyInviteBtn');
+  if (copyInviteBtn) {
+    copyInviteBtn.addEventListener('click', function() {
+      const input = document.getElementById('inviteLinkInput');
+      input.select();
+      input.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(input.value).then(() => {
+        alert('¡Enlace copiado al portapapeles!');
+      }).catch(() => {
+        // Fallback
+        document.execCommand('copy');
+        alert('¡Enlace copiado al portapapeles!');
+      });
+    });
+  }
