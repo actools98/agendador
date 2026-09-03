@@ -35,7 +35,7 @@ router.post('/:token', (req, res) => {
 
   const userId = link.user_id;
 
-  // Validaciones...
+  // Validaciones
   if (!title || !start || !end) {
     return res.render('invite', {
       token,
@@ -132,27 +132,6 @@ router.post('/:token', (req, res) => {
   } catch (error) {
     console.error('Error al crear evento por invitación:', error);
     res.status(500).send('Error interno al crear el evento.');
-  }
-});
-
-// ========================================
-// Ruta protegida: generar enlace (API)
-// ========================================
-router.post('/generate', (req, res) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ error: 'No autenticado' });
-  }
-  const userId = req.session.userId;
-  try {
-    console.log(`Generando enlace para usuario ${userId}`);
-    const token = InvitationLink.generate(userId);
-    const baseUrl = req.protocol + '://' + req.get('host');
-    const fullLink = `${baseUrl}/invite/${token}`;
-    console.log(`Enlace generado: ${fullLink}`);
-    res.json({ link: fullLink, token });
-  } catch (error) {
-    console.error('Error generando enlace:', error);
-    res.status(500).json({ error: 'Error al generar enlace: ' + error.message });
   }
 });
 
