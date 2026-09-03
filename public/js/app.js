@@ -37,6 +37,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const timeFormatSelect = $('#timeFormatSelect');
   const themeSelect = $('#themeSelect');
   const saveSettingsBtn = $('#saveSettingsBtn');
+  const workStartInput = $('#workStart');
+  const workEndInput = $('#workEnd');
+  const dayCheckboxes = $$('.form-check-input[id^="day"]');
+  const meetingDurationSelect = $('#meetingDuration');
 
   // Elementos categorías
   const categoriasList = $('#categoriasList');
@@ -118,6 +122,27 @@ document.addEventListener('DOMContentLoaded', function() {
       timeFormat = data.formato_hora || '24';
       tema = data.tema || 'claro';
       applyTheme(tema);
+
+      // Cargar configuración de disponibilidad
+      if (workStartInput) {
+        const hours = Math.floor(data.work_start / 60);
+        const mins = data.work_start % 60;
+        workStartInput.value = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+      }
+      if (workEndInput) {
+        const hours = Math.floor(data.work_end / 60);
+        const mins = data.work_end % 60;
+        workEndInput.value = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+      }
+      if (data.work_days) {
+        const days = data.work_days.split(',').map(Number);
+        dayCheckboxes.forEach(cb => {
+          cb.checked = days.includes(parseInt(cb.value));
+        });
+      }
+      if (meetingDurationSelect) {
+        meetingDurationSelect.value = data.meeting_duration || 60;
+      }
     } catch (error) {
       console.error('Error cargando preferencias:', error);
       timeFormat = '24';
@@ -127,9 +152,27 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   async function savePreferences() {
+    // Obtener días seleccionados
+    const selectedDays = [];
+    dayCheckboxes.forEach(cb => {
+      if (cb.checked) selectedDays.push(parseInt(cb.value));
+    });
+    const workDays = selectedDays.length ? selectedDays.join(',') : '';
+
+    // Convertir hora a minutos
+    const parseTime = (val) => {
+      if (!val) return 0;
+      const parts = val.split(':');
+      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    };
+
     const payload = {
       tema: themeSelect.value,
-      formato_hora: timeFormatSelect.value
+      formato_hora: timeFormatSelect.value,
+      work_start: parseTime(workStartInput.value),
+      work_end: parseTime(workEndInput.value),
+      work_days: workDays,
+      meeting_duration: parseInt(meetingDurationSelect.value)
     };
 
     try {
@@ -1156,8 +1199,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', function() {
+      // Cargar valores actuales en los inputs
       if (timeFormatSelect) timeFormatSelect.value = timeFormat;
       if (themeSelect) themeSelect.value = tema;
+      // Los demás campos ya se cargan en loadPreferences
       settingsModal.show();
     });
   }
@@ -1228,7 +1273,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (generateInviteBtn) {
     generateInviteBtn.addEventListener('click', async function() {
       try {
-        // === URL CORREGIDA ===
         const res = await fetch('/api/generate-invite', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
