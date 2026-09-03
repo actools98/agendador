@@ -16,7 +16,6 @@ router.get('/:token', (req, res) => {
   }
 
   const userId = link.user_id;
-  // Obtener preferencias del usuario
   const pref = Preferencia.getByUser(userId) || {
     work_start: 480,
     work_end: 1020,
@@ -49,33 +48,33 @@ router.post('/:token', (req, res) => {
 
   const userId = link.user_id;
 
-  // Validar campos obligatorios
   if (!title || !start) {
+    const pref = Preferencia.getByUser(userId) || { work_start: 480, work_end: 1020, work_days: '1,2,3,4,5', meeting_duration: 60 };
     return res.render('invite', {
       token,
       error: 'Título y fecha/hora de inicio son obligatorios.',
       eventData: { title, description, start },
-      workStart: 480,
-      workEnd: 1020,
-      workDays: '1,2,3,4,5',
-      meetingDuration: 60
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
     });
   }
 
   const startDate = new Date(start);
   if (isNaN(startDate.getTime())) {
+    const pref = Preferencia.getByUser(userId) || { work_start: 480, work_end: 1020, work_days: '1,2,3,4,5', meeting_duration: 60 };
     return res.render('invite', {
       token,
       error: 'Formato de fecha inválido.',
       eventData: { title, description, start },
-      workStart: 480,
-      workEnd: 1020,
-      workDays: '1,2,3,4,5',
-      meetingDuration: 60
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
     });
   }
 
-  // Obtener preferencias del usuario
   const pref = Preferencia.getByUser(userId) || {
     work_start: 480,
     work_end: 1020,
@@ -84,7 +83,7 @@ router.post('/:token', (req, res) => {
   };
 
   // Validar día de la semana
-  const dayOfWeek = startDate.getDay(); // 0=domingo, 1=lunes...
+  const dayOfWeek = startDate.getDay();
   let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
   const allowedDays = pref.work_days.split(',').map(Number);
   if (!allowedDays.includes(ourDay)) {
@@ -116,7 +115,6 @@ router.post('/:token', (req, res) => {
   // Calcular fin = inicio + duración
   const endDate = new Date(startDate.getTime() + pref.meeting_duration * 60000);
 
-  // Validar que el fin no se salga de la franja horaria
   const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
   if (endMinutes > pref.work_end) {
     return res.render('invite', {
@@ -130,7 +128,6 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // Validar que no sea en el pasado
   const now = new Date();
   if (startDate < now) {
     return res.render('invite', {
@@ -144,10 +141,13 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // Validar solapamiento con eventos existentes
-  const startISO = startDate.toISOString();
-  const endISO = endDate.toISOString();
+  // ========== CORRECCIÓN DE ZONA HORARIA ==========
+  // Construir strings en formato local (YYYY-MM-DD HH:mm:ss) sin conversión a UTC
+  const pad = n => String(n).padStart(2, '0');
+  const startStr = `${startDate.getFullYear()}-${pad(startDate.getMonth()+1)}-${pad(startDate.getDate())} ${pad(startDate.getHours())}:${pad(startDate.getMinutes())}:00`;
+  const endStr = `${endDate.getFullYear()}-${pad(endDate.getMonth()+1)}-${pad(endDate.getDate())} ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}:00`;
 
+  // Validar solapamiento usando los strings locales
   const conflictStmt = db.prepare(`
     SELECT COUNT(*) as count FROM events
     WHERE user_id = ?
@@ -158,7 +158,7 @@ router.post('/:token', (req, res) => {
         OR (end > ? AND end <= ?)
       )
   `);
-  const result = conflictStmt.get(userId, endISO, startISO, startISO, endISO, startISO, endISO);
+  const result = conflictStmt.get(userId, endStr, startStr, startStr, endStr, startStr, endStr);
 
   if (result.count > 0) {
     return res.render('invite', {
@@ -172,15 +172,14 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // Crear evento
   try {
     const eventId = Event.create({
       userId,
       title,
       description,
-      start: startISO,
-      end: endISO,
-      allDay: false, // nunca todo el día
+      start: startStr,
+      end: endStr,
+      allDay: false,
       color: '#ffc107',
       status: 'active',
       categoria_id: null,
