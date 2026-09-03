@@ -52,6 +52,10 @@ db.exec(`
     usuario_id INTEGER NOT NULL UNIQUE,
     tema TEXT DEFAULT 'claro' CHECK(tema IN ('claro', 'oscuro')),
     formato_hora TEXT DEFAULT '24' CHECK(formato_hora IN ('24', '12')),
+    work_start INTEGER DEFAULT 480,   -- 8:00 en minutos
+    work_end INTEGER DEFAULT 1020,    -- 17:00 en minutos
+    work_days TEXT DEFAULT '1,2,3,4,5', -- Lunes a Viernes
+    meeting_duration INTEGER DEFAULT 60, -- 60 minutos
     FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
@@ -86,6 +90,29 @@ const hasAddress = tableInfo.some(col => col.name === 'address');
 if (!hasAddress) {
   db.exec(`ALTER TABLE events ADD COLUMN address TEXT;`);
   console.log('✅ Columna "address" añadida a la tabla events');
+}
+
+// Migración: añadir columnas a preferencias
+const prefInfo = db.prepare("PRAGMA table_info(preferencias)").all();
+const hasWorkStart = prefInfo.some(col => col.name === 'work_start');
+if (!hasWorkStart) {
+  db.exec(`ALTER TABLE preferencias ADD COLUMN work_start INTEGER DEFAULT 480;`);
+  console.log('✅ Columna "work_start" añadida a preferencias');
+}
+const hasWorkEnd = prefInfo.some(col => col.name === 'work_end');
+if (!hasWorkEnd) {
+  db.exec(`ALTER TABLE preferencias ADD COLUMN work_end INTEGER DEFAULT 1020;`);
+  console.log('✅ Columna "work_end" añadida a preferencias');
+}
+const hasWorkDays = prefInfo.some(col => col.name === 'work_days');
+if (!hasWorkDays) {
+  db.exec(`ALTER TABLE preferencias ADD COLUMN work_days TEXT DEFAULT '1,2,3,4,5';`);
+  console.log('✅ Columna "work_days" añadida a preferencias');
+}
+const hasMeetingDuration = prefInfo.some(col => col.name === 'meeting_duration');
+if (!hasMeetingDuration) {
+  db.exec(`ALTER TABLE preferencias ADD COLUMN meeting_duration INTEGER DEFAULT 60;`);
+  console.log('✅ Columna "meeting_duration" añadida a preferencias');
 }
 
 module.exports = db;
