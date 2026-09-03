@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const InvitationLink = require('../models/InvitationLink');
 const Event = require('../models/Event');
+const Preferencia = require('../models/Preferencia');
 const db = require('../db');
 
 // ========================================
@@ -14,10 +15,23 @@ router.get('/:token', (req, res) => {
     return res.status(400).send('Enlace inválido o expirado. Por favor, solicita un nuevo enlace al anfitrión.');
   }
 
+  const userId = link.user_id;
+  // Obtener preferencias del usuario
+  const pref = Preferencia.getByUser(userId) || {
+    work_start: 480,
+    work_end: 1020,
+    work_days: '1,2,3,4,5',
+    meeting_duration: 60
+  };
+
   res.render('invite', {
     token,
     error: null,
-    eventData: null
+    eventData: null,
+    workStart: pref.work_start,
+    workEnd: pref.work_end,
+    workDays: pref.work_days,
+    meetingDuration: pref.meeting_duration
   });
 });
 
@@ -26,7 +40,7 @@ router.get('/:token', (req, res) => {
 // ========================================
 router.post('/:token', (req, res) => {
   const { token } = req.params;
-  const { title, description, start, end, allDay } = req.body;
+  const { title, description, start } = req.body;
 
   const link = InvitationLink.findByToken(token);
   if (!link) {
@@ -35,44 +49,102 @@ router.post('/:token', (req, res) => {
 
   const userId = link.user_id;
 
-  // Validaciones
-  if (!title || !start || !end) {
+  // Validar campos obligatorios
+  if (!title || !start) {
     return res.render('invite', {
       token,
-      error: 'Título, inicio y fin son obligatorios.',
-      eventData: { title, description, start, end, allDay }
+      error: 'Título y fecha/hora de inicio son obligatorios.',
+      eventData: { title, description, start },
+      workStart: 480,
+      workEnd: 1020,
+      workDays: '1,2,3,4,5',
+      meetingDuration: 60
     });
   }
 
   const startDate = new Date(start);
-  const endDate = new Date(end);
-
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+  if (isNaN(startDate.getTime())) {
     return res.render('invite', {
       token,
       error: 'Formato de fecha inválido.',
-      eventData: { title, description, start, end, allDay }
+      eventData: { title, description, start },
+      workStart: 480,
+      workEnd: 1020,
+      workDays: '1,2,3,4,5',
+      meetingDuration: 60
     });
   }
 
+  // Obtener preferencias del usuario
+  const pref = Preferencia.getByUser(userId) || {
+    work_start: 480,
+    work_end: 1020,
+    work_days: '1,2,3,4,5',
+    meeting_duration: 60
+  };
+
+  // Validar día de la semana
+  const dayOfWeek = startDate.getDay(); // 0=domingo, 1=lunes...
+  let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+  const allowedDays = pref.work_days.split(',').map(Number);
+  if (!allowedDays.includes(ourDay)) {
+    return res.render('invite', {
+      token,
+      error: 'El día seleccionado no está disponible. Por favor, elige otro día.',
+      eventData: { title, description, start },
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
+    });
+  }
+
+  // Validar hora dentro de la franja
+  const minutes = startDate.getHours() * 60 + startDate.getMinutes();
+  if (minutes < pref.work_start || minutes >= pref.work_end) {
+    return res.render('invite', {
+      token,
+      error: 'La hora seleccionada está fuera de la franja horaria disponible.',
+      eventData: { title, description, start },
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
+    });
+  }
+
+  // Calcular fin = inicio + duración
+  const endDate = new Date(startDate.getTime() + pref.meeting_duration * 60000);
+
+  // Validar que el fin no se salga de la franja horaria
+  const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
+  if (endMinutes > pref.work_end) {
+    return res.render('invite', {
+      token,
+      error: 'La reunión excede la franja horaria disponible. Por favor, elige una hora más temprana.',
+      eventData: { title, description, start },
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
+    });
+  }
+
+  // Validar que no sea en el pasado
   const now = new Date();
   if (startDate < now) {
     return res.render('invite', {
       token,
       error: 'No se pueden crear eventos en el pasado. Por favor, elige una fecha y hora futura.',
-      eventData: { title, description, start, end, allDay }
+      eventData: { title, description, start },
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
     });
   }
 
-  if (endDate <= startDate) {
-    return res.render('invite', {
-      token,
-      error: 'La fecha de fin debe ser posterior a la de inicio.',
-      eventData: { title, description, start, end, allDay }
-    });
-  }
-
-  // Validar solapamiento
+  // Validar solapamiento con eventos existentes
   const startISO = startDate.toISOString();
   const endISO = endDate.toISOString();
 
@@ -92,20 +164,23 @@ router.post('/:token', (req, res) => {
     return res.render('invite', {
       token,
       error: 'La franja horaria seleccionada coincide con otro evento existente. Por favor, elige otro horario.',
-      eventData: { title, description, start, end, allDay }
+      eventData: { title, description, start },
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
     });
   }
 
   // Crear evento
   try {
-    const allDayFlag = allDay === 'true' || allDay === true;
     const eventId = Event.create({
       userId,
       title,
       description,
       start: startISO,
       end: endISO,
-      allDay: allDayFlag,
+      allDay: false, // nunca todo el día
       color: '#ffc107',
       status: 'active',
       categoria_id: null,
