@@ -227,25 +227,91 @@
 
 <!-- ========== MODAL DE CONFIGURACIÓN ========== -->
 <div class="modal fade" id="settingsModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">⚙️ Configuración</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-2">
+        <!-- Formato de hora -->
+        <div class="mb-3">
           <label for="timeFormatSelect" class="form-label small">Formato de hora</label>
           <select id="timeFormatSelect" class="form-select form-select-sm">
             <option value="24">24h (00:00 – 23:59)</option>
             <option value="12">12h (AM/PM)</option>
           </select>
         </div>
-        <div class="mb-2">
+
+        <!-- Tema -->
+        <div class="mb-3">
           <label for="themeSelect" class="form-label small">Tema</label>
           <select id="themeSelect" class="form-select form-select-sm">
             <option value="claro">Claro</option>
             <option value="oscuro">Oscuro</option>
+          </select>
+        </div>
+
+        <hr />
+
+        <!-- Franja horaria libre -->
+        <h6 class="mb-2">📅 Disponibilidad para invitaciones</h6>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label for="workStart" class="form-label small">Hora de inicio</label>
+            <input type="time" id="workStart" class="form-control form-control-sm" step="900" />
+          </div>
+          <div class="col-6">
+            <label for="workEnd" class="form-label small">Hora de fin</label>
+            <input type="time" id="workEnd" class="form-control form-control-sm" step="900" />
+          </div>
+        </div>
+
+        <!-- Días de la semana -->
+        <div class="mb-3">
+          <label class="form-label small">Días disponibles</label>
+          <div class="d-flex flex-wrap gap-2">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="day1" value="1" />
+              <label class="form-check-label small" for="day1">Lun</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="day2" value="2" />
+              <label class="form-check-label small" for="day2">Mar</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="day3" value="3" />
+              <label class="form-check-label small" for="day3">Mié</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="day4" value="4" />
+              <label class="form-check-label small" for="day4">Jue</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="day5" value="5" />
+              <label class="form-check-label small" for="day5">Vie</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="day6" value="6" />
+              <label class="form-check-label small" for="day6">Sáb</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="day7" value="7" />
+              <label class="form-check-label small" for="day7">Dom</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Duración estándar -->
+        <div class="mb-3">
+          <label for="meetingDuration" class="form-label small">Duración estándar de reunión</label>
+          <select id="meetingDuration" class="form-select form-select-sm">
+            <option value="15">15 minutos</option>
+            <option value="30">30 minutos</option>
+            <option value="45">45 minutos</option>
+            <option value="60" selected>1 hora</option>
+            <option value="90">1.5 horas</option>
+            <option value="120">2 horas</option>
           </select>
         </div>
       </div>
