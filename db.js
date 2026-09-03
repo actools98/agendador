@@ -30,6 +30,8 @@ db.exec(`
     color TEXT DEFAULT '#3788d8',
     status TEXT DEFAULT 'active',
     categoria_id INTEGER,
+    link TEXT,
+    address TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL
@@ -67,6 +69,18 @@ const hasCategoriaId = tableInfo.some(col => col.name === 'categoria_id');
 if (!hasCategoriaId) {
   db.exec(`ALTER TABLE events ADD COLUMN categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL;`);
   console.log('✅ Columna "categoria_id" añadida a la tabla events');
+}
+
+// Migración: añadir columnas link y address
+const hasLink = tableInfo.some(col => col.name === 'link');
+if (!hasLink) {
+  db.exec(`ALTER TABLE events ADD COLUMN link TEXT;`);
+  console.log('✅ Columna "link" añadida a la tabla events');
+}
+const hasAddress = tableInfo.some(col => col.name === 'address');
+if (!hasAddress) {
+  db.exec(`ALTER TABLE events ADD COLUMN address TEXT;`);
+  console.log('✅ Columna "address" añadida a la tabla events');
 }
 
 module.exports = db;
