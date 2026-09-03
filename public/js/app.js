@@ -11,8 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
   let timeFormat = '24';
   let tema = 'claro';
 
-  // Altura fija por hora (en píxeles)
   const HOUR_HEIGHT = 70;
+  let endManuallyChanged = false; // flag para controlar auto-llenado de fecha fin
 
   // ========== ELEMENTOS DOM ==========
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const settingsModal = new bootstrap.Modal($('#settingsModal'));
   const categoriasModal = new bootstrap.Modal($('#categoriasModal'));
   const modalEvent = new bootstrap.Modal($('#eventModal'));
+  const modalDetail = new bootstrap.Modal($('#eventDetailModal'));
 
   // Elementos configuración
   const timeFormatSelect = $('#timeFormatSelect');
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const categoriaSaveBtn = $('#categoriaSaveBtn');
   const categoriaError = $('#categoriaError');
 
-  // Elementos evento
+  // Elementos evento (edición)
   const modalTitle = $('#modalTitle');
   const form = $('#eventForm');
   const eventIdInput = $('#eventId');
@@ -58,11 +59,26 @@ document.addEventListener('DOMContentLoaded', function() {
   const colorInput = $('#color');
   const statusSelect = $('#eventStatus');
   const eventCategoria = $('#eventCategoria');
+  const eventLinkInput = $('#eventLink');
+  const eventAddressInput = $('#eventAddress');
   const saveBtn = $('#saveEventBtn');
   const deleteBtn = $('#deleteEventBtn');
 
+  // Elementos detalle
+  const detailTitle = $('#detailTitle');
+  const detailDescription = $('#detailDescription');
+  const detailCategory = $('#detailCategory');
+  const detailStatus = $('#detailStatus');
+  const detailStart = $('#detailStart');
+  const detailEnd = $('#detailEnd');
+  const detailAllDay = $('#detailAllDay');
+  const detailLink = $('#detailLink');
+  const detailAddress = $('#detailAddress');
+  const editFromDetailBtn = $('#editFromDetailBtn');
+
   let currentEventId = null;
   let finishedVisible = false;
+  let currentDetailEventId = null;
 
   // ========== FUNCIONES DE FORMATO DE HORA ==========
   function formatTime(date, format = timeFormat) {
@@ -74,6 +90,10 @@ document.addEventListener('DOMContentLoaded', function() {
       return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
     }
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatDateTime(date) {
+    return date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + formatTime(date);
   }
 
   function formatTimeRange(start, end) {
@@ -311,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const color = ev.color || '#3788d8';
       html += `
         <div class="list-group-item" data-id="${ev.id}">
-          <span class="event-title" style="border-left: 4px solid ${color}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
+          <span class="event-title" style="border-left: 4px solid ${color}; padding-left: 8px; cursor:pointer;" title="${ev.title} - ${timeStr}">
             <strong>${ev.title}</strong><br>
             <small class="text-muted">${dateStr} ${timeStr}</small>
           </span>
@@ -324,22 +344,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     eventListEl.innerHTML = html;
 
-    $$('.edit-event', eventListEl).forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        openEditModal(parseInt(btn.dataset.id));
-      });
-    });
-    $$('.delete-event', eventListEl).forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(btn.dataset.id));
-      });
-    });
+    // Al hacer clic en el título -> abrir detalle
     $$('.event-title', eventListEl).forEach(el => {
-      el.addEventListener('click', () => {
-        const id = parseInt(el.closest('.list-group-item').dataset.id);
-        openEditModal(id);
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const id = parseInt(this.closest('.list-group-item').dataset.id);
+        openDetailModal(id);
+      });
+    });
+
+    // Botones editar
+    $$('.edit-event', eventListEl).forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openEditModal(parseInt(this.dataset.id));
+      });
+    });
+    // Botones eliminar
+    $$('.delete-event', eventListEl).forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(this.dataset.id));
       });
     });
   }
@@ -364,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const color = ev.color || '#3788d8';
       html += `
         <div class="list-group-item" data-id="${ev.id}" style="opacity:0.7;">
-          <span class="event-title" style="border-left: 4px solid ${color}; padding-left: 8px;" title="${ev.title} - ${timeStr}">
+          <span class="event-title" style="border-left: 4px solid ${color}; padding-left: 8px; cursor:pointer;" title="${ev.title} - ${timeStr}">
             <strong>${ev.title}</strong><br>
             <small class="text-muted">${dateStr} ${timeStr} - ${statusLabel}</small>
           </span>
@@ -377,22 +402,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     finishedListEl.innerHTML = html;
 
-    $$('.edit-event-finished', finishedListEl).forEach(btn => {
-      btn.addEventListener('click', e => {
+    // Título -> detalle
+    $$('.event-title', finishedListEl).forEach(el => {
+      el.addEventListener('click', function(e) {
         e.stopPropagation();
-        openEditModal(parseInt(btn.dataset.id));
+        const id = parseInt(this.closest('.list-group-item').dataset.id);
+        openDetailModal(id);
+      });
+    });
+
+    $$('.edit-event-finished', finishedListEl).forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openEditModal(parseInt(this.dataset.id));
       });
     });
     $$('.delete-event-finished', finishedListEl).forEach(btn => {
-      btn.addEventListener('click', e => {
+      btn.addEventListener('click', function(e) {
         e.stopPropagation();
-        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(btn.dataset.id));
-      });
-    });
-    $$('.event-title', finishedListEl).forEach(el => {
-      el.addEventListener('click', () => {
-        const id = parseInt(el.closest('.list-group-item').dataset.id);
-        openEditModal(id);
+        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(this.dataset.id));
       });
     });
   }
@@ -555,13 +583,13 @@ document.addEventListener('DOMContentLoaded', function() {
     $$('.all-day-event-badge').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
-        openEditModal(parseInt(this.dataset.id));
+        openDetailModal(parseInt(this.dataset.id));
       });
     });
     $$('.day-event-block').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
-        openEditModal(parseInt(this.dataset.id));
+        openDetailModal(parseInt(this.dataset.id));
       });
     });
   }
@@ -701,18 +729,18 @@ document.addEventListener('DOMContentLoaded', function() {
     $$('.week-event-block').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
-        openEditModal(parseInt(this.dataset.id));
+        openDetailModal(parseInt(this.dataset.id));
       });
     });
     $$('.all-day-event-badge').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
-        openEditModal(parseInt(this.dataset.id));
+        openDetailModal(parseInt(this.dataset.id));
       });
     });
   }
 
-  // ========== VISTA MES (CORREGIDA) ==========
+  // ========== VISTA MES ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -735,7 +763,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
-      // Almacenamos año, mes y día como atributos data-
       html += `<div class="day ${isToday ? 'today' : ''}" data-year="${year}" data-month="${month}" data-day="${day}" data-date="${dateStr}">`;
       html += `<span class="day-number">${day}</span>`;
       if (dayEvents.length > 0) {
@@ -757,7 +784,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += '</div>';
     grid.innerHTML = html;
 
-    // Listener corregido: usar año, mes, día numéricos
     $$('.day:not(.empty)').forEach(el => {
       el.addEventListener('click', function() {
         const year = parseInt(this.dataset.year);
@@ -771,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== VISTA AÑO (CORREGIDA, 3 COLUMNAS) ==========
+  // ========== VISTA AÑO ==========
   function renderYearView() {
     const year = currentDate.getFullYear();
     viewTitle.textContent = year;
@@ -795,7 +821,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const dayEvents = events.filter(e => e.start.startsWith(dateStr));
         const hasEvent = dayEvents.length > 0;
 
-        // Almacenamos año, mes y día como atributos data-
         html += `<div class="year-day ${hasEvent ? 'has-event' : ''}" data-year="${year}" data-month="${m}" data-day="${d}" data-date="${dateStr}">`;
         html += `<span class="year-day-number">${d}</span>`;
         if (hasEvent) {
@@ -814,7 +839,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</div>`;
     grid.innerHTML = html;
 
-    // Listener para el mes (cambia a vista mes)
     $$('.year-month').forEach(el => {
       el.addEventListener('click', function() {
         const month = parseInt(this.dataset.month);
@@ -824,8 +848,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderView();
       });
     });
-
-    // Listener para el día corregido: usar año, mes, día numéricos
     $$('.year-day:not(.empty)').forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -839,8 +861,68 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   }
+    // ========== MODAL DE DETALLE ==========
+  function openDetailModal(id) {
+    // Buscar el evento en events o finishedEvents
+    const ev = [...events, ...finishedEvents].find(e => e.id === id);
+    if (!ev) {
+      alert('Evento no encontrado');
+      return;
+    }
+    currentDetailEventId = id;
 
-  // ========== MODAL EVENTO ==========
+    // Llenar datos
+    detailTitle.textContent = ev.title || '(sin título)';
+    detailDescription.textContent = ev.description || 'Sin descripción';
+
+    // Categoría
+    if (ev.categoria_id) {
+      const cat = categorias.find(c => c.id === ev.categoria_id);
+      detailCategory.textContent = cat ? cat.nombre : 'Sin categoría';
+    } else {
+      detailCategory.textContent = 'Sin categoría';
+    }
+
+    // Estado
+    const statusLabels = {
+      'active': 'Activo',
+      'completed': 'Completado',
+      'postponed': 'Pospuesto',
+      'cancelled': 'Cancelado'
+    };
+    detailStatus.textContent = statusLabels[ev.status] || ev.status;
+
+    // Fechas
+    const start = new Date(ev.start);
+    const end = new Date(ev.end);
+    detailStart.textContent = formatDateTime(start);
+    detailEnd.textContent = formatDateTime(end);
+    detailAllDay.textContent = ev.all_day ? 'Sí' : 'No';
+
+    // Enlace y dirección
+    detailLink.textContent = ev.link || 'No disponible';
+    if (ev.link) {
+      // Si hay enlace, creamos un enlace clicable
+      detailLink.innerHTML = `<a href="${ev.link}" target="_blank">${ev.link}</a>`;
+    }
+    detailAddress.textContent = ev.address || 'No disponible';
+
+    // Mostrar modal
+    modalDetail.show();
+  }
+
+  // Botón "Editar" desde el detalle
+  editFromDetailBtn.addEventListener('click', function() {
+    if (currentDetailEventId) {
+      modalDetail.hide();
+      // Esperar un poco para que se cierre el modal antes de abrir edición
+      setTimeout(() => {
+        openEditModal(currentDetailEventId);
+      }, 300);
+    }
+  });
+
+  // ========== MODAL DE EDICIÓN/CREACIÓN ==========
   function openCreateModal(dateStr, hour) {
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
@@ -849,6 +931,7 @@ document.addEventListener('DOMContentLoaded', function() {
     statusSelect.value = 'active';
     deleteBtn.style.display = 'none';
     currentEventId = null;
+    endManuallyChanged = false; // resetear flag
 
     const formatLocal = (d) => {
       const offset = d.getTimezoneOffset();
@@ -857,7 +940,6 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     if (dateStr) {
-      // Construir fecha a partir de año, mes, día y hora (evita problemas de zona horaria)
       const parts = dateStr.split('-').map(Number);
       const date = new Date(parts[0], parts[1] - 1, parts[2]);
       if (hour !== undefined) date.setHours(hour, 0, 0, 0);
@@ -875,6 +957,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     allDayInput.checked = false;
     eventCategoria.value = '';
+    eventLinkInput.value = '';
+    eventAddressInput.value = '';
     modalEvent.show();
   }
 
@@ -901,13 +985,33 @@ document.addEventListener('DOMContentLoaded', function() {
       colorInput.value = ev.color || '#3788d8';
       statusSelect.value = ev.status || 'active';
       eventCategoria.value = ev.categoria_id || '';
+      eventLinkInput.value = ev.link || '';
+      eventAddressInput.value = ev.address || '';
       deleteBtn.style.display = 'inline-block';
       currentEventId = ev.id;
+      endManuallyChanged = false; // resetear flag
       modalEvent.show();
     } catch (error) {
       console.error('Error al cargar evento para editar:', error);
     }
   }
+
+  // Lógica para auto-llenar fecha fin cuando cambia inicio, si no se ha modificado manualmente
+  startInput.addEventListener('change', function() {
+    if (!endManuallyChanged) {
+      // Copiar el valor de inicio al fin (si no se ha modificado manualmente)
+      endInput.value = this.value;
+    }
+  });
+
+  endInput.addEventListener('change', function() {
+    endManuallyChanged = true; // el usuario tocó el campo fin
+  });
+
+  // Al abrir el modal, reiniciar el flag
+  modalEvent._element.addEventListener('shown.bs.modal', function() {
+    endManuallyChanged = false;
+  });
 
   async function saveEvent() {
     const id = eventIdInput.value;
@@ -919,13 +1023,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const color = colorInput.value;
     const status = statusSelect.value;
     const categoria_id = eventCategoria.value || null;
+    const link = eventLinkInput.value.trim() || null;
+    const address = eventAddressInput.value.trim() || null;
 
     if (!title || !start || !end) {
       alert('Título, inicio y fin son obligatorios');
       return;
     }
 
-    const payload = { title, description, start, end, allDay, color, status, categoria_id };
+    const payload = { title, description, start, end, allDay, color, status, categoria_id, link, address };
 
     try {
       const url = id ? `/api/events/${id}` : '/api/events';
@@ -995,7 +1101,7 @@ document.addEventListener('DOMContentLoaded', function() {
     renderView();
   }
 
-  // ========== MENÚ HAMBURGUESA (CORREGIDO) ==========
+  // ========== MENÚ HAMBURGUESA ==========
   const menuToggle = document.getElementById('menuToggle');
   const sidebarDesktop = document.getElementById('sidebarDesktop');
 
@@ -1011,13 +1117,11 @@ document.addEventListener('DOMContentLoaded', function() {
     menuToggle.addEventListener('click', toggleMobileSidebar);
   }
 
-  // Cerrar panel al hacer clic en un enlace o botón (excepto los que abren modales o editan)
   if (sidebarDesktop) {
     sidebarDesktop.addEventListener('click', function(e) {
       if (!this.classList.contains('mobile-open')) return;
       const target = e.target.closest('.btn, a');
       if (target) {
-        // No cerrar si es un botón que abre modal o edita
         if (target.id === 'newEventBtnDesktop' || 
             target.id === 'categoriasBtnDesktop' || 
             target.id === 'settingsBtnDesktop' ||
@@ -1030,7 +1134,6 @@ document.addEventListener('DOMContentLoaded', function() {
             target.classList.contains('delete-categoria')) {
           return;
         }
-        // Para otros botones (como cerrar sesión), cerramos después
         setTimeout(() => {
           this.classList.remove('mobile-open');
           if (menuToggle) menuToggle.textContent = '☰';
@@ -1040,7 +1143,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ========== EVENT LISTENERS ==========
-  // Botón de eventos terminados (funciona en escritorio y móvil)
   function toggleFinishedEvents() {
     finishedVisible = !finishedVisible;
     if (finishedListEl) {
