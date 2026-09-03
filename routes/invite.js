@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const InvitationLink = require('../models/InvitationLink');
 const Event = require('../models/Event');
-const User = require('../models/User');
 const db = require('../db');
 
 // ========================================
@@ -15,11 +14,10 @@ router.get('/:token', (req, res) => {
     return res.status(400).send('Enlace inválido o expirado. Por favor, solicita un nuevo enlace al anfitrión.');
   }
 
-  // Renderizar formulario
   res.render('invite', {
     token,
     error: null,
-    eventData: null // no hay datos previos
+    eventData: null
   });
 });
 
@@ -30,7 +28,6 @@ router.post('/:token', (req, res) => {
   const { token } = req.params;
   const { title, description, start, end, allDay } = req.body;
 
-  // Validar token
   const link = InvitationLink.findByToken(token);
   if (!link) {
     return res.status(400).send('Enlace inválido o expirado. Por favor, solicita un nuevo enlace al anfitrión.');
@@ -38,7 +35,7 @@ router.post('/:token', (req, res) => {
 
   const userId = link.user_id;
 
-  // Validar campos obligatorios
+  // Validaciones...
   if (!title || !start || !end) {
     return res.render('invite', {
       token,
@@ -50,7 +47,6 @@ router.post('/:token', (req, res) => {
   const startDate = new Date(start);
   const endDate = new Date(end);
 
-  // Validar que las fechas sean válidas
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
     return res.render('invite', {
       token,
@@ -59,7 +55,6 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // Validar que el evento sea a partir de ahora (no pasado)
   const now = new Date();
   if (startDate < now) {
     return res.render('invite', {
@@ -69,7 +64,6 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // Validar que el fin sea después del inicio
   if (endDate <= startDate) {
     return res.render('invite', {
       token,
@@ -78,22 +72,18 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // ========== Validar solapamiento con eventos existentes ==========
+  // Validar solapamiento
   const startISO = startDate.toISOString();
   const endISO = endDate.toISOString();
 
-  // Consulta SQL para detectar solapamiento:
-  // Buscar eventos que:
-  // - Comiencen antes del fin del nuevo y terminen después del inicio del nuevo
-  // (solapamiento)
   const conflictStmt = db.prepare(`
     SELECT COUNT(*) as count FROM events
     WHERE user_id = ?
       AND status = 'active'
       AND (
-        (start < ? AND end > ?)   -- evento existente abarca el nuevo
-        OR (start >= ? AND start < ?) -- inicio del nuevo está dentro del existente
-        OR (end > ? AND end <= ?)    -- fin del nuevo está dentro del existente
+        (start < ? AND end > ?)
+        OR (start >= ? AND start < ?)
+        OR (end > ? AND end <= ?)
       )
   `);
   const result = conflictStmt.get(userId, endISO, startISO, startISO, endISO, startISO, endISO);
@@ -106,7 +96,7 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // ========== Crear el evento ==========
+  // Crear evento
   try {
     const allDayFlag = allDay === 'true' || allDay === true;
     const eventId = Event.create({
@@ -116,18 +106,13 @@ router.post('/:token', (req, res) => {
       start: startISO,
       end: endISO,
       allDay: allDayFlag,
-      color: '#ffc107', // color especial para invitaciones (amarillo)
-      status: 'active', // se crea activo directamente
-      categoria_id: null, // sin categoría por defecto
+      color: '#ffc107',
+      status: 'active',
+      categoria_id: null,
       link: null,
       address: null
     });
 
-    // Opcional: invalidar el enlace después de usar? No, porque podría usarse varias veces.
-    // Pero según requisito: "cuando el usuario vuelva a darle click a 'Generar enlace' el anterior caducará".
-    // Eso ya está en la generación.
-
-    // Renderizar confirmación o redirigir
     res.send(`
       <!DOCTYPE html>
       <html>
@@ -154,18 +139,20 @@ router.post('/:token', (req, res) => {
 // Ruta protegida: generar enlace (API)
 // ========================================
 router.post('/generate', (req, res) => {
-  if (!req.session.userId) {
+  if (!req.session || !req.session.userId) {
     return res.status(401).json({ error: 'No autenticado' });
   }
   const userId = req.session.userId;
   try {
+    console.log(`Generando enlace para usuario ${userId}`);
     const token = InvitationLink.generate(userId);
     const baseUrl = req.protocol + '://' + req.get('host');
     const fullLink = `${baseUrl}/invite/${token}`;
+    console.log(`Enlace generado: ${fullLink}`);
     res.json({ link: fullLink, token });
   } catch (error) {
     console.error('Error generando enlace:', error);
-    res.status(500).json({ error: 'Error al generar enlace' });
+    res.status(500).json({ error: 'Error al generar enlace: ' + error.message });
   }
 });
 
