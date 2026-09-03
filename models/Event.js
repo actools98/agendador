@@ -21,10 +21,10 @@ class Event {
     return stmt.get(id, userId);
   }
 
-  static create({ userId, title, description, start, end, allDay, color, status = 'active', categoria_id }) {
+  static create({ userId, title, description, start, end, allDay, color, status = 'active', categoria_id, link, address }) {
     const stmt = db.prepare(`
-      INSERT INTO events (user_id, title, description, start, end, all_day, color, status, categoria_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (user_id, title, description, start, end, all_day, color, status, categoria_id, link, address)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const info = stmt.run(
       userId,
@@ -35,15 +35,17 @@ class Event {
       allDay ? 1 : 0,
       color || '#3788d8',
       status,
-      categoria_id || null
+      categoria_id || null,
+      link || null,
+      address || null
     );
     return info.lastInsertRowid;
   }
 
-  static update(id, userId, { title, description, start, end, allDay, color, status, categoria_id }) {
+  static update(id, userId, { title, description, start, end, allDay, color, status, categoria_id, link, address }) {
     const stmt = db.prepare(`
       UPDATE events
-      SET title = ?, description = ?, start = ?, end = ?, all_day = ?, color = ?, status = ?, categoria_id = ?
+      SET title = ?, description = ?, start = ?, end = ?, all_day = ?, color = ?, status = ?, categoria_id = ?, link = ?, address = ?
       WHERE id = ? AND user_id = ?
     `);
     const info = stmt.run(
@@ -55,6 +57,8 @@ class Event {
       color || '#3788d8',
       status || 'active',
       categoria_id || null,
+      link || null,
+      address || null,
       id,
       userId
     );
