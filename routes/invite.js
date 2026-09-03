@@ -61,8 +61,9 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  const startDate = new Date(start);
-  if (isNaN(startDate.getTime())) {
+  // ========== PARSEO MANUAL DE FECHA (sin zona horaria) ==========
+  const [datePart, timePart] = start.split('T');
+  if (!datePart || !timePart) {
     const pref = Preferencia.getByUser(userId) || { work_start: 480, work_end: 1020, work_days: '1,2,3,4,5', meeting_duration: 60 };
     return res.render('invite', {
       token,
@@ -74,6 +75,26 @@ router.post('/:token', (req, res) => {
       meetingDuration: pref.meeting_duration
     });
   }
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = timePart.split(':').map(Number);
+  if ([year, month, day, hours, minutes].some(isNaN)) {
+    const pref = Preferencia.getByUser(userId) || { work_start: 480, work_end: 1020, work_days: '1,2,3,4,5', meeting_duration: 60 };
+    return res.render('invite', {
+      token,
+      error: 'Formato de fecha inválido.',
+      eventData: { title, description, start },
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
+    });
+  }
+
+  const pad = n => String(n).padStart(2, '0');
+  const startStr = `${year}-${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}:00`;
+
+  // Crear objeto Date para validaciones (fecha local)
+  const startDate = new Date(year, month - 1, day, hours, minutes);
 
   const pref = Preferencia.getByUser(userId) || {
     work_start: 480,
@@ -99,8 +120,8 @@ router.post('/:token', (req, res) => {
   }
 
   // Validar hora dentro de la franja
-  const minutes = startDate.getHours() * 60 + startDate.getMinutes();
-  if (minutes < pref.work_start || minutes >= pref.work_end) {
+  const minutesFromMidnight = hours * 60 + minutes;
+  if (minutesFromMidnight < pref.work_start || minutesFromMidnight >= pref.work_end) {
     return res.render('invite', {
       token,
       error: 'La hora seleccionada está fuera de la franja horaria disponible.',
@@ -113,9 +134,7 @@ router.post('/:token', (req, res) => {
   }
 
   // Calcular fin = inicio + duración
-  const endDate = new Date(startDate.getTime() + pref.meeting_duration * 60000);
-
-  const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
+  const endMinutes = minutesFromMidnight + pref.meeting_duration;
   if (endMinutes > pref.work_end) {
     return res.render('invite', {
       token,
@@ -127,6 +146,10 @@ router.post('/:token', (req, res) => {
       meetingDuration: pref.meeting_duration
     });
   }
+
+  const endHours = Math.floor(endMinutes / 60);
+  const endMins = endMinutes % 60;
+  const endStr = `${year}-${pad(month)}-${pad(day)} ${pad(endHours)}:${pad(endMins)}:00`;
 
   const now = new Date();
   if (startDate < now) {
@@ -141,13 +164,7 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // ========== CORRECCIÓN DE ZONA HORARIA ==========
-  // Construir strings en formato local (YYYY-MM-DD HH:mm:ss) sin conversión a UTC
-  const pad = n => String(n).padStart(2, '0');
-  const startStr = `${startDate.getFullYear()}-${pad(startDate.getMonth()+1)}-${pad(startDate.getDate())} ${pad(startDate.getHours())}:${pad(startDate.getMinutes())}:00`;
-  const endStr = `${endDate.getFullYear()}-${pad(endDate.getMonth()+1)}-${pad(endDate.getDate())} ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}:00`;
-
-  // Validar solapamiento usando los strings locales
+  // Validar solapamiento
   const conflictStmt = db.prepare(`
     SELECT COUNT(*) as count FROM events
     WHERE user_id = ?
