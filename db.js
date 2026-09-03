@@ -54,24 +54,29 @@ db.exec(`
     formato_hora TEXT DEFAULT '24' CHECK(formato_hora IN ('24', '12')),
     FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS invitation_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    token TEXT NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
-// Migración: añadir columna status si no existe
+// Migración: añadir columnas si no existen en events
 const tableInfo = db.prepare("PRAGMA table_info(events)").all();
 const hasStatus = tableInfo.some(col => col.name === 'status');
 if (!hasStatus) {
   db.exec(`ALTER TABLE events ADD COLUMN status TEXT DEFAULT 'active';`);
   console.log('✅ Columna "status" añadida a la tabla events');
 }
-
-// Migración: añadir columna categoria_id si no existe
 const hasCategoriaId = tableInfo.some(col => col.name === 'categoria_id');
 if (!hasCategoriaId) {
   db.exec(`ALTER TABLE events ADD COLUMN categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL;`);
   console.log('✅ Columna "categoria_id" añadida a la tabla events');
 }
-
-// Migración: añadir columnas link y address
 const hasLink = tableInfo.some(col => col.name === 'link');
 if (!hasLink) {
   db.exec(`ALTER TABLE events ADD COLUMN link TEXT;`);
