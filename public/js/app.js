@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let tema = 'claro';
 
   const HOUR_HEIGHT = 70;
-  let endManuallyChanged = false; // flag para controlar auto-llenado de fecha fin
+  let endManuallyChanged = false;
 
   // ========== ELEMENTOS DOM ==========
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -179,7 +179,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Al cambiar la categoría, actualizar el color del evento
   if (eventCategoria) {
     eventCategoria.addEventListener('change', function() {
       const catId = parseInt(this.value);
@@ -344,7 +343,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     eventListEl.innerHTML = html;
 
-    // Al hacer clic en el título -> abrir detalle
     $$('.event-title', eventListEl).forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -353,14 +351,12 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
 
-    // Botones editar
     $$('.edit-event', eventListEl).forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
         openEditModal(parseInt(this.dataset.id));
       });
     });
-    // Botones eliminar
     $$('.delete-event', eventListEl).forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -402,7 +398,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     finishedListEl.innerHTML = html;
 
-    // Título -> detalle
     $$('.event-title', finishedListEl).forEach(el => {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -484,7 +479,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalHeight = 24 * HOUR_HEIGHT;
     let html = `<div class="day-time-grid">`;
 
-    // Eventos de todo el día
     if (allDayEvents.length > 0) {
       html += `<div class="all-day-events-section">`;
       allDayEvents.forEach(e => {
@@ -498,7 +492,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     html += `<div class="day-time-grid-inner">`;
-    // Columna de horas
     html += `<div class="day-time-column" style="height: ${totalHeight}px;">`;
     for (let hour = 0; hour < 24; hour++) {
       let label;
@@ -513,13 +506,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     html += `</div>`;
 
-    // Columna de eventos
     html += `<div class="day-events-column" style="height: ${totalHeight}px; position: relative;">`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
     }
 
-    // Línea roja
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateStr === todayStr) {
       const now = new Date();
@@ -530,7 +521,6 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
     }
 
-    // Eventos con hora
     if (timedEvents.length > 0) {
       const sorted = [...timedEvents].sort((a, b) => new Date(a.start) - new Date(b.start));
       const hourCounts = {};
@@ -571,7 +561,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
-    // Listeners
     $$('.day-hour-slot').forEach(slot => {
       slot.addEventListener('click', function() {
         const hour = parseInt(this.dataset.hour);
@@ -607,7 +596,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `<div class="week-table-scroll">`;
     html += `<table class="week-table">`;
     
-    // Cabecera
     html += `<thead>`;
     html += `<tr>`;
     html += `<th class="week-header-empty"></th>`;
@@ -618,7 +606,6 @@ document.addEventListener('DOMContentLoaded', function() {
       html += `<th class="week-header-day ${isToday ? 'today' : ''}">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</th>`;
     }
     html += `</tr>`;
-    // Fila de eventos de todo el día
     html += `<tr class="all-day-row">`;
     html += `<td class="week-header-empty" style="background-color: var(--header-bg); border-right: 1px solid var(--calendar-border);"></td>`;
     for (let i = 0; i < 7; i++) {
@@ -642,7 +629,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</tr>`;
     html += `</thead>`;
     
-    // Cuerpo
     html += `<tbody>`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<tr>`;
@@ -666,7 +652,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         html += `<td class="week-day-cell" data-date="${dateStr}" data-hour="${hour}">`;
         
-        // Línea roja
         const todayStr = new Date().toISOString().split('T')[0];
         if (dateStr === todayStr) {
           const now = new Date();
@@ -717,7 +702,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     grid.innerHTML = html;
 
-    // Listeners
     $$('.week-day-cell').forEach(cell => {
       cell.addEventListener('click', function(e) {
         if (e.target.closest('.week-event-block') || e.target.closest('.all-day-event-badge')) return;
@@ -861,9 +845,9 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   }
-    // ========== MODAL DE DETALLE ==========
+
+  // ========== MODAL DE DETALLE ==========
   function openDetailModal(id) {
-    // Buscar el evento en events o finishedEvents
     const ev = [...events, ...finishedEvents].find(e => e.id === id);
     if (!ev) {
       alert('Evento no encontrado');
@@ -871,11 +855,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     currentDetailEventId = id;
 
-    // Llenar datos
     detailTitle.textContent = ev.title || '(sin título)';
     detailDescription.textContent = ev.description || 'Sin descripción';
 
-    // Categoría
     if (ev.categoria_id) {
       const cat = categorias.find(c => c.id === ev.categoria_id);
       detailCategory.textContent = cat ? cat.nombre : 'Sin categoría';
@@ -883,7 +865,6 @@ document.addEventListener('DOMContentLoaded', function() {
       detailCategory.textContent = 'Sin categoría';
     }
 
-    // Estado
     const statusLabels = {
       'active': 'Activo',
       'completed': 'Completado',
@@ -892,30 +873,24 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     detailStatus.textContent = statusLabels[ev.status] || ev.status;
 
-    // Fechas
     const start = new Date(ev.start);
     const end = new Date(ev.end);
     detailStart.textContent = formatDateTime(start);
     detailEnd.textContent = formatDateTime(end);
     detailAllDay.textContent = ev.all_day ? 'Sí' : 'No';
 
-    // Enlace y dirección
     detailLink.textContent = ev.link || 'No disponible';
     if (ev.link) {
-      // Si hay enlace, creamos un enlace clicable
       detailLink.innerHTML = `<a href="${ev.link}" target="_blank">${ev.link}</a>`;
     }
     detailAddress.textContent = ev.address || 'No disponible';
 
-    // Mostrar modal
     modalDetail.show();
   }
 
-  // Botón "Editar" desde el detalle
   editFromDetailBtn.addEventListener('click', function() {
     if (currentDetailEventId) {
       modalDetail.hide();
-      // Esperar un poco para que se cierre el modal antes de abrir edición
       setTimeout(() => {
         openEditModal(currentDetailEventId);
       }, 300);
@@ -931,7 +906,7 @@ document.addEventListener('DOMContentLoaded', function() {
     statusSelect.value = 'active';
     deleteBtn.style.display = 'none';
     currentEventId = null;
-    endManuallyChanged = false; // resetear flag
+    endManuallyChanged = false;
 
     const formatLocal = (d) => {
       const offset = d.getTimezoneOffset();
@@ -989,26 +964,23 @@ document.addEventListener('DOMContentLoaded', function() {
       eventAddressInput.value = ev.address || '';
       deleteBtn.style.display = 'inline-block';
       currentEventId = ev.id;
-      endManuallyChanged = false; // resetear flag
+      endManuallyChanged = false;
       modalEvent.show();
     } catch (error) {
       console.error('Error al cargar evento para editar:', error);
     }
   }
 
-  // Lógica para auto-llenar fecha fin cuando cambia inicio, si no se ha modificado manualmente
   startInput.addEventListener('change', function() {
     if (!endManuallyChanged) {
-      // Copiar el valor de inicio al fin (si no se ha modificado manualmente)
       endInput.value = this.value;
     }
   });
 
   endInput.addEventListener('change', function() {
-    endManuallyChanged = true; // el usuario tocó el campo fin
+    endManuallyChanged = true;
   });
 
-  // Al abrir el modal, reiniciar el flag
   modalEvent._element.addEventListener('shown.bs.modal', function() {
     endManuallyChanged = false;
   });
@@ -1126,6 +1098,7 @@ document.addEventListener('DOMContentLoaded', function() {
             target.id === 'categoriasBtnDesktop' || 
             target.id === 'settingsBtnDesktop' ||
             target.id === 'toggleFinishedBtnDesktop' ||
+            target.id === 'generateInviteBtnDesktop' ||
             target.classList.contains('edit-event') || 
             target.classList.contains('delete-event') || 
             target.classList.contains('edit-event-finished') || 
@@ -1243,19 +1216,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== INICIO ==========
-  loadPreferences().then(() => {
-    loadCategorias().then(() => {
-      loadEventsFromServer();
-    });
-  });
-});
-}
-  // ========== ELEMENTOS DOM (añadir) ==========
-  const generateInviteBtn = document.getElementById('generateInviteBtnDesktop');
-  const modalInvite = new bootstrap.Modal(document.getElementById('inviteModal'));
-
   // ========== GENERAR ENLACE DE INVITACIÓN ==========
+  const generateInviteBtn = document.getElementById('generateInviteBtnDesktop');
+  const inviteModalElement = document.getElementById('inviteModal');
+  let modalInvite = null;
+
+  if (inviteModalElement) {
+    modalInvite = new bootstrap.Modal(inviteModalElement);
+  }
+
   if (generateInviteBtn) {
     generateInviteBtn.addEventListener('click', async function() {
       try {
@@ -1269,9 +1238,15 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         const data = await res.json();
-        // Mostrar modal con el enlace
-        document.getElementById('inviteLinkInput').value = data.link;
-        modalInvite.show();
+        const linkInput = document.getElementById('inviteLinkInput');
+        if (linkInput) {
+          linkInput.value = data.link;
+        }
+        if (modalInvite) {
+          modalInvite.show();
+        } else {
+          alert('Enlace generado: ' + data.link + '\n(Copia manualmente)');
+        }
       } catch (error) {
         console.error('Error generando enlace:', error);
         alert('Error al generar enlace');
@@ -1279,19 +1254,26 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== COPIAR ENLACE AL PORTAPAPELES ==========
   const copyInviteBtn = document.getElementById('copyInviteBtn');
   if (copyInviteBtn) {
     copyInviteBtn.addEventListener('click', function() {
       const input = document.getElementById('inviteLinkInput');
+      if (!input) return;
       input.select();
       input.setSelectionRange(0, 99999);
       navigator.clipboard.writeText(input.value).then(() => {
         alert('¡Enlace copiado al portapapeles!');
       }).catch(() => {
-        // Fallback
         document.execCommand('copy');
         alert('¡Enlace copiado al portapapeles!');
       });
     });
   }
+
+  // ========== INICIO ==========
+  loadPreferences().then(() => {
+    loadCategorias().then(() => {
+      loadEventsFromServer();
+    });
+  });
+});
