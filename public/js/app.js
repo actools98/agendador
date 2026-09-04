@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const workEndInput = $('#workEnd');
   const dayCheckboxes = $$('.form-check-input[id^="day"]');
   const meetingDurationSelect = $('#meetingDuration');
+  const contactPhoneInput = $('#contactPhone');
 
   // Elementos categorías
   const categoriasList = $('#categoriasList');
@@ -123,7 +124,6 @@ document.addEventListener('DOMContentLoaded', function() {
       tema = data.tema || 'claro';
       applyTheme(tema);
 
-      // Cargar configuración de disponibilidad
       if (workStartInput) {
         const hours = Math.floor(data.work_start / 60);
         const mins = data.work_start % 60;
@@ -143,6 +143,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (meetingDurationSelect) {
         meetingDurationSelect.value = data.meeting_duration || 60;
       }
+      if (contactPhoneInput) {
+        contactPhoneInput.value = data.contact_phone || '';
+      }
     } catch (error) {
       console.error('Error cargando preferencias:', error);
       timeFormat = '24';
@@ -152,14 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   async function savePreferences() {
-    // Obtener días seleccionados
     const selectedDays = [];
     dayCheckboxes.forEach(cb => {
       if (cb.checked) selectedDays.push(parseInt(cb.value));
     });
     const workDays = selectedDays.length ? selectedDays.join(',') : '';
 
-    // Convertir hora a minutos
     const parseTime = (val) => {
       if (!val) return 0;
       const parts = val.split(':');
@@ -172,7 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
       work_start: parseTime(workStartInput.value),
       work_end: parseTime(workEndInput.value),
       work_days: workDays,
-      meeting_duration: parseInt(meetingDurationSelect.value)
+      meeting_duration: parseInt(meetingDurationSelect.value),
+      contact_phone: contactPhoneInput.value.trim()
     };
 
     try {
@@ -1199,10 +1201,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', function() {
-      // Cargar valores actuales en los inputs
       if (timeFormatSelect) timeFormatSelect.value = timeFormat;
       if (themeSelect) themeSelect.value = tema;
-      // Los demás campos ya se cargan en loadPreferences
       settingsModal.show();
     });
   }
