@@ -57,6 +57,7 @@ db.exec(`
     work_days TEXT DEFAULT '1,2,3,4,5',
     meeting_duration INTEGER DEFAULT 60,
     contact_phone TEXT DEFAULT '',
+    meeting_address TEXT DEFAULT '',
     FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
@@ -119,6 +120,11 @@ const hasContactPhone = prefInfo.some(col => col.name === 'contact_phone');
 if (!hasContactPhone) {
   db.exec(`ALTER TABLE preferencias ADD COLUMN contact_phone TEXT DEFAULT '';`);
   console.log('✅ Columna "contact_phone" añadida a preferencias');
+}
+const hasMeetingAddress = prefInfo.some(col => col.name === 'meeting_address');
+if (!hasMeetingAddress) {
+  db.exec(`ALTER TABLE preferencias ADD COLUMN meeting_address TEXT DEFAULT '';`);
+  console.log('✅ Columna "meeting_address" añadida a preferencias');
 }
 
 module.exports = db;
