@@ -20,7 +20,8 @@ router.get('/:token', (req, res) => {
     work_start: 480,
     work_end: 1020,
     work_days: '1,2,3,4,5',
-    meeting_duration: 60
+    meeting_duration: 60,
+    contact_phone: ''
   };
 
   res.render('invite', {
@@ -30,7 +31,8 @@ router.get('/:token', (req, res) => {
     workStart: pref.work_start,
     workEnd: pref.work_end,
     workDays: pref.work_days,
-    meetingDuration: pref.meeting_duration
+    meetingDuration: pref.meeting_duration,
+    contactPhone: pref.contact_phone || ''
   });
 });
 
@@ -47,9 +49,15 @@ router.post('/:token', (req, res) => {
   }
 
   const userId = link.user_id;
+  const pref = Preferencia.getByUser(userId) || {
+    work_start: 480,
+    work_end: 1020,
+    work_days: '1,2,3,4,5',
+    meeting_duration: 60,
+    contact_phone: ''
+  };
 
   if (!title || !start) {
-    const pref = Preferencia.getByUser(userId) || { work_start: 480, work_end: 1020, work_days: '1,2,3,4,5', meeting_duration: 60 };
     return res.render('invite', {
       token,
       error: 'Título y fecha/hora de inicio son obligatorios.',
@@ -57,14 +65,14 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || ''
     });
   }
 
   // ========== PARSEO MANUAL DE FECHA (sin zona horaria) ==========
   const [datePart, timePart] = start.split('T');
   if (!datePart || !timePart) {
-    const pref = Preferencia.getByUser(userId) || { work_start: 480, work_end: 1020, work_days: '1,2,3,4,5', meeting_duration: 60 };
     return res.render('invite', {
       token,
       error: 'Formato de fecha inválido.',
@@ -72,13 +80,13 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || ''
     });
   }
   const [year, month, day] = datePart.split('-').map(Number);
   const [hours, minutes] = timePart.split(':').map(Number);
   if ([year, month, day, hours, minutes].some(isNaN)) {
-    const pref = Preferencia.getByUser(userId) || { work_start: 480, work_end: 1020, work_days: '1,2,3,4,5', meeting_duration: 60 };
     return res.render('invite', {
       token,
       error: 'Formato de fecha inválido.',
@@ -86,7 +94,8 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || ''
     });
   }
 
@@ -95,13 +104,6 @@ router.post('/:token', (req, res) => {
 
   // Crear objeto Date para validaciones (fecha local)
   const startDate = new Date(year, month - 1, day, hours, minutes);
-
-  const pref = Preferencia.getByUser(userId) || {
-    work_start: 480,
-    work_end: 1020,
-    work_days: '1,2,3,4,5',
-    meeting_duration: 60
-  };
 
   // Validar día de la semana
   const dayOfWeek = startDate.getDay();
@@ -115,7 +117,8 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || ''
     });
   }
 
@@ -129,7 +132,8 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || ''
     });
   }
 
@@ -143,7 +147,8 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || ''
     });
   }
 
@@ -160,7 +165,8 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || ''
     });
   }
 
@@ -185,7 +191,8 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || ''
     });
   }
 
@@ -204,6 +211,8 @@ router.post('/:token', (req, res) => {
       address: null
     });
 
+    const contactPhone = pref.contact_phone || '';
+
     res.send(`
       <!DOCTYPE html>
       <html>
@@ -215,6 +224,7 @@ router.post('/:token', (req, res) => {
           <h2 class="text-success">✅ Evento creado</h2>
           <p>Tu evento "<strong>${title}</strong>" ha sido agendado exitosamente.</p>
           <p class="text-muted">El anfitrión recibirá la notificación.</p>
+          ${contactPhone ? `<p class="mt-3"><strong>Para cancelaciones comunicarse con:</strong><br>${contactPhone}</p>` : ''}
           <a href="/" class="btn btn-primary mt-3">Volver al inicio</a>
         </div>
       </body>
