@@ -17,6 +17,7 @@
       font-size: 0.8rem;
       margin: 0.1rem;
     }
+    .hour-select { min-width: 80px; }
   </style>
 </head>
 <body>
@@ -41,9 +42,14 @@
         <p class="mb-0 mt-1">
           Duración estándar: <span id="meetingDurationDisplay"></span>
         </p>
+        <% if (locals.contactPhone && contactPhone) { %>
+          <p class="mb-0 mt-2">
+            <strong>Contacto para cancelaciones:</strong> <%= contactPhone %>
+          </p>
+        <% } %>
       </div>
 
-      <form method="POST" action="">
+      <form method="POST" action="" id="inviteForm">
         <!-- Título -->
         <div class="mb-3">
           <label for="title" class="form-label">Título *</label>
@@ -57,15 +63,22 @@
           <textarea class="form-control" id="description" name="description" rows="2"><%= locals.eventData ? eventData.description : '' %></textarea>
         </div>
 
-        <!-- Fecha y hora de inicio -->
+        <!-- Fecha -->
         <div class="mb-3">
-          <label for="start" class="form-label">Fecha y hora de inicio *</label>
-          <input type="datetime-local" class="form-control" id="start" name="start" required
-                 value="<%= locals.eventData ? eventData.start : '' %>"
+          <label for="dateSelect" class="form-label">Fecha *</label>
+          <input type="date" class="form-control" id="dateSelect" name="date" required
+                 value="<%= locals.eventData ? eventData.date : '' %>"
                  min="" max="">
         </div>
 
-        <p class="text-muted small">La reunión se creará con la duración estándar configurada por el anfitrión.</p>
+        <!-- Hora (selector con solo horas permitidas) -->
+        <div class="mb-3">
+          <label for="hourSelect" class="form-label">Hora de inicio *</label>
+          <select class="form-select" id="hourSelect" name="hour" required>
+            <option value="">Selecciona una hora</option>
+          </select>
+          <small class="text-muted">Solo se muestran horas dentro de la franja disponible.</small>
+        </div>
 
         <button type="submit" class="btn btn-primary w-100">Enviar solicitud</button>
       </form>
@@ -75,19 +88,18 @@
   </div>
 
   <script>
-    // Pasar datos del servidor a JavaScript
+    // Datos desde el servidor
     const availabilityData = <%- JSON.stringify({
       workStart: locals.workStart || 480,
       workEnd: locals.workEnd || 1020,
       workDays: locals.workDays || '1,2,3,4,5',
       meetingDuration: locals.meetingDuration || 60,
-      dayNames: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+      dayNames: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+      contactPhone: locals.contactPhone || ''
     }) %>;
 
     // Mostrar información de disponibilidad
-    const daysMap = {
-      1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom'
-    };
+    const daysMap = {1:'Lun',2:'Mar',3:'Mié',4:'Jue',5:'Vie',6:'Sáb',7:'Dom'};
     const days = availabilityData.workDays.split(',').map(Number);
     const daysText = days.map(d => daysMap[d]).join(', ');
     document.getElementById('availabilityDays').textContent = daysText;
@@ -103,108 +115,133 @@
     const durationMinutes = availabilityData.meetingDuration;
     let durationText = '';
     if (durationMinutes >= 60) {
-      const hours = Math.floor(durationMinutes / 60);
-      const mins = durationMinutes % 60;
-      durationText = hours + ' hora' + (hours > 1 ? 's' : '') + (mins > 0 ? ' ' + mins + ' min' : '');
+      const h = Math.floor(durationMinutes / 60);
+      const m = durationMinutes % 60;
+      durationText = h + ' hora' + (h > 1 ? 's' : '') + (m > 0 ? ' ' + m + ' min' : '');
     } else {
       durationText = durationMinutes + ' minutos';
     }
     document.getElementById('meetingDurationDisplay').textContent = durationText;
 
-    // Configurar el input datetime-local para restringir fechas y horas
-    const startInput = document.getElementById('start');
-    const now = new Date();
+    // ========== GENERAR OPCIONES DE HORA ==========
+    const dateInput = document.getElementById('dateSelect');
+    const hourSelect = document.getElementById('hourSelect');
 
-    // Restringir días: solo los días permitidos
+    // Función para generar opciones de hora según la fecha seleccionada
+    function generateHourOptions(selectedDateStr) {
+      hourSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+      if (!selectedDateStr) return;
+
+      const selectedDate = new Date(selectedDateStr + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const isToday = selectedDate.getTime() === today.getTime();
+
+      // Obtener el día de la semana (1=lunes, 7=domingo)
+      let dayOfWeek = selectedDate.getDay();
+      let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+      if (!days.includes(ourDay)) {
+        hourSelect.innerHTML = '<option value="">Día no disponible</option>';
+        return;
+      }
+
+      // Calcular límites
+      let minMinutes = availabilityData.workStart;
+      let maxMinutes = availabilityData.workEnd - availabilityData.meetingDuration;
+
+      if (isToday) {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        // Redondear al próximo bloque de 15 minutos
+        const roundedMinutes = Math.ceil(currentMinutes / 15) * 15;
+        if (roundedMinutes > minMinutes) minMinutes = roundedMinutes;
+      }
+
+      // Generar opciones cada 15 minutos
+      const step = 15;
+      for (let m = minMinutes; m <= maxMinutes; m += step) {
+        const h = Math.floor(m / 60);
+        const min = m % 60;
+        const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+        const option = document.createElement('option');
+        option.value = timeStr;
+        option.textContent = timeStr;
+        hourSelect.appendChild(option);
+      }
+
+      if (hourSelect.options.length === 1) {
+        hourSelect.innerHTML = '<option value="">No hay horarios disponibles</option>';
+      }
+    }
+
+    // Evento al cambiar la fecha
+    dateInput.addEventListener('change', function() {
+      generateHourOptions(this.value);
+    });
+
+    // Restringir días disponibles en el input date
     function getNextAllowedDate() {
-      const date = new Date(now);
-      date.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      let date = new Date(today);
       let attempts = 0;
       while (attempts < 30) {
-        const dayOfWeek = date.getDay(); // 0=domingo, 1=lunes, ...
-        // Convertir a nuestro formato (1=lunes, 7=domingo)
+        let dayOfWeek = date.getDay();
         let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-        if (days.includes(ourDay)) {
-          return date;
-        }
+        if (days.includes(ourDay)) return date;
         date.setDate(date.getDate() + 1);
         attempts++;
       }
       return null;
     }
 
-    // Min: hoy o próximo día permitido
     const minDate = getNextAllowedDate();
     if (minDate) {
       const minStr = minDate.toISOString().split('T')[0];
-      // También limitar hora mínima según workStart si es hoy
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      let minTime = '';
-      if (minDate.getTime() === today.getTime()) {
-        // Es hoy, la hora mínima es la actual o workStart, la que sea mayor
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-        const minStart = Math.max(nowMinutes, availabilityData.workStart);
-        const h = Math.floor(minStart / 60);
-        const m = minStart % 60;
-        minTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        startInput.min = `${minStr}T${minTime}`;
-      } else {
-        startInput.min = `${minStr}T${startStr}`;
-      }
+      dateInput.min = minStr;
     }
 
-    // Max: último día permitido en el futuro (ej: 30 días)
-    const maxDate = new Date(now);
+    const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 30);
     const maxStr = maxDate.toISOString().split('T')[0];
-    startInput.max = `${maxStr}T${endStr}`;
+    dateInput.max = maxStr;
 
-    // Al cambiar la fecha, ajustar la hora mínima si es hoy
-    startInput.addEventListener('change', function() {
-      const selectedDate = new Date(this.value);
-      if (!selectedDate) return;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (selectedDate.getTime() === today.getTime()) {
-        // Es hoy, ajustar hora mínima a la actual o workStart
-        const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-        const minStart = Math.max(nowMinutes, availabilityData.workStart);
-        const h = Math.floor(minStart / 60);
-        const m = minStart % 60;
-        const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        const minDateTime = selectedDate.toISOString().split('T')[0] + 'T' + timeStr;
-        this.min = minDateTime;
-        // Si el valor actual es menor, ajustarlo
-        if (this.value < minDateTime) {
-          this.value = minDateTime;
-        }
+    // Si hay un valor previo (eventData), establecerlo
+    <% if (locals.eventData && eventData.date) { %>
+      dateInput.value = '<%= eventData.date %>';
+      generateHourOptions(dateInput.value);
+      <% if (locals.eventData && eventData.hour) { %>
+        hourSelect.value = '<%= eventData.hour %>';
+      <% } %>
+    <% } else { %>
+      // Establecer la fecha mínima por defecto
+      if (minDate) {
+        dateInput.value = minDate.toISOString().split('T')[0];
+        generateHourOptions(dateInput.value);
       }
-    });
+    <% } %>
 
-    // Validar que la hora esté dentro de la franja (al enviar)
-    document.querySelector('form').addEventListener('submit', function(e) {
-      const startVal = startInput.value;
-      if (!startVal) {
-        alert('Por favor, selecciona una fecha y hora.');
+    // Validar al enviar
+    document.getElementById('inviteForm').addEventListener('submit', function(e) {
+      const date = dateInput.value;
+      const hour = hourSelect.value;
+      if (!date || !hour) {
+        alert('Por favor, selecciona una fecha y una hora.');
         e.preventDefault();
         return;
       }
-      const date = new Date(startVal);
-      const dayOfWeek = date.getDay();
-      let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-      if (!days.includes(ourDay)) {
-        alert('El día seleccionado no está disponible. Por favor, elige otro día.');
-        e.preventDefault();
-        return;
-      }
-      const minutes = date.getHours() * 60 + date.getMinutes();
-      if (minutes < availabilityData.workStart || minutes >= availabilityData.workEnd) {
-        alert('La hora seleccionada está fuera de la franja horaria disponible.');
-        e.preventDefault();
-        return;
-      }
-      // No permitir eventos en el pasado (ya validado por el min)
+      // Crear el campo start en el formato esperado por el servidor (YYYY-MM-DDTHH:mm)
+      const startField = document.createElement('input');
+      startField.type = 'hidden';
+      startField.name = 'start';
+      startField.value = date + 'T' + hour + ':00';
+      this.appendChild(startField);
+
+      // Eliminar los campos date y hour para que no se envíen
+      dateInput.removeAttribute('name');
+      hourSelect.removeAttribute('name');
+
+      // El servidor espera 'start', no 'date' ni 'hour'
     });
   </script>
 </body>
