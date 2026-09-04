@@ -21,7 +21,8 @@ router.get('/:token', (req, res) => {
     work_end: 1020,
     work_days: '1,2,3,4,5',
     meeting_duration: 60,
-    contact_phone: ''
+    contact_phone: '',
+    meeting_address: ''
   };
 
   res.render('invite', {
@@ -32,7 +33,7 @@ router.get('/:token', (req, res) => {
     workEnd: pref.work_end,
     workDays: pref.work_days,
     meetingDuration: pref.meeting_duration,
-    contactPhone: pref.contact_phone || ''
+    // Ya no se pasa contactPhone ni meetingAddress a la vista
   });
 });
 
@@ -54,7 +55,8 @@ router.post('/:token', (req, res) => {
     work_end: 1020,
     work_days: '1,2,3,4,5',
     meeting_duration: 60,
-    contact_phone: ''
+    contact_phone: '',
+    meeting_address: ''
   };
 
   if (!title || !start) {
@@ -65,8 +67,7 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || ''
+      meetingDuration: pref.meeting_duration
     });
   }
 
@@ -80,8 +81,7 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || ''
+      meetingDuration: pref.meeting_duration
     });
   }
   const [year, month, day] = datePart.split('-').map(Number);
@@ -94,8 +94,7 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || ''
+      meetingDuration: pref.meeting_duration
     });
   }
 
@@ -117,8 +116,7 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || ''
+      meetingDuration: pref.meeting_duration
     });
   }
 
@@ -132,8 +130,7 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || ''
+      meetingDuration: pref.meeting_duration
     });
   }
 
@@ -147,8 +144,7 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || ''
+      meetingDuration: pref.meeting_duration
     });
   }
 
@@ -165,8 +161,7 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || ''
+      meetingDuration: pref.meeting_duration
     });
   }
 
@@ -191,8 +186,7 @@ router.post('/:token', (req, res) => {
       workStart: pref.work_start,
       workEnd: pref.work_end,
       workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || ''
+      meetingDuration: pref.meeting_duration
     });
   }
 
@@ -212,24 +206,55 @@ router.post('/:token', (req, res) => {
     });
 
     const contactPhone = pref.contact_phone || '';
+    const meetingAddress = pref.meeting_address || '';
 
-    res.send(`
+    // Construir el HTML de éxito sin el botón "Volver a inicio"
+    let successHTML = `
       <!DOCTYPE html>
       <html>
       <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Evento creado</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       </head>
       <body class="bg-light d-flex align-items-center justify-content-center vh-100">
-        <div class="card text-center p-5 shadow" style="max-width:500px;">
+        <div class="card text-center p-5 shadow" style="max-width:550px;">
           <h2 class="text-success">✅ Evento creado</h2>
           <p>Tu evento "<strong>${title}</strong>" ha sido agendado exitosamente.</p>
           <p class="text-muted">El anfitrión recibirá la notificación.</p>
-          ${contactPhone ? `<p class="mt-3"><strong>Para cancelaciones comunicarse con:</strong><br>${contactPhone}</p>` : ''}
-          <a href="/" class="btn btn-primary mt-3">Volver al inicio</a>
+    `;
+
+    // Añadir dirección si existe
+    if (meetingAddress) {
+      const encodedAddress = encodeURIComponent(meetingAddress);
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      successHTML += `
+        <div class="mt-3">
+          <p><strong>La reunión está agendada en:</strong></p>
+          <p>${meetingAddress}</p>
+          <a href="${mapsUrl}" target="_blank" class="d-block mt-2">
+            <img src="https://maps.googleapis.com/maps/api/staticmap?center=${encodedAddress}&zoom=15&size=400x200&markers=color:red%7C${encodedAddress}&key=${process.env.GOOGLE_MAPS_API_KEY}" 
+                 alt="Mapa de ubicación" class="img-fluid rounded" style="max-width:100%; height:auto; border:1px solid #ddd;">
+          </a>
+          <small class="text-muted">Haz clic en el mapa para abrir en Google Maps</small>
+        </div>
+      `;
+    }
+
+    // Añadir contacto si existe
+    if (contactPhone) {
+      successHTML += `
+        <div class="mt-3">
+          <p><strong>Para cancelaciones comunicarse con:</strong><br>${contactPhone}</p>
+        </div>
+      `;
+    }
+
+    successHTML += `
         </div>
       </body>
       </html>
-    `);
+    `;
+
+    res.send(successHTML);
   } catch (error) {
     console.error('Error al crear evento por invitación:', error);
     res.status(500).send('Error interno al crear el evento.');
