@@ -13,10 +13,11 @@ router.get('/', (req, res) => {
     return res.json({
       tema: 'claro',
       formato_hora: '24',
-      work_start: 480,    // 8:00
-      work_end: 1020,     // 17:00
+      work_start: 480,
+      work_end: 1020,
       work_days: '1,2,3,4,5',
-      meeting_duration: 60
+      meeting_duration: 60,
+      contact_phone: ''
     });
   }
   res.json(pref);
@@ -27,7 +28,7 @@ router.put('/', (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json({ error: 'No autenticado' });
 
-  const { tema, formato_hora, work_start, work_end, work_days, meeting_duration } = req.body;
+  const { tema, formato_hora, work_start, work_end, work_days, meeting_duration, contact_phone } = req.body;
   
   // Validar campos
   if (tema !== undefined && !['claro', 'oscuro'].includes(tema)) {
@@ -60,7 +61,8 @@ router.put('/', (req, res) => {
       work_start: work_start !== undefined ? work_start : current.work_start || 480,
       work_end: work_end !== undefined ? work_end : current.work_end || 1020,
       work_days: work_days !== undefined ? work_days : current.work_days || '1,2,3,4,5',
-      meeting_duration: meeting_duration !== undefined ? meeting_duration : current.meeting_duration || 60
+      meeting_duration: meeting_duration !== undefined ? meeting_duration : current.meeting_duration || 60,
+      contact_phone: contact_phone !== undefined ? contact_phone : current.contact_phone || ''
     });
     res.json({ success: true });
   } catch (err) {
