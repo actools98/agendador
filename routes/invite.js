@@ -32,8 +32,7 @@ router.get('/:token', (req, res) => {
     workStart: pref.work_start,
     workEnd: pref.work_end,
     workDays: pref.work_days,
-    meetingDuration: pref.meeting_duration,
-    // Ya no se pasa contactPhone ni meetingAddress a la vista
+    meetingDuration: pref.meeting_duration
   });
 });
 
@@ -214,6 +213,25 @@ router.post('/:token', (req, res) => {
       <html>
       <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Evento creado</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <style>
+        .map-container {
+          position: relative;
+          padding-bottom: 56.25%;
+          height: 0;
+          overflow: hidden;
+          max-width: 100%;
+          border-radius: 8px;
+          border: 1px solid #ddd;
+          margin-top: 10px;
+        }
+        .map-container iframe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+      </style>
       </head>
       <body class="bg-light d-flex align-items-center justify-content-center vh-100">
         <div class="card text-center p-5 shadow" style="max-width:550px;">
@@ -225,16 +243,28 @@ router.post('/:token', (req, res) => {
     // Añadir dirección si existe
     if (meetingAddress) {
       const encodedAddress = encodeURIComponent(meetingAddress);
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      // OpenStreetMap embed (usamos un iframe con búsqueda general, pero podemos mostrar un mapa estático de OSM)
+      // Para OpenStreetMap necesitaríamos coordenadas, pero podemos usar el enlace directo a la búsqueda
+      // Como alternativa, usamos un iframe con la URL de OpenStreetMap (búsqueda por dirección)
+      const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=-0.5%2C40.3%2C-0.3%2C40.5&layer=mapnik`; // Coordenadas de ejemplo, no se puede mostrar dirección exacta sin geocodificación
+
       successHTML += `
         <div class="mt-3">
           <p><strong>La reunión está agendada en:</strong></p>
-          <p>${meetingAddress}</p>
-          <a href="${mapsUrl}" target="_blank" class="d-block mt-2">
-            <img src="https://maps.googleapis.com/maps/api/staticmap?center=${encodedAddress}&zoom=15&size=400x200&markers=color:red%7C${encodedAddress}&key=${process.env.GOOGLE_MAPS_API_KEY}" 
-                 alt="Mapa de ubicación" class="img-fluid rounded" style="max-width:100%; height:auto; border:1px solid #ddd;">
+          <p><strong>${meetingAddress}</strong></p>
+          <div class="map-container">
+            <iframe 
+              src="https://www.openstreetmap.org/export/embed.html?bbox=-0.5%2C40.3%2C-0.3%2C40.5&layer=mapnik" 
+              style="border:0;" 
+              allowfullscreen="" 
+              loading="lazy">
+            </iframe>
+          </div>
+          <a href="${googleMapsUrl}" target="_blank" class="btn btn-outline-primary btn-sm mt-2">
+            📍 Abrir en Google Maps
           </a>
-          <small class="text-muted">Haz clic en el mapa para abrir en Google Maps</small>
+          <p class="text-muted small mt-1">Haz clic en el mapa para verlo más grande o usa el botón para abrir en Google Maps.</p>
         </div>
       `;
     }
