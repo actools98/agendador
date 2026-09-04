@@ -1320,67 +1320,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== AUTOCOMPLETADO DE DIRECCIÓN (Google Places) ==========
-  let autocompleteService = null;
-
-  function initAutocomplete() {
-    // Esta función será llamada por Google cuando la API esté lista
-    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-      autocompleteService = new google.maps.places.AutocompleteService();
-      meetingAddressInput.addEventListener('input', handleAddressInput);
-    }
-  }
-
-  function handleAddressInput() {
-    const input = meetingAddressInput.value;
-    if (input.length < 3) {
-      document.getElementById('autocomplete-suggestions').style.display = 'none';
-      return;
-    }
-
-    if (!autocompleteService) return;
-
-    const request = {
-      input: input,
-      types: ['geocode', 'establishment'],
-      componentRestrictions: { country: 'es' } // Puedes quitar o cambiar el país
-    };
-
-    autocompleteService.getPlacePredictions(request, function(predictions, status) {
-      if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-        const suggestions = document.getElementById('autocomplete-suggestions');
-        suggestions.style.display = 'block';
-        suggestions.innerHTML = '';
-        predictions.forEach(pred => {
-          const item = document.createElement('a');
-          item.className = 'list-group-item list-group-item-action';
-          item.textContent = pred.description;
-          item.addEventListener('click', function(e) {
-            e.preventDefault();
-            meetingAddressInput.value = pred.description;
-            suggestions.style.display = 'none';
-          });
-          suggestions.appendChild(item);
-        });
-      } else {
-        document.getElementById('autocomplete-suggestions').style.display = 'none';
-      }
-    });
-  }
-
-  // Inicializar autocompletado si la API ya está cargada
-  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-    initAutocomplete();
-  }
-
-  // Cerrar sugerencias al hacer clic fuera
-  document.addEventListener('click', function(e) {
-    const suggestions = document.getElementById('autocomplete-suggestions');
-    if (suggestions && !suggestions.contains(e.target) && e.target !== meetingAddressInput) {
-      suggestions.style.display = 'none';
-    }
-  });
-
   // ========== INICIO ==========
   loadPreferences().then(() => {
     loadCategorias().then(() => {
