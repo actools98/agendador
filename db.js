@@ -52,10 +52,11 @@ db.exec(`
     usuario_id INTEGER NOT NULL UNIQUE,
     tema TEXT DEFAULT 'claro' CHECK(tema IN ('claro', 'oscuro')),
     formato_hora TEXT DEFAULT '24' CHECK(formato_hora IN ('24', '12')),
-    work_start INTEGER DEFAULT 480,   -- 8:00 en minutos
-    work_end INTEGER DEFAULT 1020,    -- 17:00 en minutos
-    work_days TEXT DEFAULT '1,2,3,4,5', -- Lunes a Viernes
-    meeting_duration INTEGER DEFAULT 60, -- 60 minutos
+    work_start INTEGER DEFAULT 480,
+    work_end INTEGER DEFAULT 1020,
+    work_days TEXT DEFAULT '1,2,3,4,5',
+    meeting_duration INTEGER DEFAULT 60,
+    contact_phone TEXT DEFAULT '',
     FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
@@ -113,6 +114,11 @@ const hasMeetingDuration = prefInfo.some(col => col.name === 'meeting_duration')
 if (!hasMeetingDuration) {
   db.exec(`ALTER TABLE preferencias ADD COLUMN meeting_duration INTEGER DEFAULT 60;`);
   console.log('✅ Columna "meeting_duration" añadida a preferencias');
+}
+const hasContactPhone = prefInfo.some(col => col.name === 'contact_phone');
+if (!hasContactPhone) {
+  db.exec(`ALTER TABLE preferencias ADD COLUMN contact_phone TEXT DEFAULT '';`);
+  console.log('✅ Columna "contact_phone" añadida a preferencias');
 }
 
 module.exports = db;
