@@ -32,17 +32,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const categoriasModal = new bootstrap.Modal($('#categoriasModal'));
   const modalEvent = new bootstrap.Modal($('#eventModal'));
   const modalDetail = new bootstrap.Modal($('#eventDetailModal'));
+  const availabilityModal = new bootstrap.Modal($('#availabilityModal'));
 
-  // Elementos configuración
+  // Elementos configuración (SOLO LOS QUE SE USAN AHORA)
   const timeFormatSelect = $('#timeFormatSelect');
   const themeSelect = $('#themeSelect');
   const saveSettingsBtn = $('#saveSettingsBtn');
-  const workStartInput = $('#workStart');
-  const workEndInput = $('#workEnd');
-  const dayCheckboxes = $$('.form-check-input[id^="day"]');
   const meetingDurationSelect = $('#meetingDuration');
   const contactPhoneInput = $('#contactPhone');
-  // NOTA: meetingAddressInput se obtiene con document.getElementById en las funciones
 
   // Elementos categorías
   const categoriasList = $('#categoriasList');
@@ -82,6 +79,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const detailAddress = $('#detailAddress');
   const editFromDetailBtn = $('#editFromDetailBtn');
 
+  // Elementos disponibilidad
+  const availabilityContainer = $('#availabilityContainer');
+  const availabilityBtn = document.getElementById('availabilityBtnDesktop');
+
   let currentEventId = null;
   let finishedVisible = false;
   let currentDetailEventId = null;
@@ -115,33 +116,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== PREFERENCIAS (CON LOGS PARA DEPURAR) ==========
+  // ========== PREFERENCIAS (SOLO CAMPOS ACTUALES) ==========
   async function loadPreferences() {
     try {
       const res = await fetch('/api/preferencias');
       if (!res.ok) throw new Error('Error al cargar preferencias');
       const data = await res.json();
-      console.log('📢 Datos de preferencias cargados:', data);
       timeFormat = data.formato_hora || '24';
       tema = data.tema || 'claro';
       applyTheme(tema);
 
-      if (workStartInput) {
-        const hours = Math.floor(data.work_start / 60);
-        const mins = data.work_start % 60;
-        workStartInput.value = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-      }
-      if (workEndInput) {
-        const hours = Math.floor(data.work_end / 60);
-        const mins = data.work_end % 60;
-        workEndInput.value = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-      }
-      if (data.work_days) {
-        const days = data.work_days.split(',').map(Number);
-        dayCheckboxes.forEach(cb => {
-          cb.checked = days.includes(parseInt(cb.value));
-        });
-      }
       if (meetingDurationSelect) {
         meetingDurationSelect.value = data.meeting_duration || 60;
       }
@@ -152,10 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Cargar dirección usando getElementById
       const addressInput = document.getElementById('meetingAddress');
       if (addressInput) {
-        console.log('📢 Asignando dirección al input:', data.meeting_address);
         addressInput.value = data.meeting_address || '';
-      } else {
-        console.warn('⚠️ No se encontró el elemento meetingAddress');
       }
     } catch (error) {
       console.error('Error cargando preferencias:', error);
@@ -166,34 +147,17 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   async function savePreferences() {
-    const selectedDays = [];
-    dayCheckboxes.forEach(cb => {
-      if (cb.checked) selectedDays.push(parseInt(cb.value));
-    });
-    const workDays = selectedDays.length ? selectedDays.join(',') : '';
-
-    const parseTime = (val) => {
-      if (!val) return 0;
-      const parts = val.split(':');
-      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
-    };
-
     // Obtener el valor de la dirección directamente del DOM
     const addressInput = document.getElementById('meetingAddress');
     const meetingAddress = addressInput ? addressInput.value.trim() : '';
-    console.log('📢 meetingAddress capturado:', meetingAddress);
 
     const payload = {
       tema: themeSelect.value,
       formato_hora: timeFormatSelect.value,
-      work_start: parseTime(workStartInput.value),
-      work_end: parseTime(workEndInput.value),
-      work_days: workDays,
       meeting_duration: parseInt(meetingDurationSelect.value),
       contact_phone: contactPhoneInput.value.trim(),
       meeting_address: meetingAddress
     };
-    console.log('📢 Payload enviado al servidor:', payload);
 
     try {
       const res = await fetch('/api/preferencias', {
@@ -1162,6 +1126,7 @@ document.addEventListener('DOMContentLoaded', function() {
             target.id === 'settingsBtnDesktop' ||
             target.id === 'toggleFinishedBtnDesktop' ||
             target.id === 'generateInviteBtnDesktop' ||
+            target.id === 'availabilityBtnDesktop' ||
             target.classList.contains('edit-event') || 
             target.classList.contains('delete-event') || 
             target.classList.contains('edit-event-finished') || 
@@ -1329,6 +1294,189 @@ document.addEventListener('DOMContentLoaded', function() {
       }).catch(() => {
         document.execCommand('copy');
         alert('¡Enlace copiado al portapapeles!');
+      });
+    });
+  }
+
+  // ========== DISPONIBILIDAD HORARIA ==========
+  const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  let availabilityBlocks = [];
+
+  async function loadAvailability() {
+    try {
+      const res = await fetch('/api/availability');
+      if (!res.ok) throw new Error('Error al cargar disponibilidad');
+      availabilityBlocks = await res.json();
+      renderAvailability();
+    } catch (error) {
+      console.error('Error cargando disponibilidad:', error);
+    }
+  }
+
+  function renderAvailability() {
+    if (!availabilityContainer) return;
+    let html = '';
+    for (let i = 1; i <= 7; i++) {
+      const dayBlocks = availabilityBlocks.filter(b => b.day_of_week === i);
+      html += `
+        <div class="card mb-2">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>${dayNames[i-1]}</strong>
+            <button class="btn btn-sm btn-outline-primary add-block-btn" data-day="${i}">+ Agregar bloque</button>
+          </div>
+          <div class="card-body">
+            <div id="day-blocks-${i}">
+      `;
+      if (dayBlocks.length === 0) {
+        html += `<p class="text-muted small">Sin bloques configurados</p>`;
+      } else {
+        dayBlocks.forEach((block) => {
+          const startTime = minutesToTime(block.start_minutes);
+          const endTime = minutesToTime(block.end_minutes);
+          html += `
+            <div class="row g-2 mb-2 align-items-center block-row" data-block-id="${block.id}">
+              <div class="col-4">
+                <input type="time" class="form-control form-control-sm block-start" value="${startTime}" step="900" />
+              </div>
+              <div class="col-4">
+                <input type="time" class="form-control form-control-sm block-end" value="${endTime}" step="900" />
+              </div>
+              <div class="col-4">
+                <button class="btn btn-sm btn-outline-danger delete-block-btn" data-id="${block.id}">🗑️</button>
+              </div>
+            </div>
+          `;
+        });
+      }
+      html += `
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    availabilityContainer.innerHTML = html;
+
+    // Event listeners para botones de agregar
+    document.querySelectorAll('.add-block-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const day = parseInt(this.dataset.day);
+        addBlock(day);
+      });
+    });
+
+    // Event listeners para eliminar
+    document.querySelectorAll('.delete-block-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const id = parseInt(this.dataset.id);
+        if (confirm('¿Eliminar este bloque?')) {
+          deleteBlock(id);
+        }
+      });
+    });
+
+    // Event listeners para guardar cambios al modificar hora
+    document.querySelectorAll('.block-start, .block-end').forEach(input => {
+      input.addEventListener('change', function() {
+        const row = this.closest('.block-row');
+        const id = parseInt(row.dataset.blockId);
+        const startInput = row.querySelector('.block-start');
+        const endInput = row.querySelector('.block-end');
+        const startMinutes = timeToMinutes(startInput.value);
+        const endMinutes = timeToMinutes(endInput.value);
+        updateBlock(id, startMinutes, endMinutes);
+      });
+    });
+  }
+
+  function minutesToTime(minutes) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  function timeToMinutes(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  async function addBlock(dayOfWeek) {
+    try {
+      // Obtener el último bloque del día para sugerir hora
+      const dayBlocks = availabilityBlocks.filter(b => b.day_of_week === dayOfWeek);
+      let startMinutes = 480; // 8am por defecto
+      let endMinutes = 540;   // 9am
+      if (dayBlocks.length > 0) {
+        const last = dayBlocks[dayBlocks.length - 1];
+        startMinutes = last.end_minutes;
+        endMinutes = Math.min(startMinutes + 60, 1380);
+      }
+      
+      const res = await fetch('/api/availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dayOfWeek, startMinutes, endMinutes })
+      });
+      if (res.ok) {
+        await loadAvailability();
+      } else {
+        const err = await res.json();
+        alert('Error al agregar bloque: ' + (err.error || 'desconocido'));
+      }
+    } catch (error) {
+      console.error('Error agregando bloque:', error);
+      alert('Error al agregar bloque');
+    }
+  }
+
+  async function updateBlock(id, startMinutes, endMinutes) {
+    try {
+      const block = availabilityBlocks.find(b => b.id === id);
+      if (!block) return;
+      
+      const res = await fetch(`/api/availability/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dayOfWeek: block.day_of_week,
+          startMinutes,
+          endMinutes
+        })
+      });
+      if (res.ok) {
+        await loadAvailability();
+      } else {
+        const err = await res.json();
+        alert('Error al actualizar bloque: ' + (err.error || 'desconocido'));
+        await loadAvailability(); // recargar para revertir
+      }
+    } catch (error) {
+      console.error('Error actualizando bloque:', error);
+      alert('Error al actualizar bloque');
+    }
+  }
+
+  async function deleteBlock(id) {
+    try {
+      const res = await fetch(`/api/availability/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await loadAvailability();
+      } else {
+        const err = await res.json();
+        alert('Error al eliminar bloque: ' + (err.error || 'desconocido'));
+      }
+    } catch (error) {
+      console.error('Error eliminando bloque:', error);
+      alert('Error al eliminar bloque');
+    }
+  }
+
+  // Evento para abrir el modal de disponibilidad
+  if (availabilityBtn) {
+    availabilityBtn.addEventListener('click', function() {
+      loadAvailability().then(() => {
+        availabilityModal.show();
       });
     });
   }
