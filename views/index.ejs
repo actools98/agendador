@@ -48,6 +48,7 @@
 
         <hr class="border-secondary" />
         <button id="categoriasBtnDesktop" class="btn btn-outline-secondary w-100 mb-2">🏷️ Categorías</button>
+        <button id="availabilityBtnDesktop" class="btn btn-outline-secondary w-100 mb-2">📅 Disponibilidad horaria</button>
         <button id="settingsBtnDesktop" class="btn btn-outline-secondary w-100 mb-3">⚙️ Configuración</button>
         <a href="/logout" class="btn btn-outline-danger w-100">Cerrar sesión</a>
       </div>
@@ -220,7 +221,7 @@
   </div>
 </div>
 
-<!-- ========== MODAL DE CONFIGURACIÓN ========== -->
+<!-- ========== MODAL DE CONFIGURACIÓN (SIN FRANJA HORARIA) ========== -->
 <div class="modal fade" id="settingsModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -248,54 +249,6 @@
         </div>
 
         <hr />
-
-        <!-- Franja horaria libre -->
-        <h6 class="mb-2">📅 Disponibilidad para invitaciones</h6>
-        <div class="row g-2 mb-3">
-          <div class="col-6">
-            <label for="workStart" class="form-label small">Hora de inicio</label>
-            <input type="time" id="workStart" class="form-control form-control-sm" step="900" />
-          </div>
-          <div class="col-6">
-            <label for="workEnd" class="form-label small">Hora de fin</label>
-            <input type="time" id="workEnd" class="form-control form-control-sm" step="900" />
-          </div>
-        </div>
-
-        <!-- Días de la semana -->
-        <div class="mb-3">
-          <label class="form-label small">Días disponibles</label>
-          <div class="d-flex flex-wrap gap-2">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="day1" value="1" />
-              <label class="form-check-label small" for="day1">Lun</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="day2" value="2" />
-              <label class="form-check-label small" for="day2">Mar</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="day3" value="3" />
-              <label class="form-check-label small" for="day3">Mié</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="day4" value="4" />
-              <label class="form-check-label small" for="day4">Jue</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="day5" value="5" />
-              <label class="form-check-label small" for="day5">Vie</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="day6" value="6" />
-              <label class="form-check-label small" for="day6">Sáb</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="day7" value="7" />
-              <label class="form-check-label small" for="day7">Dom</label>
-            </div>
-          </div>
-        </div>
 
         <!-- Duración estándar -->
         <div class="mb-3">
@@ -327,6 +280,27 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
         <button type="button" id="saveSettingsBtn" class="btn btn-primary btn-sm">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL DE DISPONIBILIDAD HORARIA ========== -->
+<div class="modal fade" id="availabilityModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">📅 Disponibilidad horaria</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Configura los bloques de disponibilidad por día de la semana. Los invitados podrán agendar reuniones solo en estos bloques.</p>
+        <div id="availabilityContainer">
+          <!-- Los días se generarán dinámicamente con JavaScript -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
       </div>
     </div>
   </div>
