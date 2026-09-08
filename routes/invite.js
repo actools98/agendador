@@ -41,7 +41,7 @@ router.get('/:token', (req, res) => {
 // ========================================
 router.post('/:token', (req, res) => {
   const { token } = req.params;
-  const { title, description, start } = req.body;
+  const { title, description, start, timezoneOffset } = req.body;
 
   const link = InvitationLink.findByToken(token);
   if (!link) {
@@ -58,7 +58,7 @@ router.post('/:token', (req, res) => {
     meeting_address: ''
   };
 
-  if (!title || !start) {
+  if (!title || !start || timezoneOffset === undefined) {
     return res.render('invite', {
       token,
       error: 'Título y fecha/hora de inicio son obligatorios.',
@@ -70,7 +70,7 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // ========== PARSEO MANUAL DE FECHA (sin zona horaria) ==========
+  // ========== PARSEO MANUAL DE FECHA ==========
   const [datePart, timePart] = start.split('T');
   if (!datePart || !timePart) {
     return res.render('invite', {
@@ -97,14 +97,31 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  const pad = n => String(n).padStart(2, '0');
-  const startStr = `${year}-${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}:00`;
+  // ========== CONSTRUIR FECHA LOCAL DEL USUARIO ==========
+  const userDate = new Date(year, month - 1, day, hours, minutes);
 
-  // Crear objeto Date para validaciones (fecha local)
-  const startDate = new Date(year, month - 1, day, hours, minutes);
+  // ========== CALCULAR FECHA ACTUAL DEL USUARIO ==========
+  const now = new Date();
+  const serverOffsetMinutes = now.getTimezoneOffset(); // offset del servidor en minutos (negativo para UTC-5)
+  const userOffsetMinutes = parseInt(timezoneOffset); // offset del cliente en minutos (negativo para UTC-5)
+  const diffMinutes = userOffsetMinutes - (-serverOffsetMinutes); // diferencia en minutos entre servidor y cliente
+  const userNow = new Date(now.getTime() + diffMinutes * 60000);
 
-  // Validar día de la semana
-  const dayOfWeek = startDate.getDay();
+  // ========== VALIDAR QUE NO SEA PASADO ==========
+  if (userDate.getTime() < userNow.getTime()) {
+    return res.render('invite', {
+      token,
+      error: 'No se pueden crear eventos en el pasado. Por favor, elige una fecha y hora futura.',
+      eventData: { title, description, start },
+      workStart: pref.work_start,
+      workEnd: pref.work_end,
+      workDays: pref.work_days,
+      meetingDuration: pref.meeting_duration
+    });
+  }
+
+  // ========== VALIDAR DÍA DE LA SEMANA ==========
+  const dayOfWeek = userDate.getDay();
   let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
   const allowedDays = pref.work_days.split(',').map(Number);
   if (!allowedDays.includes(ourDay)) {
@@ -119,7 +136,7 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // Validar hora dentro de la franja
+  // ========== VALIDAR HORA DENTRO DE LA FRANJA ==========
   const minutesFromMidnight = hours * 60 + minutes;
   if (minutesFromMidnight < pref.work_start || minutesFromMidnight >= pref.work_end) {
     return res.render('invite', {
@@ -133,7 +150,7 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // Calcular fin = inicio + duración
+  // ========== CALCULAR FIN ==========
   const endMinutes = minutesFromMidnight + pref.meeting_duration;
   if (endMinutes > pref.work_end) {
     return res.render('invite', {
@@ -149,22 +166,11 @@ router.post('/:token', (req, res) => {
 
   const endHours = Math.floor(endMinutes / 60);
   const endMins = endMinutes % 60;
+  const pad = n => String(n).padStart(2, '0');
+  const startStr = `${year}-${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}:00`;
   const endStr = `${year}-${pad(month)}-${pad(day)} ${pad(endHours)}:${pad(endMins)}:00`;
 
-  const now = new Date();
-  if (startDate < now) {
-    return res.render('invite', {
-      token,
-      error: 'No se pueden crear eventos en el pasado. Por favor, elige una fecha y hora futura.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
-    });
-  }
-
-  // Validar solapamiento
+  // ========== VALIDAR SOLAPAMIENTO ==========
   const conflictStmt = db.prepare(`
     SELECT COUNT(*) as count FROM events
     WHERE user_id = ?
@@ -189,6 +195,7 @@ router.post('/:token', (req, res) => {
     });
   }
 
+  // ========== CREAR EVENTO ==========
   try {
     const eventId = Event.create({
       userId,
@@ -207,7 +214,6 @@ router.post('/:token', (req, res) => {
     const contactPhone = pref.contact_phone || '';
     const meetingAddress = pref.meeting_address || '';
 
-    // Construir el HTML de éxito sin el botón "Volver a inicio"
     let successHTML = `
       <!DOCTYPE html>
       <html>
@@ -240,15 +246,9 @@ router.post('/:token', (req, res) => {
           <p class="text-muted">El anfitrión recibirá la notificación.</p>
     `;
 
-    // Añadir dirección si existe
     if (meetingAddress) {
       const encodedAddress = encodeURIComponent(meetingAddress);
       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-      // OpenStreetMap embed (usamos un iframe con búsqueda general, pero podemos mostrar un mapa estático de OSM)
-      // Para OpenStreetMap necesitaríamos coordenadas, pero podemos usar el enlace directo a la búsqueda
-      // Como alternativa, usamos un iframe con la URL de OpenStreetMap (búsqueda por dirección)
-      const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=-0.5%2C40.3%2C-0.3%2C40.5&layer=mapnik`; // Coordenadas de ejemplo, no se puede mostrar dirección exacta sin geocodificación
-
       successHTML += `
         <div class="mt-3">
           <p><strong>La reunión está agendada en:</strong></p>
@@ -269,7 +269,6 @@ router.post('/:token', (req, res) => {
       `;
     }
 
-    // Añadir contacto si existe
     if (contactPhone) {
       successHTML += `
         <div class="mt-3">
