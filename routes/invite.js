@@ -115,15 +115,33 @@ router.post('/:token', (req, res) => {
     });
   }
 
-  // Validar que la hora no sea pasada (si es hoy)
+  // ========== VALIDACIÓN CORREGIDA: BLOQUE PASADO ==========
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   if (date === todayStr) {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    if (block.start_minutes <= currentMinutes) {
+    // El bloque está disponible si su fin es mayor que la hora actual
+    if (block.end_minutes <= currentMinutes) {
       return res.render('invite', {
         token,
-        error: 'Este bloque ya ha pasado para hoy. Por favor, selecciona otro día o bloque.',
+        error: 'Este bloque ya ha terminado para hoy. Por favor, selecciona otro día o bloque.',
+        eventData: { title, description, date, blockId },
+        meetingDuration: pref.meeting_duration,
+        contactPhone: pref.contact_phone || '',
+        meetingAddress: pref.meeting_address || '',
+        blocksByDay: AvailabilityBlock.findByUser(userId).reduce((acc, b) => {
+          if (!acc[b.day_of_week]) acc[b.day_of_week] = [];
+          acc[b.day_of_week].push(b);
+          return acc;
+        }, {})
+      });
+    }
+    // Verificar si la duración de la reunión cabe en el tiempo restante del bloque
+    const remainingMinutes = block.end_minutes - currentMinutes;
+    if (remainingMinutes < pref.meeting_duration) {
+      return res.render('invite', {
+        token,
+        error: `El tiempo restante del bloque (${Math.floor(remainingMinutes/60)}h ${remainingMinutes%60}min) es insuficiente para la duración de la reunión (${Math.floor(pref.meeting_duration/60)}h ${pref.meeting_duration%60}min). Por favor, selecciona otro bloque.`,
         eventData: { title, description, date, blockId },
         meetingDuration: pref.meeting_duration,
         contactPhone: pref.contact_phone || '',
@@ -143,7 +161,7 @@ router.post('/:token', (req, res) => {
   const endDate = new Date(startDate);
   endDate.setMinutes(endDate.getMinutes() + pref.meeting_duration);
 
-  // Validar que el fin no exceda el bloque
+  // Validar que el fin no exceda el bloque (por si acaso)
   const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
   if (endMinutes > block.end_minutes) {
     return res.render('invite', {
