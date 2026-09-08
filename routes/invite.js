@@ -3,6 +3,7 @@ const router = express.Router();
 const InvitationLink = require('../models/InvitationLink');
 const Event = require('../models/Event');
 const Preferencia = require('../models/Preferencia');
+const AvailabilityBlock = require('../models/AvailabilityBlock');
 const db = require('../db');
 
 // ========================================
@@ -17,22 +18,26 @@ router.get('/:token', (req, res) => {
 
   const userId = link.user_id;
   const pref = Preferencia.getByUser(userId) || {
-    work_start: 480,
-    work_end: 1020,
-    work_days: '1,2,3,4,5',
     meeting_duration: 60,
     contact_phone: '',
     meeting_address: ''
   };
+  const blocks = AvailabilityBlock.findByUser(userId);
+
+  // Agrupar bloques por día
+  const blocksByDay = {};
+  for (let i = 1; i <= 7; i++) {
+    blocksByDay[i] = blocks.filter(b => b.day_of_week === i);
+  }
 
   res.render('invite', {
     token,
     error: null,
     eventData: null,
-    workStart: pref.work_start,
-    workEnd: pref.work_end,
-    workDays: pref.work_days,
-    meetingDuration: pref.meeting_duration
+    meetingDuration: pref.meeting_duration,
+    contactPhone: pref.contact_phone || '',
+    meetingAddress: pref.meeting_address || '',
+    blocksByDay: blocksByDay
   });
 });
 
@@ -41,7 +46,7 @@ router.get('/:token', (req, res) => {
 // ========================================
 router.post('/:token', (req, res) => {
   const { token } = req.params;
-  const { title, description, start, timezoneOffset } = req.body;
+  const { title, description, date, blockId } = req.body;
 
   const link = InvitationLink.findByToken(token);
   if (!link) {
@@ -50,127 +55,117 @@ router.post('/:token', (req, res) => {
 
   const userId = link.user_id;
   const pref = Preferencia.getByUser(userId) || {
-    work_start: 480,
-    work_end: 1020,
-    work_days: '1,2,3,4,5',
     meeting_duration: 60,
     contact_phone: '',
     meeting_address: ''
   };
 
-  if (!title || !start || timezoneOffset === undefined) {
+  // Validaciones básicas
+  if (!title || !date || !blockId) {
     return res.render('invite', {
       token,
-      error: 'Título y fecha/hora de inicio son obligatorios.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      error: 'Título, fecha y bloque son obligatorios.',
+      eventData: { title, description, date, blockId },
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || '',
+      meetingAddress: pref.meeting_address || '',
+      blocksByDay: AvailabilityBlock.findByUser(userId).reduce((acc, b) => {
+        if (!acc[b.day_of_week]) acc[b.day_of_week] = [];
+        acc[b.day_of_week].push(b);
+        return acc;
+      }, {})
     });
   }
 
-  // ========== PARSEO MANUAL DE FECHA ==========
-  const [datePart, timePart] = start.split('T');
-  if (!datePart || !timePart) {
+  // Obtener el bloque seleccionado
+  const block = AvailabilityBlock.findByUser(userId).find(b => b.id === parseInt(blockId));
+  if (!block) {
     return res.render('invite', {
       token,
-      error: 'Formato de fecha inválido.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
-    });
-  }
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hours, minutes] = timePart.split(':').map(Number);
-  if ([year, month, day, hours, minutes].some(isNaN)) {
-    return res.render('invite', {
-      token,
-      error: 'Formato de fecha inválido.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      error: 'El bloque seleccionado no es válido.',
+      eventData: { title, description, date, blockId },
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || '',
+      meetingAddress: pref.meeting_address || '',
+      blocksByDay: AvailabilityBlock.findByUser(userId).reduce((acc, b) => {
+        if (!acc[b.day_of_week]) acc[b.day_of_week] = [];
+        acc[b.day_of_week].push(b);
+        return acc;
+      }, {})
     });
   }
 
-  // ========== CONSTRUIR FECHA LOCAL DEL USUARIO ==========
-  const userDate = new Date(year, month - 1, day, hours, minutes);
-
-  // ========== CALCULAR FECHA ACTUAL DEL USUARIO ==========
-  const now = new Date();
-  const serverOffsetMinutes = now.getTimezoneOffset();
-  const userOffsetMinutes = parseInt(timezoneOffset);
-  const diffMinutes = userOffsetMinutes - (-serverOffsetMinutes);
-  const userNow = new Date(now.getTime() + diffMinutes * 60000);
-
-  // ========== VALIDAR QUE NO SEA PASADO ==========
-  if (userDate.getTime() < userNow.getTime()) {
-    return res.render('invite', {
-      token,
-      error: 'No se pueden crear eventos en el pasado. Por favor, elige una fecha y hora futura.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
-    });
-  }
-
-  // ========== VALIDAR DÍA DE LA SEMANA ==========
-  const dayOfWeek = userDate.getDay();
+  // Validar que la fecha seleccionada corresponda al día de la semana del bloque
+  const selectedDate = new Date(date + 'T00:00:00');
+  const dayOfWeek = selectedDate.getDay(); // 0=domingo, 1=lunes...
   let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-  const allowedDays = pref.work_days.split(',').map(Number);
-  if (!allowedDays.includes(ourDay)) {
+  if (block.day_of_week !== ourDay) {
     return res.render('invite', {
       token,
-      error: 'El día seleccionado no está disponible. Por favor, elige otro día.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      error: 'El bloque seleccionado no corresponde al día de la fecha elegida.',
+      eventData: { title, description, date, blockId },
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || '',
+      meetingAddress: pref.meeting_address || '',
+      blocksByDay: AvailabilityBlock.findByUser(userId).reduce((acc, b) => {
+        if (!acc[b.day_of_week]) acc[b.day_of_week] = [];
+        acc[b.day_of_week].push(b);
+        return acc;
+      }, {})
     });
   }
 
-  // ========== VALIDAR HORA DENTRO DE LA FRANJA ==========
-  const minutesFromMidnight = hours * 60 + minutes;
-  if (minutesFromMidnight < pref.work_start || minutesFromMidnight >= pref.work_end) {
+  // Validar que la hora no sea pasada (si es hoy)
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  if (date === todayStr) {
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    if (block.start_minutes <= currentMinutes) {
+      return res.render('invite', {
+        token,
+        error: 'Este bloque ya ha pasado para hoy. Por favor, selecciona otro día o bloque.',
+        eventData: { title, description, date, blockId },
+        meetingDuration: pref.meeting_duration,
+        contactPhone: pref.contact_phone || '',
+        meetingAddress: pref.meeting_address || '',
+        blocksByDay: AvailabilityBlock.findByUser(userId).reduce((acc, b) => {
+          if (!acc[b.day_of_week]) acc[b.day_of_week] = [];
+          acc[b.day_of_week].push(b);
+          return acc;
+        }, {})
+      });
+    }
+  }
+
+  // Construir fechas de inicio y fin
+  const startDate = new Date(date + 'T00:00:00');
+  startDate.setHours(Math.floor(block.start_minutes / 60), block.start_minutes % 60, 0, 0);
+  const endDate = new Date(startDate);
+  endDate.setMinutes(endDate.getMinutes() + pref.meeting_duration);
+
+  // Validar que el fin no exceda el bloque
+  const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
+  if (endMinutes > block.end_minutes) {
     return res.render('invite', {
       token,
-      error: 'La hora seleccionada está fuera de la franja horaria disponible.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      error: 'La duración de la reunión excede el bloque de disponibilidad. Por favor, elige otro bloque o reduce la duración.',
+      eventData: { title, description, date, blockId },
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || '',
+      meetingAddress: pref.meeting_address || '',
+      blocksByDay: AvailabilityBlock.findByUser(userId).reduce((acc, b) => {
+        if (!acc[b.day_of_week]) acc[b.day_of_week] = [];
+        acc[b.day_of_week].push(b);
+        return acc;
+      }, {})
     });
   }
 
-  // ========== CALCULAR FIN ==========
-  const endMinutes = minutesFromMidnight + pref.meeting_duration;
-  if (endMinutes > pref.work_end) {
-    return res.render('invite', {
-      token,
-      error: 'La reunión excede la franja horaria disponible. Por favor, elige una hora más temprana.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
-    });
-  }
-
-  const endHours = Math.floor(endMinutes / 60);
-  const endMins = endMinutes % 60;
   const pad = n => String(n).padStart(2, '0');
-  const startStr = `${year}-${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}:00`;
-  const endStr = `${year}-${pad(month)}-${pad(day)} ${pad(endHours)}:${pad(endMins)}:00`;
+  const startStr = `${date} ${pad(startDate.getHours())}:${pad(startDate.getMinutes())}:00`;
+  const endStr = `${date} ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}:00`;
 
-  // ========== VALIDAR SOLAPAMIENTO ==========
+  // Validar solapamiento con eventos existentes
   const conflictStmt = db.prepare(`
     SELECT COUNT(*) as count FROM events
     WHERE user_id = ?
@@ -186,16 +181,20 @@ router.post('/:token', (req, res) => {
   if (result.count > 0) {
     return res.render('invite', {
       token,
-      error: 'La franja horaria seleccionada coincide con otro evento existente. Por favor, elige otro horario.',
-      eventData: { title, description, start },
-      workStart: pref.work_start,
-      workEnd: pref.work_end,
-      workDays: pref.work_days,
-      meetingDuration: pref.meeting_duration
+      error: 'La franja horaria seleccionada coincide con otro evento existente. Por favor, elige otro bloque.',
+      eventData: { title, description, date, blockId },
+      meetingDuration: pref.meeting_duration,
+      contactPhone: pref.contact_phone || '',
+      meetingAddress: pref.meeting_address || '',
+      blocksByDay: AvailabilityBlock.findByUser(userId).reduce((acc, b) => {
+        if (!acc[b.day_of_week]) acc[b.day_of_week] = [];
+        acc[b.day_of_week].push(b);
+        return acc;
+      }, {})
     });
   }
 
-  // ========== CREAR EVENTO ==========
+  // Crear evento
   try {
     const eventId = Event.create({
       userId,
@@ -214,7 +213,6 @@ router.post('/:token', (req, res) => {
     const contactPhone = pref.contact_phone || '';
     const meetingAddress = pref.meeting_address || '';
 
-    // ====== MENSAJE DE ÉXITO (SIN MAPA) ======
     let successHTML = `
       <!DOCTYPE html>
       <html>
