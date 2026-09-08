@@ -69,6 +69,17 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS availability_blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    day_of_week INTEGER NOT NULL CHECK(day_of_week BETWEEN 1 AND 7),
+    start_minutes INTEGER NOT NULL CHECK(start_minutes >= 0 AND start_minutes < 1440),
+    end_minutes INTEGER NOT NULL CHECK(end_minutes > 0 AND end_minutes <= 1440),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CHECK(start_minutes < end_minutes)
+  );
 `);
 
 // Migración: añadir columnas si no existen en events
@@ -126,5 +137,8 @@ if (!hasMeetingAddress) {
   db.exec(`ALTER TABLE preferencias ADD COLUMN meeting_address TEXT DEFAULT '';`);
   console.log('✅ Columna "meeting_address" añadida a preferencias');
 }
+
+// Crear índice para availability_blocks
+db.exec(`CREATE INDEX IF NOT EXISTS idx_availability_user_day ON availability_blocks(user_id, day_of_week);`);
 
 module.exports = db;
