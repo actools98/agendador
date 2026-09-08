@@ -102,9 +102,9 @@ router.post('/:token', (req, res) => {
 
   // ========== CALCULAR FECHA ACTUAL DEL USUARIO ==========
   const now = new Date();
-  const serverOffsetMinutes = now.getTimezoneOffset(); // offset del servidor en minutos (negativo para UTC-5)
-  const userOffsetMinutes = parseInt(timezoneOffset); // offset del cliente en minutos (negativo para UTC-5)
-  const diffMinutes = userOffsetMinutes - (-serverOffsetMinutes); // diferencia en minutos entre servidor y cliente
+  const serverOffsetMinutes = now.getTimezoneOffset();
+  const userOffsetMinutes = parseInt(timezoneOffset);
+  const diffMinutes = userOffsetMinutes - (-serverOffsetMinutes);
   const userNow = new Date(now.getTime() + diffMinutes * 60000);
 
   // ========== VALIDAR QUE NO SEA PASADO ==========
@@ -214,30 +214,12 @@ router.post('/:token', (req, res) => {
     const contactPhone = pref.contact_phone || '';
     const meetingAddress = pref.meeting_address || '';
 
+    // ====== MENSAJE DE ÉXITO (SIN MAPA) ======
     let successHTML = `
       <!DOCTYPE html>
       <html>
       <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Evento creado</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-      <style>
-        .map-container {
-          position: relative;
-          padding-bottom: 56.25%;
-          height: 0;
-          overflow: hidden;
-          max-width: 100%;
-          border-radius: 8px;
-          border: 1px solid #ddd;
-          margin-top: 10px;
-        }
-        .map-container iframe {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-        }
-      </style>
       </head>
       <body class="bg-light d-flex align-items-center justify-content-center vh-100">
         <div class="card text-center p-5 shadow" style="max-width:550px;">
@@ -247,24 +229,10 @@ router.post('/:token', (req, res) => {
     `;
 
     if (meetingAddress) {
-      const encodedAddress = encodeURIComponent(meetingAddress);
-      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
       successHTML += `
         <div class="mt-3">
-          <p><strong>La reunión está agendada en:</strong></p>
-          <p><strong>${meetingAddress}</strong></p>
-          <div class="map-container">
-            <iframe 
-              src="https://www.openstreetmap.org/export/embed.html?bbox=-0.5%2C40.3%2C-0.3%2C40.5&layer=mapnik" 
-              style="border:0;" 
-              allowfullscreen="" 
-              loading="lazy">
-            </iframe>
-          </div>
-          <a href="${googleMapsUrl}" target="_blank" class="btn btn-outline-primary btn-sm mt-2">
-            📍 Abrir en Google Maps
-          </a>
-          <p class="text-muted small mt-1">Haz clic en el mapa para verlo más grande o usa el botón para abrir en Google Maps.</p>
+          <p><strong>Te esperamos en:</strong></p>
+          <p>${meetingAddress}</p>
         </div>
       `;
     }
