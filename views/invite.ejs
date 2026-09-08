@@ -127,7 +127,6 @@
     const dateInput = document.getElementById('dateSelect');
     const hourSelect = document.getElementById('hourSelect');
 
-    // Función para generar opciones de hora según la fecha seleccionada
     function generateHourOptions(selectedDateStr) {
       hourSelect.innerHTML = '<option value="">Selecciona una hora</option>';
       if (!selectedDateStr) return;
@@ -137,7 +136,6 @@
       today.setHours(0,0,0,0);
       const isToday = selectedDate.getTime() === today.getTime();
 
-      // Obtener el día de la semana (1=lunes, 7=domingo)
       let dayOfWeek = selectedDate.getDay();
       let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
       if (!days.includes(ourDay)) {
@@ -145,19 +143,16 @@
         return;
       }
 
-      // Calcular límites
       let minMinutes = availabilityData.workStart;
       let maxMinutes = availabilityData.workEnd - availabilityData.meetingDuration;
 
       if (isToday) {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        // Redondear al próximo bloque de 15 minutos
         const roundedMinutes = Math.ceil(currentMinutes / 15) * 15;
         if (roundedMinutes > minMinutes) minMinutes = roundedMinutes;
       }
 
-      // Generar opciones cada 15 minutos
       const step = 15;
       for (let m = minMinutes; m <= maxMinutes; m += step) {
         const h = Math.floor(m / 60);
@@ -174,12 +169,10 @@
       }
     }
 
-    // Evento al cambiar la fecha
     dateInput.addEventListener('change', function() {
       generateHourOptions(this.value);
     });
 
-    // Restringir días disponibles en el input date
     function getNextAllowedDate() {
       const today = new Date();
       today.setHours(0,0,0,0);
@@ -206,7 +199,6 @@
     const maxStr = maxDate.toISOString().split('T')[0];
     dateInput.max = maxStr;
 
-    // Si hay un valor previo (eventData), establecerlo
     <% if (locals.eventData && eventData.date) { %>
       dateInput.value = '<%= eventData.date %>';
       generateHourOptions(dateInput.value);
@@ -214,14 +206,13 @@
         hourSelect.value = '<%= eventData.hour %>';
       <% } %>
     <% } else { %>
-      // Establecer la fecha mínima por defecto
       if (minDate) {
         dateInput.value = minDate.toISOString().split('T')[0];
         generateHourOptions(dateInput.value);
       }
     <% } %>
 
-    // Validar al enviar
+    // ========== VALIDACIÓN AL ENVIAR ==========
     document.getElementById('inviteForm').addEventListener('submit', function(e) {
       const date = dateInput.value;
       const hour = hourSelect.value;
@@ -230,18 +221,30 @@
         e.preventDefault();
         return;
       }
-      // Crear el campo start en el formato esperado por el servidor (YYYY-MM-DDTHH:mm)
+
+      // Construir fecha en formato local (sin zona horaria)
+      const localDateTime = date + 'T' + hour + ':00';
+      
+      // Obtener offset horario del cliente en minutos (negativo para UTC-5)
+      const timezoneOffset = -new Date().getTimezoneOffset(); // Ej: -300 para UTC-5
+
+      // Crear campos ocultos
       const startField = document.createElement('input');
       startField.type = 'hidden';
       startField.name = 'start';
-      startField.value = date + 'T' + hour + ':00';
+      startField.value = localDateTime;
+
+      const offsetField = document.createElement('input');
+      offsetField.type = 'hidden';
+      offsetField.name = 'timezoneOffset';
+      offsetField.value = timezoneOffset;
+
       this.appendChild(startField);
+      this.appendChild(offsetField);
 
       // Eliminar los campos date y hour para que no se envíen
       dateInput.removeAttribute('name');
       hourSelect.removeAttribute('name');
-
-      // El servidor espera 'start', no 'date' ni 'hour'
     });
   </script>
 </body>
