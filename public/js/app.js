@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const dayCheckboxes = $$('.form-check-input[id^="day"]');
   const meetingDurationSelect = $('#meetingDuration');
   const contactPhoneInput = $('#contactPhone');
-  const meetingAddressInput = $('#meetingAddress');
+  // NOTA: meetingAddressInput ya no se usa como variable global, se obtiene con document.getElementById
 
   // Elementos categorías
   const categoriasList = $('#categoriasList');
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== PREFERENCIAS ==========
+  // ========== PREFERENCIAS (CORREGIDO) ==========
   async function loadPreferences() {
     try {
       const res = await fetch('/api/preferencias');
@@ -147,8 +147,11 @@ document.addEventListener('DOMContentLoaded', function() {
       if (contactPhoneInput) {
         contactPhoneInput.value = data.contact_phone || '';
       }
-      if (meetingAddressInput) {
-        meetingAddressInput.value = data.meeting_address || '';
+
+      // Obtener el campo de dirección directamente del DOM
+      const addressInput = document.getElementById('meetingAddress');
+      if (addressInput) {
+        addressInput.value = data.meeting_address || '';
       }
     } catch (error) {
       console.error('Error cargando preferencias:', error);
@@ -171,6 +174,10 @@ document.addEventListener('DOMContentLoaded', function() {
       return parseInt(parts[0]) * 60 + parseInt(parts[1]);
     };
 
+    // Obtener el campo de dirección directamente del DOM
+    const addressInput = document.getElementById('meetingAddress');
+    const meetingAddress = addressInput ? addressInput.value.trim() : '';
+
     const payload = {
       tema: themeSelect.value,
       formato_hora: timeFormatSelect.value,
@@ -179,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
       work_days: workDays,
       meeting_duration: parseInt(meetingDurationSelect.value),
       contact_phone: contactPhoneInput.value.trim(),
-      meeting_address: meetingAddressInput.value.trim()
+      meeting_address: meetingAddress
     };
 
     try {
