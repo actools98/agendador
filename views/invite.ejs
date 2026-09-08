@@ -38,6 +38,10 @@
       color: #fff;
       border-color: #0d6efd;
     }
+    .block-btn.block-passed {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
   </style>
 </head>
 <body>
@@ -66,7 +70,7 @@
           <div class="col"><small>Sá</small></div>
           <div class="col"><small>Do</small></div>
         </div>
-        <div id="calendarGrid" class="row g-0 mt-2"></div>
+        <div id="calendarGrid" class="row g-0 mt-2 row-cols-7"></div>
       </div>
 
       <!-- ========== BLOQUES DISPONIBLES ========== -->
@@ -103,7 +107,7 @@
     // Datos del servidor
     const blocksByDay = <%- JSON.stringify(blocksByDay) %>;
     const meetingDuration = <%= meetingDuration %>;
-    const timeFormat = '24'; // Podríamos pasar del usuario, pero simplificamos
+    const timeFormat = '24';
 
     // Estado
     let currentDate = new Date();
@@ -120,11 +124,26 @@
     const selectedBlockInput = document.getElementById('selectedBlockInput');
     const submitBtn = document.getElementById('submitBtn');
 
-    // Función para saber si un día tiene bloques
-    function hasBlocks(date) {
+    // Función para saber si un día tiene bloques disponibles (futuros)
+    function hasAvailableBlocks(date) {
       const dayOfWeek = date.getDay(); // 0=domingo, 1=lunes...
       let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-      return blocksByDay[ourDay] && blocksByDay[ourDay].length > 0;
+      const blocks = blocksByDay[ourDay] || [];
+      if (blocks.length === 0) return false;
+
+      // Verificar si al menos un bloque no ha pasado (para hoy)
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const dateStr = date.toISOString().split('T')[0];
+      const currentMinutes = today.getHours() * 60 + today.getMinutes();
+
+      return blocks.some(block => {
+        if (dateStr === todayStr) {
+          // Si es hoy, el bloque debe terminar después de la hora actual
+          return block.end_minutes > currentMinutes && (block.end_minutes - block.start_minutes) >= meetingDuration;
+        }
+        return true;
+      });
     }
 
     // Renderizar calendario
@@ -149,7 +168,7 @@
         const dateObj = new Date(year, month, day);
         const dateStr = dateObj.toISOString().split('T')[0];
         const isToday = dateStr === todayStr;
-        const hasAvail = hasBlocks(dateObj);
+        const hasAvail = hasAvailableBlocks(dateObj);
         const isPast = dateObj < new Date(todayStr);
 
         let classes = 'day-cell';
@@ -167,12 +186,9 @@
         `;
       }
 
-      // Completar fila
-      const totalCells = startOffset + daysInMonth;
-      const remaining = (7 - (totalCells % 7)) % 7;
-      for (let i = 0; i < remaining; i++) {
-        html += `<div class="col"><div class="day-cell disabled"></div></div>`;
-      }
+      // Completar fila (no es necesario, row-cols-7 lo hace automáticamente, pero añadimos celdas vacías para mantener la estructura)
+      // De hecho, con row-cols-7, no necesitamos completar, pero para evitar espacios extra, solo añadimos si hace falta
+      // Mejor no añadir más celdas, row-cols-7 maneja el wrap.
 
       calendarGrid.innerHTML = html;
       currentMonthLabel.textContent = firstDay.toLocaleString('es', { month: 'long', year: 'numeric' });
@@ -212,25 +228,38 @@
       // Ordenar por hora
       blocks.sort((a, b) => a.start_minutes - b.start_minutes);
 
+      // Obtener hora actual si es hoy
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const currentMinutes = today.getHours() * 60 + today.getMinutes();
+
       let html = '';
       blocks.forEach(block => {
         const startTime = formatTime(block.start_minutes);
         const endTime = formatTime(block.end_minutes);
         const blockDuration = block.end_minutes - block.start_minutes;
         const isDurationValid = blockDuration >= meetingDuration;
-        const isSelected = selectedBlockId === block.id;
-
-        // Verificar si el bloque ya pasó (si es hoy)
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
-        const currentMinutes = today.getHours() * 60 + today.getMinutes();
+        // Verificar si el bloque ya pasó (si es hoy y la hora actual >= fin del bloque)
         const isPast = (dateStr === todayStr) && (block.end_minutes <= currentMinutes);
-
-        const disabled = !isDurationValid || isPast;
-        const btnClass = isSelected ? 'btn-primary selected' : (disabled ? 'btn-secondary' : 'btn-outline-primary');
+        // Verificar si la reunión cabe en el tiempo restante del bloque (si es hoy)
+        let canFit = true;
+        if (dateStr === todayStr && !isPast) {
+          const remainingMinutes = block.end_minutes - currentMinutes;
+          canFit = remainingMinutes >= meetingDuration;
+        }
+        const isSelected = selectedBlockId === block.id;
+        const disabled = !isDurationValid || isPast || !canFit;
+        let btnClass = 'block-btn btn btn-sm ';
+        if (isSelected) {
+          btnClass += 'btn-primary selected';
+        } else if (disabled) {
+          btnClass += 'btn-secondary block-passed';
+        } else {
+          btnClass += 'btn-outline-primary';
+        }
 
         html += `
-          <button class="btn btn-sm ${btnClass} block-btn" data-block-id="${block.id}" ${disabled ? 'disabled' : ''}>
+          <button class="${btnClass}" data-block-id="${block.id}" ${disabled ? 'disabled' : ''}>
             ${startTime} - ${endTime}
           </button>
         `;
@@ -299,7 +328,6 @@
       submitBtn.disabled = false;
       renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
       showBlocksForDate(prevDate);
-      // Seleccionar el bloque
       setTimeout(() => {
         document.querySelectorAll('.block-btn').forEach(btn => {
           if (parseInt(btn.dataset.blockId) === prevBlockId) {
