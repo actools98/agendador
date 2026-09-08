@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const dayCheckboxes = $$('.form-check-input[id^="day"]');
   const meetingDurationSelect = $('#meetingDuration');
   const contactPhoneInput = $('#contactPhone');
-  // NOTA: meetingAddressInput ya no se usa como variable global, se obtiene con document.getElementById
+  // NOTA: meetingAddressInput se obtiene con document.getElementById en las funciones
 
   // Elementos categorías
   const categoriasList = $('#categoriasList');
@@ -115,12 +115,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ========== PREFERENCIAS (CORREGIDO) ==========
+  // ========== PREFERENCIAS (CON LOGS PARA DEPURAR) ==========
   async function loadPreferences() {
     try {
       const res = await fetch('/api/preferencias');
       if (!res.ok) throw new Error('Error al cargar preferencias');
       const data = await res.json();
+      console.log('📢 Datos de preferencias cargados:', data);
       timeFormat = data.formato_hora || '24';
       tema = data.tema || 'claro';
       applyTheme(tema);
@@ -148,10 +149,13 @@ document.addEventListener('DOMContentLoaded', function() {
         contactPhoneInput.value = data.contact_phone || '';
       }
 
-      // Obtener el campo de dirección directamente del DOM
+      // Cargar dirección usando getElementById
       const addressInput = document.getElementById('meetingAddress');
       if (addressInput) {
+        console.log('📢 Asignando dirección al input:', data.meeting_address);
         addressInput.value = data.meeting_address || '';
+      } else {
+        console.warn('⚠️ No se encontró el elemento meetingAddress');
       }
     } catch (error) {
       console.error('Error cargando preferencias:', error);
@@ -174,9 +178,10 @@ document.addEventListener('DOMContentLoaded', function() {
       return parseInt(parts[0]) * 60 + parseInt(parts[1]);
     };
 
-    // Obtener el campo de dirección directamente del DOM
+    // Obtener el valor de la dirección directamente del DOM
     const addressInput = document.getElementById('meetingAddress');
     const meetingAddress = addressInput ? addressInput.value.trim() : '';
+    console.log('📢 meetingAddress capturado:', meetingAddress);
 
     const payload = {
       tema: themeSelect.value,
@@ -188,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
       contact_phone: contactPhoneInput.value.trim(),
       meeting_address: meetingAddress
     };
+    console.log('📢 Payload enviado al servidor:', payload);
 
     try {
       const res = await fetch('/api/preferencias', {
