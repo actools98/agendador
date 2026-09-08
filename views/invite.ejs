@@ -7,80 +7,92 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background-color: #f8f9fa; }
-    .card { max-width: 600px; margin: 2rem auto; }
-    .form-label { font-weight: 500; }
-    .day-badge {
-      display: inline-block;
-      padding: 0.2rem 0.6rem;
+    .card { max-width: 700px; margin: 2rem auto; }
+    .day-cell {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 2px auto;
+      font-size: 0.9rem;
       background-color: #e9ecef;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      margin: 0.1rem;
     }
-    .hour-select { min-width: 80px; }
+    .day-cell:hover:not(.disabled) { background-color: #dee2e6; }
+    .day-cell.selected { background-color: #0d6efd; color: #fff; }
+    .day-cell.has-availability { background-color: #d1e7dd; }
+    .day-cell.has-availability.selected { background-color: #0d6efd; color: #fff; }
+    .day-cell.disabled { opacity: 0.4; cursor: not-allowed; }
+    .day-cell.other-month { opacity: 0.3; }
+    .month-nav { cursor: pointer; user-select: none; font-size: 1.2rem; }
+    .month-nav:hover { color: #0d6efd; }
+    .block-btn {
+      margin: 4px;
+      min-width: 80px;
+    }
+    .block-btn.selected {
+      background-color: #0d6efd;
+      color: #fff;
+      border-color: #0d6efd;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card shadow p-4">
       <h2 class="text-center mb-4">📅 Agendar reunión</h2>
-      <p class="text-muted text-center">Selecciona una fecha y hora dentro de la disponibilidad del anfitrión.</p>
+      <p class="text-muted text-center">Selecciona un día y luego elige un bloque horario disponible.</p>
 
       <% if (error) { %>
         <div class="alert alert-danger"><%= error %></div>
       <% } %>
 
-      <!-- Mostrar información de disponibilidad -->
-      <div class="alert alert-info">
-        <p class="mb-1"><strong>Disponibilidad:</strong></p>
-        <p class="mb-1">
-          <span id="availabilityDays"></span>
-        </p>
-        <p class="mb-0">
-          Horario: <span id="availabilityHours"></span>
-        </p>
-        <p class="mb-0 mt-1">
-          Duración estándar: <span id="meetingDurationDisplay"></span>
-        </p>
-        <% if (locals.contactPhone && contactPhone) { %>
-          <p class="mb-0 mt-2">
-            <strong>Contacto para cancelaciones:</strong> <%= contactPhone %>
-          </p>
-        <% } %>
+      <!-- ========== CALENDARIO MENSUAL ========== -->
+      <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="month-nav" id="prevMonth">‹</span>
+          <h5 class="m-0" id="currentMonthLabel"></h5>
+          <span class="month-nav" id="nextMonth">›</span>
+        </div>
+        <div class="row g-0 text-center">
+          <div class="col"><small>Lu</small></div>
+          <div class="col"><small>Ma</small></div>
+          <div class="col"><small>Mi</small></div>
+          <div class="col"><small>Ju</small></div>
+          <div class="col"><small>Vi</small></div>
+          <div class="col"><small>Sá</small></div>
+          <div class="col"><small>Do</small></div>
+        </div>
+        <div id="calendarGrid" class="row g-0 mt-2"></div>
       </div>
 
+      <!-- ========== BLOQUES DISPONIBLES ========== -->
+      <div id="blocksContainer" style="display:none;">
+        <hr />
+        <h6>Bloques disponibles para el <span id="selectedDateLabel"></span></h6>
+        <div id="blocksList" class="d-flex flex-wrap justify-content-center"></div>
+      </div>
+
+      <!-- ========== FORMULARIO ========== -->
       <form method="POST" action="" id="inviteForm">
-        <!-- Título -->
+        <input type="hidden" name="date" id="selectedDateInput">
+        <input type="hidden" name="blockId" id="selectedBlockInput">
+
         <div class="mb-3">
           <label for="title" class="form-label">Título *</label>
           <input type="text" class="form-control" id="title" name="title" required
                  value="<%= locals.eventData ? eventData.title : '' %>">
         </div>
 
-        <!-- Descripción -->
         <div class="mb-3">
           <label for="description" class="form-label">Descripción</label>
           <textarea class="form-control" id="description" name="description" rows="2"><%= locals.eventData ? eventData.description : '' %></textarea>
         </div>
 
-        <!-- Fecha -->
-        <div class="mb-3">
-          <label for="dateSelect" class="form-label">Fecha *</label>
-          <input type="date" class="form-control" id="dateSelect" name="date" required
-                 value="<%= locals.eventData ? eventData.date : '' %>"
-                 min="" max="">
-        </div>
-
-        <!-- Hora (selector con solo horas permitidas) -->
-        <div class="mb-3">
-          <label for="hourSelect" class="form-label">Hora de inicio *</label>
-          <select class="form-select" id="hourSelect" name="hour" required>
-            <option value="">Selecciona una hora</option>
-          </select>
-          <small class="text-muted">Solo se muestran horas dentro de la franja disponible.</small>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100">Enviar solicitud</button>
+        <button type="submit" class="btn btn-primary w-100" id="submitBtn" disabled>Enviar solicitud</button>
       </form>
 
       <p class="mt-3 text-center text-muted small">Este enlace caduca en 24 horas.</p>
@@ -88,164 +100,214 @@
   </div>
 
   <script>
-    // Datos desde el servidor
-    const availabilityData = <%- JSON.stringify({
-      workStart: locals.workStart || 480,
-      workEnd: locals.workEnd || 1020,
-      workDays: locals.workDays || '1,2,3,4,5',
-      meetingDuration: locals.meetingDuration || 60,
-      dayNames: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-      contactPhone: locals.contactPhone || ''
-    }) %>;
+    // Datos del servidor
+    const blocksByDay = <%- JSON.stringify(blocksByDay) %>;
+    const meetingDuration = <%= meetingDuration %>;
+    const timeFormat = '24'; // Podríamos pasar del usuario, pero simplificamos
 
-    // Mostrar información de disponibilidad
-    const daysMap = {1:'Lun',2:'Mar',3:'Mié',4:'Jue',5:'Vie',6:'Sáb',7:'Dom'};
-    const days = availabilityData.workDays.split(',').map(Number);
-    const daysText = days.map(d => daysMap[d]).join(', ');
-    document.getElementById('availabilityDays').textContent = daysText;
+    // Estado
+    let currentDate = new Date();
+    let selectedDate = null;
+    let selectedBlockId = null;
 
-    const startHour = Math.floor(availabilityData.workStart / 60);
-    const startMin = availabilityData.workStart % 60;
-    const endHour = Math.floor(availabilityData.workEnd / 60);
-    const endMin = availabilityData.workEnd % 60;
-    const startStr = `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
-    const endStr = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
-    document.getElementById('availabilityHours').textContent = `${startStr} - ${endStr}`;
+    // Referencias DOM
+    const calendarGrid = document.getElementById('calendarGrid');
+    const currentMonthLabel = document.getElementById('currentMonthLabel');
+    const blocksContainer = document.getElementById('blocksContainer');
+    const blocksList = document.getElementById('blocksList');
+    const selectedDateLabel = document.getElementById('selectedDateLabel');
+    const selectedDateInput = document.getElementById('selectedDateInput');
+    const selectedBlockInput = document.getElementById('selectedBlockInput');
+    const submitBtn = document.getElementById('submitBtn');
 
-    const durationMinutes = availabilityData.meetingDuration;
-    let durationText = '';
-    if (durationMinutes >= 60) {
-      const h = Math.floor(durationMinutes / 60);
-      const m = durationMinutes % 60;
-      durationText = h + ' hora' + (h > 1 ? 's' : '') + (m > 0 ? ' ' + m + ' min' : '');
-    } else {
-      durationText = durationMinutes + ' minutos';
-    }
-    document.getElementById('meetingDurationDisplay').textContent = durationText;
-
-    // ========== GENERAR OPCIONES DE HORA ==========
-    const dateInput = document.getElementById('dateSelect');
-    const hourSelect = document.getElementById('hourSelect');
-
-    function generateHourOptions(selectedDateStr) {
-      hourSelect.innerHTML = '<option value="">Selecciona una hora</option>';
-      if (!selectedDateStr) return;
-
-      const selectedDate = new Date(selectedDateStr + 'T00:00:00');
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      const isToday = selectedDate.getTime() === today.getTime();
-
-      let dayOfWeek = selectedDate.getDay();
+    // Función para saber si un día tiene bloques
+    function hasBlocks(date) {
+      const dayOfWeek = date.getDay(); // 0=domingo, 1=lunes...
       let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-      if (!days.includes(ourDay)) {
-        hourSelect.innerHTML = '<option value="">Día no disponible</option>';
+      return blocksByDay[ourDay] && blocksByDay[ourDay].length > 0;
+    }
+
+    // Renderizar calendario
+    function renderCalendar(year, month) {
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startDayOfWeek = firstDay.getDay(); // 0=domingo, 1=lunes...
+      // Ajustar para que lunes sea 0
+      let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
+      let html = '';
+      // Días vacíos al inicio
+      for (let i = 0; i < startOffset; i++) {
+        html += `<div class="col"><div class="day-cell disabled"></div></div>`;
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateObj = new Date(year, month, day);
+        const dateStr = dateObj.toISOString().split('T')[0];
+        const isToday = dateStr === todayStr;
+        const hasAvail = hasBlocks(dateObj);
+        const isPast = dateObj < new Date(todayStr);
+
+        let classes = 'day-cell';
+        if (isPast) classes += ' disabled';
+        else if (!hasAvail) classes += ' disabled';
+        else if (hasAvail) classes += ' has-availability';
+        if (selectedDate && dateStr === selectedDate) classes += ' selected';
+
+        html += `
+          <div class="col">
+            <div class="${classes}" data-date="${dateStr}" data-day="${day}">
+              ${day}
+            </div>
+          </div>
+        `;
+      }
+
+      // Completar fila
+      const totalCells = startOffset + daysInMonth;
+      const remaining = (7 - (totalCells % 7)) % 7;
+      for (let i = 0; i < remaining; i++) {
+        html += `<div class="col"><div class="day-cell disabled"></div></div>`;
+      }
+
+      calendarGrid.innerHTML = html;
+      currentMonthLabel.textContent = firstDay.toLocaleString('es', { month: 'long', year: 'numeric' });
+
+      // Event listeners para los días
+      document.querySelectorAll('.day-cell:not(.disabled)').forEach(el => {
+        el.addEventListener('click', function() {
+          const dateStr = this.dataset.date;
+          if (dateStr) {
+            selectedDate = dateStr;
+            selectedDateInput.value = dateStr;
+            selectedBlockId = null;
+            selectedBlockInput.value = '';
+            submitBtn.disabled = true;
+            renderCalendar(year, month);
+            showBlocksForDate(dateStr);
+          }
+        });
+      });
+    }
+
+    // Mostrar bloques para una fecha
+    function showBlocksForDate(dateStr) {
+      const dateObj = new Date(dateStr + 'T00:00:00');
+      const dayOfWeek = dateObj.getDay();
+      let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+      const blocks = blocksByDay[ourDay] || [];
+
+      if (blocks.length === 0) {
+        blocksContainer.style.display = 'none';
         return;
       }
 
-      let minMinutes = availabilityData.workStart;
-      let maxMinutes = availabilityData.workEnd - availabilityData.meetingDuration;
+      blocksContainer.style.display = 'block';
+      selectedDateLabel.textContent = dateObj.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
 
-      if (isToday) {
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        const roundedMinutes = Math.ceil(currentMinutes / 15) * 15;
-        if (roundedMinutes > minMinutes) minMinutes = roundedMinutes;
-      }
+      // Ordenar por hora
+      blocks.sort((a, b) => a.start_minutes - b.start_minutes);
 
-      const step = 15;
-      for (let m = minMinutes; m <= maxMinutes; m += step) {
-        const h = Math.floor(m / 60);
-        const min = m % 60;
-        const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-        const option = document.createElement('option');
-        option.value = timeStr;
-        option.textContent = timeStr;
-        hourSelect.appendChild(option);
-      }
+      let html = '';
+      blocks.forEach(block => {
+        const startTime = formatTime(block.start_minutes);
+        const endTime = formatTime(block.end_minutes);
+        const blockDuration = block.end_minutes - block.start_minutes;
+        const isDurationValid = blockDuration >= meetingDuration;
+        const isSelected = selectedBlockId === block.id;
 
-      if (hourSelect.options.length === 1) {
-        hourSelect.innerHTML = '<option value="">No hay horarios disponibles</option>';
-      }
+        // Verificar si el bloque ya pasó (si es hoy)
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const currentMinutes = today.getHours() * 60 + today.getMinutes();
+        const isPast = (dateStr === todayStr) && (block.end_minutes <= currentMinutes);
+
+        const disabled = !isDurationValid || isPast;
+        const btnClass = isSelected ? 'btn-primary selected' : (disabled ? 'btn-secondary' : 'btn-outline-primary');
+
+        html += `
+          <button class="btn btn-sm ${btnClass} block-btn" data-block-id="${block.id}" ${disabled ? 'disabled' : ''}>
+            ${startTime} - ${endTime}
+          </button>
+        `;
+      });
+
+      blocksList.innerHTML = html;
+
+      // Event listeners para los bloques
+      document.querySelectorAll('.block-btn:not(:disabled)').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const blockId = parseInt(this.dataset.blockId);
+          if (blockId) {
+            selectedBlockId = blockId;
+            selectedBlockInput.value = blockId;
+            submitBtn.disabled = false;
+            // Actualizar selección visual
+            document.querySelectorAll('.block-btn').forEach(b => b.classList.remove('selected', 'btn-primary'));
+            this.classList.add('selected', 'btn-primary');
+          }
+        });
+      });
     }
 
-    dateInput.addEventListener('change', function() {
-      generateHourOptions(this.value);
+    // Formatear minutos a hora
+    function formatTime(minutes) {
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      if (timeFormat === '12') {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+      }
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    // Navegación meses
+    document.getElementById('prevMonth').addEventListener('click', function() {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+    });
+    document.getElementById('nextMonth').addEventListener('click', function() {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
     });
 
-    function getNextAllowedDate() {
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      let date = new Date(today);
-      let attempts = 0;
-      while (attempts < 30) {
-        let dayOfWeek = date.getDay();
-        let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-        if (days.includes(ourDay)) return date;
-        date.setDate(date.getDate() + 1);
-        attempts++;
-      }
-      return null;
-    }
-
-    const minDate = getNextAllowedDate();
-    if (minDate) {
-      const minStr = minDate.toISOString().split('T')[0];
-      dateInput.min = minStr;
-    }
-
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + 30);
-    const maxStr = maxDate.toISOString().split('T')[0];
-    dateInput.max = maxStr;
-
-    <% if (locals.eventData && eventData.date) { %>
-      dateInput.value = '<%= eventData.date %>';
-      generateHourOptions(dateInput.value);
-      <% if (locals.eventData && eventData.hour) { %>
-        hourSelect.value = '<%= eventData.hour %>';
-      <% } %>
-    <% } else { %>
-      if (minDate) {
-        dateInput.value = minDate.toISOString().split('T')[0];
-        generateHourOptions(dateInput.value);
-      }
-    <% } %>
-
-    // ========== VALIDACIÓN AL ENVIAR ==========
+    // Validación al enviar
     document.getElementById('inviteForm').addEventListener('submit', function(e) {
-      const date = dateInput.value;
-      const hour = hourSelect.value;
-      if (!date || !hour) {
-        alert('Por favor, selecciona una fecha y una hora.');
+      if (!selectedDate || !selectedBlockId) {
+        alert('Por favor, selecciona un día y un bloque horario.');
         e.preventDefault();
         return;
       }
-
-      // Construir fecha en formato local (sin zona horaria)
-      const localDateTime = date + 'T' + hour + ':00';
-      
-      // Obtener offset horario del cliente en minutos (negativo para UTC-5)
-      const timezoneOffset = -new Date().getTimezoneOffset(); // Ej: -300 para UTC-5
-
-      // Crear campos ocultos
-      const startField = document.createElement('input');
-      startField.type = 'hidden';
-      startField.name = 'start';
-      startField.value = localDateTime;
-
-      const offsetField = document.createElement('input');
-      offsetField.type = 'hidden';
-      offsetField.name = 'timezoneOffset';
-      offsetField.value = timezoneOffset;
-
-      this.appendChild(startField);
-      this.appendChild(offsetField);
-
-      // Eliminar los campos date y hour para que no se envíen
-      dateInput.removeAttribute('name');
-      hourSelect.removeAttribute('name');
     });
+
+    // Inicializar
+    renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+
+    // Si hay datos previos (error), restaurar selección
+    <% if (locals.eventData && eventData.date && eventData.blockId) { %>
+      const prevDate = '<%= eventData.date %>';
+      const prevBlockId = parseInt('<%= eventData.blockId %>');
+      selectedDate = prevDate;
+      selectedDateInput.value = prevDate;
+      selectedBlockId = prevBlockId;
+      selectedBlockInput.value = prevBlockId;
+      submitBtn.disabled = false;
+      renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+      showBlocksForDate(prevDate);
+      // Seleccionar el bloque
+      setTimeout(() => {
+        document.querySelectorAll('.block-btn').forEach(btn => {
+          if (parseInt(btn.dataset.blockId) === prevBlockId) {
+            btn.click();
+          }
+        });
+      }, 100);
+    <% } %>
   </script>
 </body>
 </html>
