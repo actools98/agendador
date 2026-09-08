@@ -8,27 +8,39 @@
   <style>
     body { background-color: #f8f9fa; }
     .card { max-width: 700px; margin: 2rem auto; }
-    .day-cell {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
+    
+    /* Calendario con Grid CSS (7 columnas fijas) */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .calendar-grid .day-cell {
+      width: 100%;
+      aspect-ratio: 1/1;
       display: flex;
       align-items: center;
       justify-content: center;
+      border-radius: 50%;
       cursor: pointer;
       transition: all 0.2s;
-      margin: 2px auto;
       font-size: 0.9rem;
       background-color: #e9ecef;
+      user-select: none;
     }
-    .day-cell:hover:not(.disabled) { background-color: #dee2e6; }
-    .day-cell.selected { background-color: #0d6efd; color: #fff; }
-    .day-cell.has-availability { background-color: #d1e7dd; }
-    .day-cell.has-availability.selected { background-color: #0d6efd; color: #fff; }
-    .day-cell.disabled { opacity: 0.4; cursor: not-allowed; }
-    .day-cell.other-month { opacity: 0.3; }
+    .calendar-grid .day-cell:hover:not(.disabled) { background-color: #dee2e6; }
+    .calendar-grid .day-cell.selected { background-color: #0d6efd; color: #fff; }
+    .calendar-grid .day-cell.has-availability { background-color: #d1e7dd; }
+    .calendar-grid .day-cell.has-availability.selected { background-color: #0d6efd; color: #fff; }
+    .calendar-grid .day-cell.disabled { opacity: 0.4; cursor: not-allowed; }
+    .calendar-grid .day-cell.other-month { opacity: 0.3; }
+    
+    /* Navegación del mes */
     .month-nav { cursor: pointer; user-select: none; font-size: 1.2rem; }
     .month-nav:hover { color: #0d6efd; }
+    
+    /* Bloques */
     .block-btn {
       margin: 4px;
       min-width: 80px;
@@ -42,6 +54,35 @@
       opacity: 0.5;
       text-decoration: line-through;
     }
+    .block-btn.disabled {
+      cursor: not-allowed;
+    }
+
+    /* Encabezados de días (Lu, Ma, ...) */
+    .day-header {
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #6c757d;
+      padding: 4px 0;
+    }
+
+    /* Contenedor del calendario */
+    .calendar-wrapper {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Para pantallas pequeñas */
+    @media (max-width: 576px) {
+      .calendar-grid .day-cell {
+        font-size: 0.7rem;
+      }
+      .block-btn {
+        min-width: 60px;
+        font-size: 0.8rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -54,23 +95,27 @@
         <div class="alert alert-danger"><%= error %></div>
       <% } %>
 
-      <!-- ========== CALENDARIO MENSUAL ========== -->
-      <div class="mb-4">
+      <!-- ========== CALENDARIO MENSUAL (Grid CSS) ========== -->
+      <div class="calendar-wrapper">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="month-nav" id="prevMonth">‹</span>
           <h5 class="m-0" id="currentMonthLabel"></h5>
           <span class="month-nav" id="nextMonth">›</span>
         </div>
-        <div class="row g-0 text-center">
-          <div class="col"><small>Lu</small></div>
-          <div class="col"><small>Ma</small></div>
-          <div class="col"><small>Mi</small></div>
-          <div class="col"><small>Ju</small></div>
-          <div class="col"><small>Vi</small></div>
-          <div class="col"><small>Sá</small></div>
-          <div class="col"><small>Do</small></div>
+
+        <!-- Encabezados de días -->
+        <div class="day-header-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px;">
+          <div class="day-header">Lu</div>
+          <div class="day-header">Ma</div>
+          <div class="day-header">Mi</div>
+          <div class="day-header">Ju</div>
+          <div class="day-header">Vi</div>
+          <div class="day-header">Sá</div>
+          <div class="day-header">Do</div>
         </div>
-        <div id="calendarGrid" class="row g-0 mt-2 row-cols-7"></div>
+
+        <!-- Grid de días -->
+        <div id="calendarGrid" class="calendar-grid"></div>
       </div>
 
       <!-- ========== BLOQUES DISPONIBLES ========== -->
@@ -131,7 +176,6 @@
       const blocks = blocksByDay[ourDay] || [];
       if (blocks.length === 0) return false;
 
-      // Verificar si al menos un bloque no ha pasado (para hoy)
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
       const dateStr = date.toISOString().split('T')[0];
@@ -139,31 +183,33 @@
 
       return blocks.some(block => {
         if (dateStr === todayStr) {
-          // Si es hoy, el bloque debe terminar después de la hora actual
           return block.end_minutes > currentMinutes && (block.end_minutes - block.start_minutes) >= meetingDuration;
         }
         return true;
       });
     }
 
-    // Renderizar calendario
+    // Renderizar calendario usando Grid CSS
     function renderCalendar(year, month) {
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const daysInMonth = lastDay.getDate();
-      const startDayOfWeek = firstDay.getDay(); // 0=domingo, 1=lunes...
+      const startDayOfWeek = firstDay.getDay(); // 0=domingo
       // Ajustar para que lunes sea 0
       let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
 
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
 
-      let html = '';
+      // Generar celdas
+      let cells = [];
+
       // Días vacíos al inicio
       for (let i = 0; i < startOffset; i++) {
-        html += `<div class="col"><div class="day-cell disabled"></div></div>`;
+        cells.push({ empty: true });
       }
 
+      // Días del mes
       for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(year, month, day);
         const dateStr = dateObj.toISOString().split('T')[0];
@@ -177,18 +223,26 @@
         else if (hasAvail) classes += ' has-availability';
         if (selectedDate && dateStr === selectedDate) classes += ' selected';
 
-        html += `
-          <div class="col">
-            <div class="${classes}" data-date="${dateStr}" data-day="${day}">
-              ${day}
-            </div>
-          </div>
-        `;
+        cells.push({
+          day: day,
+          dateStr: dateStr,
+          classes: classes,
+          disabled: isPast || !hasAvail,
+          hasAvailability: hasAvail
+        });
       }
 
-      // Completar fila (no es necesario, row-cols-7 lo hace automáticamente, pero añadimos celdas vacías para mantener la estructura)
-      // De hecho, con row-cols-7, no necesitamos completar, pero para evitar espacios extra, solo añadimos si hace falta
-      // Mejor no añadir más celdas, row-cols-7 maneja el wrap.
+      // No necesitamos completar filas, grid lo hace automáticamente.
+
+      // Construir HTML
+      let html = '';
+      cells.forEach(cell => {
+        if (cell.empty) {
+          html += `<div class="day-cell disabled" style="background:transparent;"></div>`;
+        } else {
+          html += `<div class="${cell.classes}" data-date="${cell.dateStr}" data-day="${cell.day}">${cell.day}</div>`;
+        }
+      });
 
       calendarGrid.innerHTML = html;
       currentMonthLabel.textContent = firstDay.toLocaleString('es', { month: 'long', year: 'numeric' });
@@ -228,7 +282,6 @@
       // Ordenar por hora
       blocks.sort((a, b) => a.start_minutes - b.start_minutes);
 
-      // Obtener hora actual si es hoy
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
       const currentMinutes = today.getHours() * 60 + today.getMinutes();
@@ -239,9 +292,7 @@
         const endTime = formatTime(block.end_minutes);
         const blockDuration = block.end_minutes - block.start_minutes;
         const isDurationValid = blockDuration >= meetingDuration;
-        // Verificar si el bloque ya pasó (si es hoy y la hora actual >= fin del bloque)
         const isPast = (dateStr === todayStr) && (block.end_minutes <= currentMinutes);
-        // Verificar si la reunión cabe en el tiempo restante del bloque (si es hoy)
         let canFit = true;
         if (dateStr === todayStr && !isPast) {
           const remainingMinutes = block.end_minutes - currentMinutes;
@@ -275,7 +326,6 @@
             selectedBlockId = blockId;
             selectedBlockInput.value = blockId;
             submitBtn.disabled = false;
-            // Actualizar selección visual
             document.querySelectorAll('.block-btn').forEach(b => b.classList.remove('selected', 'btn-primary'));
             this.classList.add('selected', 'btn-primary');
           }
