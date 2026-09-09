@@ -9,7 +9,6 @@
     body { background-color: #f8f9fa; }
     .card { max-width: 700px; margin: 2rem auto; }
     
-    /* Calendario con Grid CSS (7 columnas fijas) */
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -34,13 +33,10 @@
     .calendar-grid .day-cell.has-availability { background-color: #d1e7dd; }
     .calendar-grid .day-cell.has-availability.selected { background-color: #0d6efd; color: #fff; }
     .calendar-grid .day-cell.disabled { opacity: 0.4; cursor: not-allowed; }
-    .calendar-grid .day-cell.other-month { opacity: 0.3; }
     
-    /* Navegación del mes */
     .month-nav { cursor: pointer; user-select: none; font-size: 1.2rem; }
     .month-nav:hover { color: #0d6efd; }
     
-    /* Bloques */
     .block-btn {
       margin: 4px;
       min-width: 80px;
@@ -54,11 +50,6 @@
       opacity: 0.5;
       text-decoration: line-through;
     }
-    .block-btn.disabled {
-      cursor: not-allowed;
-    }
-
-    /* Encabezados de días (Lu, Ma, ...) */
     .day-header {
       text-align: center;
       font-size: 0.8rem;
@@ -66,23 +57,16 @@
       color: #6c757d;
       padding: 4px 0;
     }
-
-    /* Contenedor del calendario */
     .calendar-wrapper {
       max-width: 100%;
       margin: 0 auto;
     }
-
-    /* Para pantallas pequeñas */
     @media (max-width: 576px) {
-      .calendar-grid .day-cell {
-        font-size: 0.7rem;
-      }
-      .block-btn {
-        min-width: 60px;
-        font-size: 0.8rem;
-      }
+      .calendar-grid .day-cell { font-size: 0.7rem; }
+      .block-btn { min-width: 60px; font-size: 0.8rem; }
     }
+    .spinner-border-sm { width: 1rem; height: 1rem; }
+    .loading-text { font-size: 0.9rem; color: #6c757d; }
   </style>
 </head>
 <body>
@@ -95,7 +79,7 @@
         <div class="alert alert-danger"><%= error %></div>
       <% } %>
 
-      <!-- ========== CALENDARIO MENSUAL (Grid CSS) ========== -->
+      <!-- ========== CALENDARIO MENSUAL ========== -->
       <div class="calendar-wrapper">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="month-nav" id="prevMonth">‹</span>
@@ -103,7 +87,6 @@
           <span class="month-nav" id="nextMonth">›</span>
         </div>
 
-        <!-- Encabezados de días -->
         <div class="day-header-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px;">
           <div class="day-header">Lu</div>
           <div class="day-header">Ma</div>
@@ -114,15 +97,16 @@
           <div class="day-header">Do</div>
         </div>
 
-        <!-- Grid de días -->
         <div id="calendarGrid" class="calendar-grid"></div>
       </div>
 
-      <!-- ========== BLOQUES DISPONIBLES ========== -->
+      <!-- ========== BLOQUES DISPONIBLES (cargados vía AJAX) ========== -->
       <div id="blocksContainer" style="display:none;">
         <hr />
         <h6>Bloques disponibles para el <span id="selectedDateLabel"></span></h6>
-        <div id="blocksList" class="d-flex flex-wrap justify-content-center"></div>
+        <div id="blocksList" class="d-flex flex-wrap justify-content-center">
+          <div class="loading-text">Cargando bloques...</div>
+        </div>
       </div>
 
       <!-- ========== FORMULARIO ========== -->
@@ -150,7 +134,7 @@
 
   <script>
     // Datos del servidor
-    const blocksByDay = <%- JSON.stringify(blocksByDay) %>;
+    const token = '<%= token %>';
     const meetingDuration = <%= meetingDuration %>;
     const timeFormat = '24';
 
@@ -158,6 +142,7 @@
     let currentDate = new Date();
     let selectedDate = null;
     let selectedBlockId = null;
+    let currentBlocks = [];
 
     // Referencias DOM
     const calendarGrid = document.getElementById('calendarGrid');
@@ -169,54 +154,50 @@
     const selectedBlockInput = document.getElementById('selectedBlockInput');
     const submitBtn = document.getElementById('submitBtn');
 
-    // Función para saber si un día tiene bloques disponibles (futuros)
-    function hasAvailableBlocks(date) {
-      const dayOfWeek = date.getDay(); // 0=domingo, 1=lunes...
-      let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-      const blocks = blocksByDay[ourDay] || [];
-      if (blocks.length === 0) return false;
-
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
-      const dateStr = date.toISOString().split('T')[0];
-      const currentMinutes = today.getHours() * 60 + today.getMinutes();
-
-      return blocks.some(block => {
-        if (dateStr === todayStr) {
-          return block.end_minutes > currentMinutes && (block.end_minutes - block.start_minutes) >= meetingDuration;
+    // ========== FUNCIONES ==========
+    async function fetchAvailableBlocks(dateStr) {
+      try {
+        const response = await fetch(`/invite/availability/${token}/${dateStr}`);
+        if (!response.ok) {
+          throw new Error('Error al cargar disponibilidad');
         }
-        return true;
-      });
+        const data = await response.json();
+        return data.blocks || [];
+      } catch (error) {
+        console.error('Error fetching blocks:', error);
+        return [];
+      }
     }
 
-    // Renderizar calendario usando Grid CSS
-    function renderCalendar(year, month) {
+    async function hasAvailableBlocks(date) {
+      const dateStr = date.toISOString().split('T')[0];
+      const blocks = await fetchAvailableBlocks(dateStr);
+      return blocks.length > 0;
+    }
+
+    async function renderCalendar(year, month) {
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const daysInMonth = lastDay.getDate();
-      const startDayOfWeek = firstDay.getDay(); // 0=domingo
-      // Ajustar para que lunes sea 0
+      const startDayOfWeek = firstDay.getDay();
       let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
 
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
 
-      // Generar celdas
       let cells = [];
 
-      // Días vacíos al inicio
       for (let i = 0; i < startOffset; i++) {
         cells.push({ empty: true });
       }
 
-      // Días del mes
       for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(year, month, day);
         const dateStr = dateObj.toISOString().split('T')[0];
         const isToday = dateStr === todayStr;
-        const hasAvail = hasAvailableBlocks(dateObj);
         const isPast = dateObj < new Date(todayStr);
 
+        const hasAvail = !isPast && (await hasAvailableBlocks(dateObj));
         let classes = 'day-cell';
         if (isPast) classes += ' disabled';
         else if (!hasAvail) classes += ' disabled';
@@ -227,14 +208,10 @@
           day: day,
           dateStr: dateStr,
           classes: classes,
-          disabled: isPast || !hasAvail,
-          hasAvailability: hasAvail
+          disabled: isPast || !hasAvail
         });
       }
 
-      // No necesitamos completar filas, grid lo hace automáticamente.
-
-      // Construir HTML
       let html = '';
       cells.forEach(cell => {
         if (cell.empty) {
@@ -247,7 +224,6 @@
       calendarGrid.innerHTML = html;
       currentMonthLabel.textContent = firstDay.toLocaleString('es', { month: 'long', year: 'numeric' });
 
-      // Event listeners para los días
       document.querySelectorAll('.day-cell:not(.disabled)').forEach(el => {
         el.addEventListener('click', function() {
           const dateStr = this.dataset.date;
@@ -264,22 +240,19 @@
       });
     }
 
-    // Mostrar bloques para una fecha
-    function showBlocksForDate(dateStr) {
-      const dateObj = new Date(dateStr + 'T00:00:00');
-      const dayOfWeek = dateObj.getDay();
-      let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-      const blocks = blocksByDay[ourDay] || [];
+    async function showBlocksForDate(dateStr) {
+      blocksContainer.style.display = 'block';
+      blocksList.innerHTML = '<div class="loading-text">Cargando bloques disponibles...</div>';
+      selectedDateLabel.textContent = new Date(dateStr + 'T00:00:00').toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
+
+      const blocks = await fetchAvailableBlocks(dateStr);
+      currentBlocks = blocks;
 
       if (blocks.length === 0) {
-        blocksContainer.style.display = 'none';
+        blocksList.innerHTML = '<p class="text-muted">No hay bloques disponibles para esta fecha.</p>';
         return;
       }
 
-      blocksContainer.style.display = 'block';
-      selectedDateLabel.textContent = dateObj.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
-
-      // Ordenar por hora
       blocks.sort((a, b) => a.start_minutes - b.start_minutes);
 
       const today = new Date();
@@ -290,16 +263,10 @@
       blocks.forEach(block => {
         const startTime = formatTime(block.start_minutes);
         const endTime = formatTime(block.end_minutes);
-        const blockDuration = block.end_minutes - block.start_minutes;
-        const isDurationValid = blockDuration >= meetingDuration;
         const isPast = (dateStr === todayStr) && (block.end_minutes <= currentMinutes);
-        let canFit = true;
-        if (dateStr === todayStr && !isPast) {
-          const remainingMinutes = block.end_minutes - currentMinutes;
-          canFit = remainingMinutes >= meetingDuration;
-        }
+        const canFit = !isPast;
         const isSelected = selectedBlockId === block.id;
-        const disabled = !isDurationValid || isPast || !canFit;
+        const disabled = isPast || !canFit;
         let btnClass = 'block-btn btn btn-sm ';
         if (isSelected) {
           btnClass += 'btn-primary selected';
@@ -318,7 +285,6 @@
 
       blocksList.innerHTML = html;
 
-      // Event listeners para los bloques
       document.querySelectorAll('.block-btn:not(:disabled)').forEach(btn => {
         btn.addEventListener('click', function() {
           const blockId = parseInt(this.dataset.blockId);
@@ -333,7 +299,6 @@
       });
     }
 
-    // Formatear minutos a hora
     function formatTime(minutes) {
       const h = Math.floor(minutes / 60);
       const m = minutes % 60;
@@ -345,7 +310,7 @@
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
-    // Navegación meses
+    // ========== NAVEGACIÓN ==========
     document.getElementById('prevMonth').addEventListener('click', function() {
       currentDate.setMonth(currentDate.getMonth() - 1);
       renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
@@ -355,7 +320,7 @@
       renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
     });
 
-    // Validación al enviar
+    // ========== VALIDACIÓN AL ENVIAR ==========
     document.getElementById('inviteForm').addEventListener('submit', function(e) {
       if (!selectedDate || !selectedBlockId) {
         alert('Por favor, selecciona un día y un bloque horario.');
@@ -364,10 +329,10 @@
       }
     });
 
-    // Inicializar
+    // ========== INICIALIZACIÓN ==========
     renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
 
-    // Si hay datos previos (error), restaurar selección
+    // Restaurar selección previa si hay error
     <% if (locals.eventData && eventData.date && eventData.blockId) { %>
       const prevDate = '<%= eventData.date %>';
       const prevBlockId = parseInt('<%= eventData.blockId %>');
@@ -377,14 +342,15 @@
       selectedBlockInput.value = prevBlockId;
       submitBtn.disabled = false;
       renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-      showBlocksForDate(prevDate);
-      setTimeout(() => {
-        document.querySelectorAll('.block-btn').forEach(btn => {
-          if (parseInt(btn.dataset.blockId) === prevBlockId) {
-            btn.click();
-          }
-        });
-      }, 100);
+      showBlocksForDate(prevDate).then(() => {
+        setTimeout(() => {
+          document.querySelectorAll('.block-btn').forEach(btn => {
+            if (parseInt(btn.dataset.blockId) === prevBlockId) {
+              btn.click();
+            }
+          });
+        }, 100);
+      });
     <% } %>
   </script>
 </body>
