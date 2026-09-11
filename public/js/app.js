@@ -503,7 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const weekday = date.toLocaleDateString('es-ES', { weekday: 'long' });
     const monthShort = date.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
     
-  viewTitle.textContent = `${weekday}, ${date.getDate()}${monthShort}${date.getFullYear()}`;
+  viewTitle.textContent = `${weekday}, ${date.getDate()} ${monthShort} ${date.getFullYear()}`;
 
     const totalHeight = 24 * HOUR_HEIGHT;
     let html = `<div class="day-time-grid">`;
