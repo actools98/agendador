@@ -79,11 +79,11 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
   overflow-y: auto;
-  height: 100vh;
+  height: 100%;
 }
 .calendar-container {
   background-color: var(--bg-body);
-  height: 100vh;
+  height: 100%;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -624,6 +624,7 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     top: 56px;
     right: 0;
     bottom: 0;
+    height: auto;  
     width: 300px;
     max-width: 80%;
     background-color: var(--sidebar-bg);
