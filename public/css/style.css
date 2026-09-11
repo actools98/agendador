@@ -277,60 +277,6 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
-   VISTA SEMANA - NUEVA ESTRUCTURA (columnas con altura proporcional)
-   ============================================================ */
-.week-header-row,
-.week-allday-row {
-  display: grid;
-  grid-template-columns: 70px repeat(7, 1fr);
-}
-
-.week-allday-row {
-  border-bottom: 2px solid var(--calendar-border);
-}
-
-.week-body-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-gutter: stable;
-}
-
-.week-body {
-  display: flex;
-  position: relative;
-}
-
-.week-time-column {
-  width: 70px;
-  flex-shrink: 0;
-  background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--slot-border);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-}
-
-.week-day-column {
-  flex: 1;
-  position: relative;
-  border-left: 1px solid var(--calendar-border);
-  box-sizing: border-box;
-  background-color: var(--calendar-bg);
-}
-
-.week-day-slot {
-  border-bottom: 1px solid var(--slot-border);
-  cursor: pointer;
-  transition: background 0.2s;
-  box-sizing: border-box;
-}
-
-.week-day-slot:hover {
-  background-color: var(--slot-hover);
-}
-
-/* ============================================================
    VISTA AÑO - 3 COLUMNAS (CORREGIDO)
    ============================================================ */
 .year-grid {
@@ -701,7 +647,4 @@ h1, h2, h3, h4, h5, h6, p, span, a {
   .modal-body .form-control-sm {
     font-size: 0.8rem;
   }
-}
-.week-time-column {
-  width: 38px !important;
 }
