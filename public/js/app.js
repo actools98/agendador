@@ -500,8 +500,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
     const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
     const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
-
-    viewTitle.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const weekday = date.toLocaleDateString('es-ES', { weekday: 'long' });
+    const monthShort = date.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+    
+  viewTitle.textContent = `${weekday}, ${date.getDate()}/${monthShort}/${date.getFullYear()}`;
 
     const totalHeight = 24 * HOUR_HEIGHT;
     let html = `<div class="day-time-grid">`;
