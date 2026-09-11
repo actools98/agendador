@@ -277,6 +277,105 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 }
 
 /* ============================================================
+   VISTA SEMANA
+   ============================================================ */
+.week-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background-color: var(--calendar-bg);
+  border-radius: 8px;
+  border: 1px solid var(--calendar-border);
+  overflow: hidden;
+}
+.week-table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.week-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.week-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.week-table thead tr {
+  background-color: var(--header-bg);
+}
+.week-header-empty {
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
+  border-right: 1px solid var(--calendar-border);
+  border-bottom: 2px solid var(--calendar-border);
+  background-color: var(--header-bg);
+}
+.week-header-day {
+  padding: 8px 0;
+  font-weight: bold;
+  background-color: var(--sidebar-bg);
+  color: var(--text-body);
+  border-bottom: 2px solid var(--calendar-border);
+  border-left: 1px solid var(--calendar-border);
+  text-align: center;
+}
+.week-header-day.today {
+  color: var(--today-border);
+}
+.week-table tbody tr {
+  border-bottom: 1px solid var(--slot-border);
+}
+.week-hour-label {
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
+  height: 70px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 0.8rem;
+  color: var(--header-text);
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--slot-border);
+  box-sizing: border-box;
+}
+.week-day-cell {
+  height: 70px;
+  padding: 0;
+  position: relative;
+  border-left: 1px solid var(--calendar-border);
+  cursor: pointer;
+  transition: background 0.2s;
+  background-color: var(--calendar-bg);
+  vertical-align: top;
+}
+.week-day-cell:hover {
+  background-color: var(--slot-hover);
+}
+.week-event-block {
+  position: absolute;
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 0.65rem;
+  color: #fff;
+  cursor: pointer;
+  border-left: 3px solid rgba(255,255,255,0.5);
+  transition: opacity 0.2s;
+  min-height: 16px;
+  box-sizing: border-box;
+  z-index: 5;
+}
+.week-event-block:hover {
+  opacity: 0.85;
+}
+
+/* ============================================================
    VISTA AÑO - 3 COLUMNAS (CORREGIDO)
    ============================================================ */
 .year-grid {
