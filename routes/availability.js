@@ -46,6 +46,37 @@ router.post('/', (req, res) => {
   }
 });
 
+// Copiar bloques de un día a otros días
+router.post('/copy', (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: 'No autenticado' });
+
+  const { fromDay, toDays, replaceExisting = true } = req.body;
+
+  if (typeof fromDay !== 'number' || fromDay < 1 || fromDay > 7) {
+    return res.status(400).json({ error: 'Día de origen inválido (1-7)' });
+  }
+  if (!Array.isArray(toDays) || toDays.length === 0) {
+    return res.status(400).json({ error: 'Debes seleccionar al menos un día destino' });
+  }
+  for (const d of toDays) {
+    if (typeof d !== 'number' || d < 1 || d > 7) {
+      return res.status(400).json({ error: 'Día destino inválido (1-7)' });
+    }
+  }
+
+  try {
+    const result = AvailabilityBlock.copyFromTo(userId, fromDay, toDays, replaceExisting);
+    if (result.copied === 0) {
+      return res.status(400).json({ error: 'El día de origen no tiene bloques para copiar' });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('Error copiando bloques:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Actualizar un bloque
 router.put('/:id', (req, res) => {
   const userId = req.session.userId;
