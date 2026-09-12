@@ -809,3 +809,28 @@ h1, h2, h3, h4, h5, h6, p, span, a {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ============================================================
+   MODAL DE EVENTO - Fecha y hora en la misma línea
+   ============================================================ */
+#eventModal .row .row.g-1 > [class^="col-"] {
+  padding-right: 4px;
+  padding-left: 4px;
+}
+#eventModal .row .row.g-1 > [class^="col-"]:first-child {
+  padding-left: 0;
+}
+#eventModal .row .row.g-1 > [class^="col-"]:last-child {
+  padding-right: 0;
+}
+#startTime,
+#endTime {
+  font-variant-numeric: tabular-nums; /* Alinea los dígitos verticalmente */
+}
+
+/* Duración rápida */
+.quick-duration {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  line-height: 1.4;
+}
