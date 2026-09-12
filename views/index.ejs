@@ -128,15 +128,44 @@
             </div>
           </div>
           <div class="row g-2 mt-1">
-            <div class="col-md-6">
-              <label for="start" class="form-label">Inicio *</label>
-              <input type="datetime-local" class="form-control" id="start" required />
-            </div>
-            <div class="col-md-6">
-              <label for="end" class="form-label">Fin *</label>
-              <input type="datetime-local" class="form-control" id="end" required />
-            </div>
-          </div>
+  <div class="col-md-6">
+    <label class="form-label">Inicio *</label>
+    <div class="row g-1">
+      <div class="col-6">
+        <input type="date" class="form-control" id="startDate" required />
+      </div>
+      <div class="col-6">
+        <select class="form-select" id="startTime" required></select>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Fin *</label>
+    <div class="row g-1">
+      <div class="col-6">
+        <input type="date" class="form-control" id="endDate" required />
+      </div>
+      <div class="col-6">
+        <select class="form-select" id="endTime" required></select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Duración rápida (opcional pero muy útil) -->
+<div class="row g-2 mt-2">
+  <div class="col-12">
+    <div class="d-flex flex-wrap gap-1 align-items-center">
+      <span class="text-muted small me-1">Duración:</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary quick-duration" data-min="15">15 min</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary quick-duration" data-min="30">30 min</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary quick-duration" data-min="60">1 h</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary quick-duration" data-min="90">1.5 h</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary quick-duration" data-min="120">2 h</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary quick-duration" data-min="240">4 h</button>
+    </div>
+  </div>
+</div>
           <div class="row g-2 mt-1">
             <div class="col-md-4">
               <div class="form-check mt-2">
