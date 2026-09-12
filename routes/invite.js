@@ -109,6 +109,103 @@ router.get('/availability/:token/:date', (req, res) => {
 });
 
 // ========================================
+// Ruta pública: disponibilidad del mes completo (una sola petición)
+// Devuelve { availableDates: { "YYYY-MM-DD": cantidadBloques } }
+// ========================================
+router.get('/availability-month/:token/:year/:month', (req, res) => {
+  const { token } = req.params;
+  const year = parseInt(req.params.year);
+  const month = parseInt(req.params.month); // 0-11
+
+  if (isNaN(year) || isNaN(month) || month < 0 || month > 11) {
+    return res.status(400).json({ error: 'Año o mes inválido' });
+  }
+
+  const link = InvitationLink.findByToken(token);
+  if (!link) {
+    return res.status(400).json({ error: 'Enlace inválido o expirado' });
+  }
+
+  const userId = link.user_id;
+  const pref = Preferencia.getByUser(userId) || { meeting_duration: 60 };
+  const meetingDuration = pref.meeting_duration;
+
+  // Bloques agrupados por día de la semana
+  const allBlocks = AvailabilityBlock.findByUser(userId);
+  const blocksByDay = {};
+  for (const b of allBlocks) {
+    if (!blocksByDay[b.day_of_week]) blocksByDay[b.day_of_week] = [];
+    blocksByDay[b.day_of_week].push(b);
+  }
+
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Eventos activos del mes completo (una sola consulta)
+  const monthStartStr = `${year}-${String(month + 1).padStart(2, '0')}-01 00:00:00`;
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+  const monthEndStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDayOfMonth).padStart(2, '0')} 23:59:59`;
+  const eventsStmt = db.prepare(`
+    SELECT start, end FROM events
+    WHERE user_id = ? AND status = 'active'
+      AND start <= ? AND end >= ?
+  `);
+  const monthEvents = eventsStmt.all(userId, monthEndStr, monthStartStr);
+
+  const availableDates = {};
+  const daysInMonth = lastDayOfMonth;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateObj = new Date(year, month, day);
+    const dateMidnight = new Date(year, month, day, 0, 0, 0);
+    if (dateMidnight < todayMidnight) continue;
+
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const jsDay = dateObj.getDay();
+    const ourDay = jsDay === 0 ? 7 : jsDay;
+    const dayBlocks = blocksByDay[ourDay] || [];
+    if (dayBlocks.length === 0) continue;
+
+    // Eventos que tocan ese día
+    const dayStart = new Date(year, month, day, 0, 0, 0);
+    const dayEnd = new Date(year, month, day, 23, 59, 59);
+    const dayEvents = monthEvents.filter(ev => {
+      const s = new Date(ev.start.replace(' ', 'T'));
+      const e = new Date(ev.end.replace(' ', 'T'));
+      return s <= dayEnd && e >= dayStart;
+    });
+
+    const available = dayBlocks.filter(block => {
+      const blockDuration = block.end_minutes - block.start_minutes;
+      if (blockDuration < meetingDuration) return false;
+
+      if (dateStr === todayStr) {
+        if (block.end_minutes <= currentMinutes) return false;
+        if (block.end_minutes - currentMinutes < meetingDuration) return false;
+      }
+
+      const isOccupied = dayEvents.some(event => {
+        const eventStart = new Date(event.start.replace(' ', 'T'));
+        const eventEnd = new Date(event.end.replace(' ', 'T'));
+        const blockStart = new Date(year, month, day, Math.floor(block.start_minutes / 60), block.start_minutes % 60, 0, 0);
+        const blockEnd = new Date(year, month, day, Math.floor(block.end_minutes / 60), block.end_minutes % 60, 0, 0);
+        return eventStart < blockEnd && eventEnd > blockStart;
+      });
+
+      return !isOccupied;
+    });
+
+    if (available.length > 0) {
+      availableDates[dateStr] = available.length;
+    }
+  }
+
+  res.json({ availableDates });
+});
+
+// ========================================
 // Ruta pública: procesar creación de evento (POST)
 // ========================================
 router.post('/:token', (req, res) => {
