@@ -155,6 +155,14 @@
     const submitBtn = document.getElementById('submitBtn');
 
     // ========== FUNCIONES ==========
+    // Devuelve YYYY-MM-DD usando componentes locales (NO usa toISOString)
+    function formatDateLocal(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
     async function fetchAvailableBlocks(dateStr) {
       try {
         const response = await fetch(`/invite/availability/${token}/${dateStr}`);
@@ -170,7 +178,7 @@
     }
 
     async function hasAvailableBlocks(date) {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = formatDateLocal(date);
       const blocks = await fetchAvailableBlocks(dateStr);
       return blocks.length > 0;
     }
@@ -183,7 +191,7 @@
       let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
 
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = formatDateLocal(today);
 
       let cells = [];
 
@@ -193,7 +201,7 @@
 
       for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(year, month, day);
-        const dateStr = dateObj.toISOString().split('T')[0];
+        const dateStr = formatDateLocal(dateObj);
         const isToday = dateStr === todayStr;
         const isPast = dateObj < new Date(todayStr);
 
@@ -256,7 +264,7 @@
       blocks.sort((a, b) => a.start_minutes - b.start_minutes);
 
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = formatDateLocal(today);
       const currentMinutes = today.getHours() * 60 + today.getMinutes();
 
       let html = '';
