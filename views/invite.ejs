@@ -8,7 +8,7 @@
   <style>
     body { background-color: #f8f9fa; }
     .card { max-width: 700px; margin: 2rem auto; }
-    
+
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -33,10 +33,10 @@
     .calendar-grid .day-cell.has-availability { background-color: #d1e7dd; }
     .calendar-grid .day-cell.has-availability.selected { background-color: #0d6efd; color: #fff; }
     .calendar-grid .day-cell.disabled { opacity: 0.4; cursor: not-allowed; }
-    
+
     .month-nav { cursor: pointer; user-select: none; font-size: 1.2rem; }
     .month-nav:hover { color: #0d6efd; }
-    
+
     .block-btn {
       margin: 4px;
       min-width: 80px;
@@ -163,12 +163,11 @@
       return `${y}-${m}-${d}`;
     }
 
+    // Bloques de un día específico (usado al hacer clic en un día)
     async function fetchAvailableBlocks(dateStr) {
       try {
         const response = await fetch(`/invite/availability/${token}/${dateStr}`);
-        if (!response.ok) {
-          throw new Error('Error al cargar disponibilidad');
-        }
+        if (!response.ok) throw new Error('Error al cargar disponibilidad');
         const data = await response.json();
         return data.blocks || [];
       } catch (error) {
@@ -177,47 +176,51 @@
       }
     }
 
-    async function hasAvailableBlocks(date) {
-      const dateStr = formatDateLocal(date);
-      const blocks = await fetchAvailableBlocks(dateStr);
-      return blocks.length > 0;
+    // Disponibilidad del mes completo (una sola petición)
+    async function fetchMonthAvailability(year, month) {
+      try {
+        const res = await fetch(`/invite/availability-month/${token}/${year}/${month}`);
+        if (!res.ok) throw new Error('Error al cargar disponibilidad del mes');
+        const data = await res.json();
+        return data.availableDates || {};
+      } catch (error) {
+        console.error('Error fetching month availability:', error);
+        return {};
+      }
     }
 
     async function renderCalendar(year, month) {
+      // Placeholder inmediato mientras carga
+      calendarGrid.innerHTML = '<div class="text-center py-3 text-muted small">Cargando calendario...</div>';
+      currentMonthLabel.textContent = new Date(year, month, 1).toLocaleString('es', { month: 'long', year: 'numeric' });
+
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const daysInMonth = lastDay.getDate();
       const startDayOfWeek = firstDay.getDay();
-      let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+      const startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
 
       const today = new Date();
-      const todayStr = formatDateLocal(today);
+      const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+
+      // UNA SOLA PETICIÓN para todo el mes
+      const availableDates = await fetchMonthAvailability(year, month);
 
       let cells = [];
-
-      for (let i = 0; i < startOffset; i++) {
-        cells.push({ empty: true });
-      }
+      for (let i = 0; i < startOffset; i++) cells.push({ empty: true });
 
       for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(year, month, day);
         const dateStr = formatDateLocal(dateObj);
-        const isToday = dateStr === todayStr;
-        const isPast = dateObj < new Date(todayStr);
+        const isPast = dateObj < todayMidnight;
+        const hasAvail = availableDates[dateStr] !== undefined;
 
-        const hasAvail = !isPast && (await hasAvailableBlocks(dateObj));
         let classes = 'day-cell';
-        if (isPast) classes += ' disabled';
-        else if (!hasAvail) classes += ' disabled';
-        else if (hasAvail) classes += ' has-availability';
+        if (isPast || !hasAvail) classes += ' disabled';
+        else classes += ' has-availability';
         if (selectedDate && dateStr === selectedDate) classes += ' selected';
 
-        cells.push({
-          day: day,
-          dateStr: dateStr,
-          classes: classes,
-          disabled: isPast || !hasAvail
-        });
+        cells.push({ day, dateStr, classes });
       }
 
       let html = '';
@@ -230,7 +233,6 @@
       });
 
       calendarGrid.innerHTML = html;
-      currentMonthLabel.textContent = firstDay.toLocaleString('es', { month: 'long', year: 'numeric' });
 
       document.querySelectorAll('.day-cell:not(.disabled)').forEach(el => {
         el.addEventListener('click', function() {
@@ -241,7 +243,11 @@
             selectedBlockId = null;
             selectedBlockInput.value = '';
             submitBtn.disabled = true;
-            renderCalendar(year, month);
+
+            // Actualizar solo la clase 'selected' sin re-renderizar el calendario completo
+            document.querySelectorAll('.day-cell.selected').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+
             showBlocksForDate(dateStr);
           }
         });
@@ -349,15 +355,16 @@
       selectedBlockId = prevBlockId;
       selectedBlockInput.value = prevBlockId;
       submitBtn.disabled = false;
-      renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-      showBlocksForDate(prevDate).then(() => {
-        setTimeout(() => {
-          document.querySelectorAll('.block-btn').forEach(btn => {
-            if (parseInt(btn.dataset.blockId) === prevBlockId) {
-              btn.click();
-            }
-          });
-        }, 100);
+      renderCalendar(currentDate.getFullYear(), currentDate.getMonth()).then(() => {
+        showBlocksForDate(prevDate).then(() => {
+          setTimeout(() => {
+            document.querySelectorAll('.block-btn').forEach(btn => {
+              if (parseInt(btn.dataset.blockId) === prevBlockId) {
+                btn.click();
+              }
+            });
+          }, 100);
+        });
       });
     <% } %>
   </script>
