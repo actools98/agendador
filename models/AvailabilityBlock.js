@@ -57,6 +57,39 @@ class AvailabilityBlock {
     const result = stmt.get(...params);
     return result.count > 0;
   }
+// Copia todos los bloques de un día origen a uno o varios días destino.
+  // Si replaceExisting es true, elimina los bloques existentes de los destinos antes de copiar.
+  static copyFromTo(userId, fromDay, toDays, replaceExisting = true) {
+    const sourceBlocks = db.prepare(
+      'SELECT start_minutes, end_minutes FROM availability_blocks WHERE user_id = ? AND day_of_week = ? ORDER BY start_minutes'
+    ).all(userId, fromDay);
+
+    if (sourceBlocks.length === 0) return { copied: 0, days: [] };
+
+    const insert = db.prepare(
+      'INSERT INTO availability_blocks (user_id, day_of_week, start_minutes, end_minutes) VALUES (?, ?, ?, ?)'
+    );
+    const del = db.prepare(
+      'DELETE FROM availability_blocks WHERE user_id = ? AND day_of_week = ?'
+    );
+
+    let totalCopied = 0;
+    const copiedDays = [];
+    const tx = db.transaction(() => {
+      for (const day of toDays) {
+        if (day === fromDay) continue;
+        if (replaceExisting) del.run(userId, day);
+        for (const b of sourceBlocks) {
+          insert.run(userId, day, b.start_minutes, b.end_minutes);
+          totalCopied++;
+        }
+        copiedDays.push(day);
+      }
+    });
+    tx();
+
+    return { copied: totalCopied, days: copiedDays };
+  }
 }
 
 module.exports = AvailabilityBlock;
