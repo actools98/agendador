@@ -56,8 +56,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const eventIdInput = $('#eventId');
   const titleInput = $('#title');
   const descriptionInput = $('#description');
-  const startInput = $('#start');
-  const endInput = $('#end');
+const startDateInput = $('#startDate');
+const startTimeSelect = $('#startTime');
+const endDateInput = $('#endDate');
+const endTimeSelect = $('#endTime');
   const allDayInput = $('#allDay');
   const colorInput = $('#color');
   const statusSelect = $('#eventStatus');
