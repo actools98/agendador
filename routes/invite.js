@@ -38,7 +38,7 @@ router.get('/:token', (req, res) => {
 // ========================================
 router.get('/availability/:token/:date', (req, res) => {
   const { token, date } = req.params;
-  
+
   const link = InvitationLink.findByToken(token);
   if (!link) {
     return res.status(400).json({ error: 'Enlace inválido o expirado' });
@@ -48,9 +48,17 @@ router.get('/availability/:token/:date', (req, res) => {
   const pref = Preferencia.getByUser(userId) || { meeting_duration: 60 };
   const meetingDuration = pref.meeting_duration;
 
-  // Obtener todos los bloques del usuario
-  const allBlocks = AvailabilityBlock.findByUser(userId);
-  
+  // Calcular el día de la semana de la fecha solicitada (1=lunes ... 7=domingo)
+  const selectedDate = new Date(date + 'T00:00:00');
+  if (isNaN(selectedDate.getTime())) {
+    return res.status(400).json({ error: 'Fecha inválida' });
+  }
+  const jsDay = selectedDate.getDay(); // 0=domingo, 1=lunes...
+  const ourDay = jsDay === 0 ? 7 : jsDay;
+
+  // Obtener SOLO los bloques del día de la semana correspondiente
+  const allBlocks = AvailabilityBlock.findByUserAndDay(userId, ourDay);
+
   // Obtener los eventos activos para esa fecha
   const startOfDay = date + ' 00:00:00';
   const endOfDay = date + ' 23:59:59';
@@ -62,36 +70,39 @@ router.get('/availability/:token/:date', (req, res) => {
   `);
   const events = eventsStmt.all(userId, startOfDay, endOfDay);
 
-  // Calcular qué bloques están disponibles
-  const availableBlocks = allBlocks.filter(block => {
-    // Verificar si el bloque está ocupado por algún evento
-    const isOccupied = events.some(event => {
-      const eventStart = new Date(event.start);
-      const eventEnd = new Date(event.end);
+  // Verificar si un bloque está ocupado por algún evento
+  const isBlockOccupied = (block) => {
+    return events.some(event => {
+      const eventStart = new Date(event.start.replace(' ', 'T'));
+      const eventEnd = new Date(event.end.replace(' ', 'T'));
       const blockStart = new Date(date + 'T00:00:00');
       blockStart.setHours(Math.floor(block.start_minutes / 60), block.start_minutes % 60, 0, 0);
       const blockEnd = new Date(date + 'T00:00:00');
       blockEnd.setHours(Math.floor(block.end_minutes / 60), block.end_minutes % 60, 0, 0);
-      
-      // Solapamiento
       return eventStart < blockEnd && eventEnd > blockStart;
     });
+  };
 
-    // Verificar duración
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const availableBlocks = allBlocks.filter(block => {
+    // Debe durar al menos meeting_duration
     const blockDuration = block.end_minutes - block.start_minutes;
     if (blockDuration < meetingDuration) return false;
 
-    // Verificar que el bloque no haya terminado (si es hoy)
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    // Si es hoy, que aún no haya pasado y quede tiempo suficiente
     if (date === todayStr) {
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
       if (block.end_minutes <= currentMinutes) return false;
-      const remainingMinutes = block.end_minutes - currentMinutes;
-      if (remainingMinutes < meetingDuration) return false;
+      const remaining = block.end_minutes - currentMinutes;
+      if (remaining < meetingDuration) return false;
     }
 
-    return !isOccupied;
+    // No debe solaparse con un evento existente
+    if (isBlockOccupied(block)) return false;
+
+    return true;
   });
 
   res.json({ blocks: availableBlocks });
@@ -116,9 +127,8 @@ router.post('/:token', (req, res) => {
     meeting_address: ''
   };
 
-  // Validaciones básicas
-  if (!title || !date || !blockId) {
-    // Obtener bloques para renderizar de nuevo (para el formulario)
+  // Helper local para re-renderizar el formulario con error
+  const renderError = (errorMsg, eventData) => {
     const blocks = AvailabilityBlock.findByUser(userId);
     const blocksByDay = {};
     for (let i = 1; i <= 7; i++) {
@@ -126,96 +136,55 @@ router.post('/:token', (req, res) => {
     }
     return res.render('invite', {
       token,
-      error: 'Título, fecha y bloque son obligatorios.',
-      eventData: { title, description, date, blockId },
+      error: errorMsg,
+      eventData,
       meetingDuration: pref.meeting_duration,
       contactPhone: pref.contact_phone || '',
       meetingAddress: pref.meeting_address || '',
-      blocksByDay: blocksByDay
+      blocksByDay
     });
+  };
+
+  // Validaciones básicas
+  if (!title || !date || !blockId) {
+    return renderError('Título, fecha y bloque son obligatorios.', { title, description, date, blockId });
   }
 
   // Obtener el bloque seleccionado
   const block = AvailabilityBlock.findByUser(userId).find(b => b.id === parseInt(blockId));
   if (!block) {
-    const blocks = AvailabilityBlock.findByUser(userId);
-    const blocksByDay = {};
-    for (let i = 1; i <= 7; i++) {
-      blocksByDay[i] = blocks.filter(b => b.day_of_week === i);
-    }
-    return res.render('invite', {
-      token,
-      error: 'El bloque seleccionado no es válido.',
-      eventData: { title, description, date, blockId },
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || '',
-      meetingAddress: pref.meeting_address || '',
-      blocksByDay: blocksByDay
-    });
+    return renderError('El bloque seleccionado no es válido.', { title, description, date, blockId });
   }
 
   // Validar que la fecha seleccionada corresponda al día de la semana del bloque
   const selectedDate = new Date(date + 'T00:00:00');
   const dayOfWeek = selectedDate.getDay(); // 0=domingo, 1=lunes...
-  let ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+  const ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
   if (block.day_of_week !== ourDay) {
-    const blocks = AvailabilityBlock.findByUser(userId);
-    const blocksByDay = {};
-    for (let i = 1; i <= 7; i++) {
-      blocksByDay[i] = blocks.filter(b => b.day_of_week === i);
-    }
-    return res.render('invite', {
-      token,
-      error: 'El bloque seleccionado no corresponde al día de la fecha elegida.',
-      eventData: { title, description, date, blockId },
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || '',
-      meetingAddress: pref.meeting_address || '',
-      blocksByDay: blocksByDay
-    });
+    return renderError('El bloque seleccionado no corresponde al día de la fecha elegida.', { title, description, date, blockId });
   }
 
   // Validar que el bloque no haya pasado y que quepa la reunión
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   if (date === todayStr) {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     if (block.end_minutes <= currentMinutes) {
-      const blocks = AvailabilityBlock.findByUser(userId);
-      const blocksByDay = {};
-      for (let i = 1; i <= 7; i++) {
-        blocksByDay[i] = blocks.filter(b => b.day_of_week === i);
-      }
-      return res.render('invite', {
-        token,
-        error: 'Este bloque ya ha terminado para hoy. Por favor, selecciona otro día o bloque.',
-        eventData: { title, description, date, blockId },
-        meetingDuration: pref.meeting_duration,
-        contactPhone: pref.contact_phone || '',
-        meetingAddress: pref.meeting_address || '',
-        blocksByDay: blocksByDay
-      });
+      return renderError(
+        'Este bloque ya ha terminado para hoy. Por favor, selecciona otro día o bloque.',
+        { title, description, date, blockId }
+      );
     }
     const remainingMinutes = block.end_minutes - currentMinutes;
     if (remainingMinutes < pref.meeting_duration) {
-      const blocks = AvailabilityBlock.findByUser(userId);
-      const blocksByDay = {};
-      for (let i = 1; i <= 7; i++) {
-        blocksByDay[i] = blocks.filter(b => b.day_of_week === i);
-      }
-      return res.render('invite', {
-        token,
-        error: `El tiempo restante del bloque (${Math.floor(remainingMinutes/60)}h ${remainingMinutes%60}min) es insuficiente para la duración de la reunión (${Math.floor(pref.meeting_duration/60)}h ${pref.meeting_duration%60}min). Por favor, selecciona otro bloque.`,
-        eventData: { title, description, date, blockId },
-        meetingDuration: pref.meeting_duration,
-        contactPhone: pref.contact_phone || '',
-        meetingAddress: pref.meeting_address || '',
-        blocksByDay: blocksByDay
-      });
+      return renderError(
+        `El tiempo restante del bloque (${Math.floor(remainingMinutes / 60)}h ${remainingMinutes % 60}min) es insuficiente para la duración de la reunión (${Math.floor(pref.meeting_duration / 60)}h ${pref.meeting_duration % 60}min). Por favor, selecciona otro bloque.`,
+        { title, description, date, blockId }
+      );
     }
   }
 
-  // Verificar solapamiento con eventos existentes (doble verificación)
+  // Calcular inicio y fin del evento
   const startDate = new Date(date + 'T00:00:00');
   startDate.setHours(Math.floor(block.start_minutes / 60), block.start_minutes % 60, 0, 0);
   const endDate = new Date(startDate);
@@ -223,20 +192,10 @@ router.post('/:token', (req, res) => {
 
   const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
   if (endMinutes > block.end_minutes) {
-    const blocks = AvailabilityBlock.findByUser(userId);
-    const blocksByDay = {};
-    for (let i = 1; i <= 7; i++) {
-      blocksByDay[i] = blocks.filter(b => b.day_of_week === i);
-    }
-    return res.render('invite', {
-      token,
-      error: 'La duración de la reunión excede el bloque de disponibilidad. Por favor, elige otro bloque o reduce la duración.',
-      eventData: { title, description, date, blockId },
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || '',
-      meetingAddress: pref.meeting_address || '',
-      blocksByDay: blocksByDay
-    });
+    return renderError(
+      'La duración de la reunión excede el bloque de disponibilidad. Por favor, elige otro bloque o reduce la duración.',
+      { title, description, date, blockId }
+    );
   }
 
   const pad = n => String(n).padStart(2, '0');
@@ -257,25 +216,15 @@ router.post('/:token', (req, res) => {
   const result = conflictStmt.get(userId, endStr, startStr, startStr, endStr, startStr, endStr);
 
   if (result.count > 0) {
-    const blocks = AvailabilityBlock.findByUser(userId);
-    const blocksByDay = {};
-    for (let i = 1; i <= 7; i++) {
-      blocksByDay[i] = blocks.filter(b => b.day_of_week === i);
-    }
-    return res.render('invite', {
-      token,
-      error: 'La franja horaria seleccionada coincide con otro evento existente. Por favor, elige otro bloque.',
-      eventData: { title, description, date, blockId },
-      meetingDuration: pref.meeting_duration,
-      contactPhone: pref.contact_phone || '',
-      meetingAddress: pref.meeting_address || '',
-      blocksByDay: blocksByDay
-    });
+    return renderError(
+      'La franja horaria seleccionada coincide con otro evento existente. Por favor, elige otro bloque.',
+      { title, description, date, blockId }
+    );
   }
 
   // Crear evento
   try {
-    const eventId = Event.create({
+    Event.create({
       userId,
       title,
       description,
