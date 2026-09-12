@@ -1298,7 +1298,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== DISPONIBILIDAD HORARIA ==========
+    // ========== DISPONIBILIDAD HORARIA ==========
   const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   let availabilityBlocks = [];
 
@@ -1313,79 +1313,204 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // Genera las <option> para un select de hora (incrementos de 15 min)
+  // Si isEnd es true, incluye la opción 24:00 (útil para el fin de bloque)
+  function renderTimeOptions(selectedMinutes, isEnd = false) {
+    const maxMinutes = isEnd ? 24 * 60 : 24 * 60 - 15;
+    let html = '';
+    for (let m = 0; m <= maxMinutes; m += 15) {
+      const label = m === 1440 ? '24:00' : minutesToTime(m);
+      const sel = m === selectedMinutes ? ' selected' : '';
+      html += `<option value="${m}"${sel}>${label}</option>`;
+    }
+    return html;
+  }
+
+  // Fila de un bloque individual (2 selects + botón eliminar)
+  function renderBlockRow(block) {
+    return `
+      <div class="row g-2 mb-2 align-items-center block-row" data-block-id="${block.id}">
+        <div class="col-5">
+          <select class="form-select form-select-sm block-start" aria-label="Hora de inicio">
+            ${renderTimeOptions(block.start_minutes, false)}
+          </select>
+        </div>
+        <div class="col-5">
+          <select class="form-select form-select-sm block-end" aria-label="Hora de fin">
+            ${renderTimeOptions(block.end_minutes, true)}
+          </select>
+        </div>
+        <div class="col-2 text-end">
+          <button class="btn btn-sm btn-outline-danger delete-block-btn" data-id="${block.id}" title="Eliminar bloque">🗑️</button>
+        </div>
+      </div>
+    `;
+  }
+
   function renderAvailability() {
     if (!availabilityContainer) return;
     let html = '';
     for (let i = 1; i <= 7; i++) {
       const dayBlocks = availabilityBlocks.filter(b => b.day_of_week === i);
+      const otherDays = [1,2,3,4,5,6,7].filter(d => d !== i);
+
       html += `
-        <div class="card mb-2">
-          <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card mb-2 availability-day-card" data-day="${i}">
+          <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
             <strong>${dayNames[i-1]}</strong>
-            <button class="btn btn-sm btn-outline-primary add-block-btn" data-day="${i}">+ Agregar bloque</button>
+            <div class="d-flex gap-2 flex-wrap">
+              <button class="btn btn-sm btn-outline-secondary copy-day-btn" data-day="${i}" title="Copiar los bloques de este día a otros días">
+                📋 Copiar a...
+              </button>
+              <button class="btn btn-sm btn-outline-primary add-block-btn" data-day="${i}">+ Agregar bloque</button>
+            </div>
           </div>
-          <div class="card-body">
-            <div id="day-blocks-${i}">
-      `;
-      if (dayBlocks.length === 0) {
-        html += `<p class="text-muted small">Sin bloques configurados</p>`;
-      } else {
-        dayBlocks.forEach((block) => {
-          const startTime = minutesToTime(block.start_minutes);
-          const endTime = minutesToTime(block.end_minutes);
-          html += `
-            <div class="row g-2 mb-2 align-items-center block-row" data-block-id="${block.id}">
-              <div class="col-4">
-                <input type="time" class="form-control form-control-sm block-start" value="${startTime}" step="900" />
+
+          <div class="copy-panel" data-day="${i}" style="display:none;">
+            <div class="copy-panel-inner">
+              <div class="small text-muted mb-2">
+                ${dayBlocks.length === 0
+                  ? 'Este día no tiene bloques para copiar.'
+                  : `Copiar <strong>${dayBlocks.length}</strong> bloque(s) de <strong>${dayNames[i-1]}</strong> a:`}
               </div>
-              <div class="col-4">
-                <input type="time" class="form-control form-control-sm block-end" value="${endTime}" step="900" />
+              <div class="copy-days-grid">
+                ${otherDays.map(d => `
+                  <label class="copy-day-option">
+                    <input type="checkbox" class="copy-target-checkbox" data-source="${i}" value="${d}">
+                    <span>${dayNames[d-1]}</span>
+                  </label>
+                `).join('')}
               </div>
-              <div class="col-4">
-                <button class="btn btn-sm btn-outline-danger delete-block-btn" data-id="${block.id}">🗑️</button>
+              <div class="d-flex justify-content-end gap-2 mt-2">
+                <button class="btn btn-sm btn-outline-secondary copy-cancel-btn" data-day="${i}">Cancelar</button>
+                <button class="btn btn-sm btn-primary copy-confirm-btn" data-day="${i}" ${dayBlocks.length === 0 ? 'disabled' : ''}>Copiar</button>
               </div>
             </div>
-          `;
-        });
-      }
-      html += `
+          </div>
+
+          <div class="card-body">
+            <div id="day-blocks-${i}">
+              ${dayBlocks.length === 0
+                ? '<p class="text-muted small mb-0">Sin bloques configurados</p>'
+                : dayBlocks.map(renderBlockRow).join('')}
             </div>
           </div>
         </div>
       `;
     }
     availabilityContainer.innerHTML = html;
+    attachAvailabilityListeners();
+  }
 
-    // Event listeners para botones de agregar
+  function attachAvailabilityListeners() {
+    // Agregar bloque
     document.querySelectorAll('.add-block-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
-        const day = parseInt(this.dataset.day);
-        addBlock(day);
+        addBlock(parseInt(this.dataset.day));
       });
     });
 
-    // Event listeners para eliminar
+    // Eliminar bloque
     document.querySelectorAll('.delete-block-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
         const id = parseInt(this.dataset.id);
-        if (confirm('¿Eliminar este bloque?')) {
-          deleteBlock(id);
+        if (confirm('¿Eliminar este bloque?')) deleteBlock(id);
+      });
+    });
+
+    // Cambiar hora (selects)
+    document.querySelectorAll('.block-start, .block-end').forEach(select => {
+      select.addEventListener('change', function() {
+        const row = this.closest('.block-row');
+        const id = parseInt(row.dataset.blockId);
+        const startMinutes = parseInt(row.querySelector('.block-start').value);
+        const endMinutes = parseInt(row.querySelector('.block-end').value);
+
+        if (startMinutes >= endMinutes) {
+          alert('La hora de inicio debe ser anterior a la de fin.');
+          loadAvailability(); // revertir
+          return;
+        }
+        updateBlock(id, startMinutes, endMinutes);
+      });
+    });
+
+    // Abrir/cerrar panel de copiar
+    document.querySelectorAll('.copy-day-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const day = parseInt(this.dataset.day);
+        document.querySelectorAll('.copy-panel').forEach(p => {
+          if (parseInt(p.dataset.day) === day) {
+            p.style.display = p.style.display === 'none' ? 'block' : 'none';
+          } else {
+            p.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Cancelar copia
+    document.querySelectorAll('.copy-cancel-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const day = parseInt(this.dataset.day);
+        const panel = document.querySelector(`.copy-panel[data-day="${day}"]`);
+        if (panel) {
+          panel.style.display = 'none';
+          panel.querySelectorAll('.copy-target-checkbox').forEach(cb => cb.checked = false);
         }
       });
     });
 
-    // Event listeners para guardar cambios al modificar hora
-    document.querySelectorAll('.block-start, .block-end').forEach(input => {
-      input.addEventListener('change', function() {
-        const row = this.closest('.block-row');
-        const id = parseInt(row.dataset.blockId);
-        const startInput = row.querySelector('.block-start');
-        const endInput = row.querySelector('.block-end');
-        const startMinutes = timeToMinutes(startInput.value);
-        const endMinutes = timeToMinutes(endInput.value);
-        updateBlock(id, startMinutes, endMinutes);
+    // Confirmar copia
+    document.querySelectorAll('.copy-confirm-btn').forEach(btn => {
+      btn.addEventListener('click', async function(e) {
+        e.stopPropagation();
+        const fromDay = parseInt(this.dataset.day);
+        const panel = document.querySelector(`.copy-panel[data-day="${fromDay}"]`);
+        const targets = [...panel.querySelectorAll('.copy-target-checkbox:checked')]
+          .map(cb => parseInt(cb.value));
+
+        if (targets.length === 0) {
+          alert('Selecciona al menos un día destino.');
+          return;
+        }
+
+        const sourceCount = availabilityBlocks.filter(b => b.day_of_week === fromDay).length;
+        if (sourceCount === 0) {
+          alert('Este día no tiene bloques para copiar.');
+          return;
+        }
+
+        const daysWithBlocks = targets.filter(d =>
+          availabilityBlocks.some(b => b.day_of_week === d)
+        );
+        if (daysWithBlocks.length > 0) {
+          const names = daysWithBlocks.map(d => dayNames[d-1]).join(', ');
+          if (!confirm(`Los siguientes días ya tienen bloques y serán reemplazados: ${names}.\n¿Continuar?`)) {
+            return;
+          }
+        }
+
+        try {
+          const res = await fetch('/api/availability/copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fromDay, toDays: targets, replaceExisting: true })
+          });
+          if (res.ok) {
+            await loadAvailability();
+          } else {
+            const err = await res.json();
+            alert('Error al copiar: ' + (err.error || 'desconocido'));
+          }
+        } catch (error) {
+          console.error('Error copiando bloques:', error);
+          alert('Error al copiar bloques');
+        }
       });
     });
   }
@@ -1396,23 +1521,16 @@ document.addEventListener('DOMContentLoaded', function() {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
-  function timeToMinutes(timeStr) {
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
-  }
-
   async function addBlock(dayOfWeek) {
     try {
-      // Obtener el último bloque del día para sugerir hora
       const dayBlocks = availabilityBlocks.filter(b => b.day_of_week === dayOfWeek);
-      let startMinutes = 480; // 8am por defecto
-      let endMinutes = 540;   // 9am
+      let startMinutes = 480; // 08:00
+      let endMinutes = 540;   // 09:00
       if (dayBlocks.length > 0) {
         const last = dayBlocks[dayBlocks.length - 1];
         startMinutes = last.end_minutes;
         endMinutes = Math.min(startMinutes + 60, 1380);
       }
-      
       const res = await fetch('/api/availability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1434,7 +1552,6 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const block = availabilityBlocks.find(b => b.id === id);
       if (!block) return;
-      
       const res = await fetch(`/api/availability/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1449,7 +1566,7 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         const err = await res.json();
         alert('Error al actualizar bloque: ' + (err.error || 'desconocido'));
-        await loadAvailability(); // recargar para revertir
+        await loadAvailability();
       }
     } catch (error) {
       console.error('Error actualizando bloque:', error);
