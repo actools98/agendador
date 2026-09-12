@@ -374,6 +374,15 @@ h1, h2, h3, h4, h5, h6, p, span, a {
 .week-event-block:hover {
   opacity: 0.85;
 }
+.week-day-cell {
+  overflow: visible; /* Permite que eventos largos sobresalgan hacia la fila siguiente */
+}
+.week-day-cell.has-event {
+  z-index: 10; /* Eleva la celda con eventos para que sus eventos cubran filas posteriores */
+}
+.week-event-block {
+  z-index: 20; /* Ya existía en z-index 5; lo subimos para garantizar que va por encima del resto */
+}
 
 /* ============================================================
    VISTA AÑO - 3 COLUMNAS (CORREGIDO)
