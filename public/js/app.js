@@ -1,6 +1,17 @@
 document.addEventListener('DOMContentLoaded', function() {
   'use strict';
 
+  // ========== HELPERS DE FECHA ==========
+  // Formatea una fecha como YYYY-MM-DD usando componentes locales.
+  // NO usa toISOString() para evitar corrimientos en zonas horarias positivas.
+  function formatDateLocal(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
   // ========== ESTADO ==========
   let currentDate = new Date();
   let currentView = 'month';
@@ -34,14 +45,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const modalDetail = new bootstrap.Modal($('#eventDetailModal'));
   const availabilityModal = new bootstrap.Modal($('#availabilityModal'));
 
-  // Elementos configuración (SOLO LOS QUE SE USAN AHORA)
+  // Configuración
   const timeFormatSelect = $('#timeFormatSelect');
   const themeSelect = $('#themeSelect');
   const saveSettingsBtn = $('#saveSettingsBtn');
   const meetingDurationSelect = $('#meetingDuration');
   const contactPhoneInput = $('#contactPhone');
 
-  // Elementos categorías
+  // Categorías
   const categoriasList = $('#categoriasList');
   const categoriaForm = $('#categoriaForm');
   const categoriaEditId = $('#categoriaEditId');
@@ -50,16 +61,16 @@ document.addEventListener('DOMContentLoaded', function() {
   const categoriaSaveBtn = $('#categoriaSaveBtn');
   const categoriaError = $('#categoriaError');
 
-  // Elementos evento (edición)
+  // Evento (edición)
   const modalTitle = $('#modalTitle');
   const form = $('#eventForm');
   const eventIdInput = $('#eventId');
   const titleInput = $('#title');
   const descriptionInput = $('#description');
-const startDateInput = $('#startDate');
-const startTimeSelect = $('#startTime');
-const endDateInput = $('#endDate');
-const endTimeSelect = $('#endTime');
+  const startDateInput = $('#startDate');
+  const startTimeSelect = $('#startTime');
+  const endDateInput = $('#endDate');
+  const endTimeSelect = $('#endTime');
   const allDayInput = $('#allDay');
   const colorInput = $('#color');
   const statusSelect = $('#eventStatus');
@@ -69,7 +80,7 @@ const endTimeSelect = $('#endTime');
   const saveBtn = $('#saveEventBtn');
   const deleteBtn = $('#deleteEventBtn');
 
-  // Elementos detalle
+  // Detalle
   const detailTitle = $('#detailTitle');
   const detailDescription = $('#detailDescription');
   const detailCategory = $('#detailCategory');
@@ -81,7 +92,7 @@ const endTimeSelect = $('#endTime');
   const detailAddress = $('#detailAddress');
   const editFromDetailBtn = $('#editFromDetailBtn');
 
-  // Elementos disponibilidad
+  // Disponibilidad
   const availabilityContainer = $('#availabilityContainer');
   const availabilityBtn = document.getElementById('availabilityBtnDesktop');
 
@@ -89,27 +100,25 @@ const endTimeSelect = $('#endTime');
   let finishedVisible = false;
   let currentDetailEventId = null;
 
-  // ========== FUNCIONES DE FORMATO DE HORA ==========
+  // ========== FORMATO DE HORA ==========
   function formatTime(date, format = timeFormat) {
     if (format === '12') {
       let hours = date.getHours();
       const minutes = date.getMinutes();
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12 || 12;
-      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+      return `${pad2(hours)}:${pad2(minutes)} ${ampm}`;
     }
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
-
   function formatDateTime(date) {
     return date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + formatTime(date);
   }
-
   function formatTimeRange(start, end) {
     return `${formatTime(start)} - ${formatTime(end)}`;
   }
 
-  // ========== APLICAR TEMA ==========
+  // ========== TEMA ==========
   function applyTheme(theme) {
     if (theme === 'oscuro') {
       document.body.classList.add('theme-dark');
@@ -118,7 +127,7 @@ const endTimeSelect = $('#endTime');
     }
   }
 
-  // ========== PREFERENCIAS (SOLO CAMPOS ACTUALES) ==========
+  // ========== PREFERENCIAS ==========
   async function loadPreferences() {
     try {
       const res = await fetch('/api/preferencias');
@@ -128,18 +137,11 @@ const endTimeSelect = $('#endTime');
       tema = data.tema || 'claro';
       applyTheme(tema);
 
-      if (meetingDurationSelect) {
-        meetingDurationSelect.value = data.meeting_duration || 60;
-      }
-      if (contactPhoneInput) {
-        contactPhoneInput.value = data.contact_phone || '';
-      }
+      if (meetingDurationSelect) meetingDurationSelect.value = data.meeting_duration || 60;
+      if (contactPhoneInput) contactPhoneInput.value = data.contact_phone || '';
 
-      // Cargar dirección usando getElementById
       const addressInput = document.getElementById('meetingAddress');
-      if (addressInput) {
-        addressInput.value = data.meeting_address || '';
-      }
+      if (addressInput) addressInput.value = data.meeting_address || '';
     } catch (error) {
       console.error('Error cargando preferencias:', error);
       timeFormat = '24';
@@ -149,7 +151,6 @@ const endTimeSelect = $('#endTime');
   }
 
   async function savePreferences() {
-    // Obtener el valor de la dirección directamente del DOM
     const addressInput = document.getElementById('meetingAddress');
     const meetingAddress = addressInput ? addressInput.value.trim() : '';
 
@@ -167,9 +168,8 @@ const endTimeSelect = $('#endTime');
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        window.location.reload();
-      } else {
+      if (res.ok) window.location.reload();
+      else {
         const err = await res.json();
         alert('Error al guardar: ' + (err.error || 'desconocido'));
       }
@@ -186,9 +186,7 @@ const endTimeSelect = $('#endTime');
       if (!res.ok) throw new Error('Error al cargar categorías');
       categorias = await res.json();
       populateCategoriaSelect();
-      if (categoriasModal._element.classList.contains('show')) {
-        renderCategoriasList();
-      }
+      if (categoriasModal._element.classList.contains('show')) renderCategoriasList();
     } catch (error) {
       console.error('Error cargando categorías:', error);
     }
@@ -213,9 +211,7 @@ const endTimeSelect = $('#endTime');
       const catId = parseInt(this.value);
       if (!catId) return;
       const cat = categorias.find(c => c.id === catId);
-      if (cat && cat.color) {
-        colorInput.value = cat.color;
-      }
+      if (cat && cat.color) colorInput.value = cat.color;
     });
   }
 
@@ -261,9 +257,7 @@ const endTimeSelect = $('#endTime');
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
         const id = parseInt(this.dataset.id);
-        if (confirm('¿Eliminar esta categoría? Los eventos que la usen quedarán sin categoría.')) {
-          deleteCategoria(id);
-        }
+        if (confirm('¿Eliminar esta categoría? Los eventos que la usen quedarán sin categoría.')) deleteCategoria(id);
       });
     });
   }
@@ -273,23 +267,16 @@ const endTimeSelect = $('#endTime');
     const id = categoriaEditId.value;
     const nombre = categoriaNombre.value.trim();
     const color = categoriaColor.value;
-
     if (!nombre) {
       categoriaError.textContent = 'El nombre es obligatorio.';
       categoriaError.style.display = 'block';
       return;
     }
-
     const payload = { nombre, color };
     const url = id ? `/api/categorias/${id}` : '/api/categorias';
     const method = id ? 'PUT' : 'POST';
-
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (res.ok) {
         categoriaEditId.value = '';
         categoriaNombre.value = '';
@@ -343,7 +330,6 @@ const endTimeSelect = $('#endTime');
     }
   }
 
-  // ========== RENDER LISTAS ==========
   function renderEventList() {
     if (!eventListEl) return;
     if (events.length === 0) {
@@ -379,7 +365,6 @@ const endTimeSelect = $('#endTime');
         openDetailModal(id);
       });
     });
-
     $$('.edit-event', eventListEl).forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -434,7 +419,6 @@ const endTimeSelect = $('#endTime');
         openDetailModal(id);
       });
     });
-
     $$('.edit-event-finished', finishedListEl).forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -459,53 +443,39 @@ const endTimeSelect = $('#endTime');
       case 'year':  renderYearView(); break;
       default: renderMonthView();
     }
-    if (currentView === 'day' || currentView === 'week') {
-      startRedLineUpdater();
-    } else {
-      stopRedLineUpdater();
-    }
+    if (currentView === 'day' || currentView === 'week') startRedLineUpdater();
+    else stopRedLineUpdater();
   }
 
   // ========== LÍNEA ROJA ==========
   let redLineInterval = null;
-
   function startRedLineUpdater() {
     if (redLineInterval) return;
-    redLineInterval = setInterval(() => {
-      updateRedLine();
-    }, 60000);
+    redLineInterval = setInterval(() => updateRedLine(), 60000);
   }
-
   function stopRedLineUpdater() {
-    if (redLineInterval) {
-      clearInterval(redLineInterval);
-      redLineInterval = null;
-    }
+    if (redLineInterval) { clearInterval(redLineInterval); redLineInterval = null; }
   }
-
   function updateRedLine() {
     const lines = document.querySelectorAll('.current-time-line');
     if (lines.length === 0) return;
     const now = new Date();
     const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
-    const totalMinutes = 24 * 60;
-    const topPercent = (minutesSinceMidnight / totalMinutes) * 100;
-    lines.forEach(line => {
-      line.style.top = `${Math.min(100, topPercent)}%`;
-    });
+    const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
+    lines.forEach(line => { line.style.top = `${Math.min(100, topPercent)}%`; });
   }
 
   // ========== VISTA DÍA ==========
   function renderDayView() {
     const date = currentDate;
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(date);
     const dayEvents = events.filter(e => e.start.startsWith(dateStr));
     const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
     const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
+
     const weekday = date.toLocaleDateString('es-ES', { weekday: 'long' });
     const monthShort = date.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
-    
-  viewTitle.textContent = `${weekday}, ${date.getDate()} ${monthShort} ${date.getFullYear()}`;
+    viewTitle.textContent = `${weekday}, ${date.getDate()} ${monthShort} ${date.getFullYear()}`;
 
     const totalHeight = 24 * HOUR_HEIGHT;
     let html = `<div class="day-time-grid">`;
@@ -513,11 +483,7 @@ const endTimeSelect = $('#endTime');
     if (allDayEvents.length > 0) {
       html += `<div class="all-day-events-section">`;
       allDayEvents.forEach(e => {
-        html += `
-          <div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'};" data-id="${e.id}">
-            ${e.title}
-          </div>
-        `;
+        html += `<div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'};" data-id="${e.id}">${e.title}</div>`;
       });
       html += `</div>`;
     }
@@ -529,9 +495,9 @@ const endTimeSelect = $('#endTime');
       if (timeFormat === '12') {
         const hour12 = hour % 12 || 12;
         const ampm = hour >= 12 ? 'PM' : 'AM';
-        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
+        label = `${pad2(hour12)}:00 ${ampm}`;
       } else {
-        label = `${String(hour).padStart(2, '0')}:00`;
+        label = `${pad2(hour)}:00`;
       }
       html += `<div class="day-hour-label" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px;">${label}</div>`;
     }
@@ -542,14 +508,12 @@ const endTimeSelect = $('#endTime');
       html += `<div class="day-hour-slot" data-hour="${hour}" style="height: ${HOUR_HEIGHT}px; border-bottom: 1px solid var(--slot-border, #dee2e6);"></div>`;
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatDateLocal(new Date());
     if (dateStr === todayStr) {
       const now = new Date();
       const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
       const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
-      html += `
-        <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
-      `;
+      html += `<div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>`;
     }
 
     if (timedEvents.length > 0) {
@@ -564,7 +528,8 @@ const endTimeSelect = $('#endTime');
         const start = new Date(e.start);
         const end = new Date(e.end);
         const startMinutes = start.getHours() * 60 + start.getMinutes();
-        const endMinutes = end.getHours() * 60 + end.getMinutes();
+        let endMinutes = end.getHours() * 60 + end.getMinutes();
+        if (endMinutes <= startMinutes) endMinutes = 24 * 60;
         const duration = endMinutes - startMinutes;
         const top = (startMinutes / (24 * 60)) * 100;
         const height = (duration / (24 * 60)) * 100;
@@ -577,9 +542,8 @@ const endTimeSelect = $('#endTime');
         const left = index * (80 / totalInHour);
 
         const timeStr = formatTimeRange(start, end);
-
         html += `
-          <div class="day-event-block" 
+          <div class="day-event-block"
                style="top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
                data-id="${e.id}"
                title="${e.title} (${timeStr})">
@@ -597,23 +561,68 @@ const endTimeSelect = $('#endTime');
         const hour = parseInt(this.dataset.hour);
         const dateObj = new Date(currentDate);
         dateObj.setHours(hour, 0, 0, 0);
-        openCreateModal(dateObj.toISOString().split('T')[0], hour);
+        openCreateModal(formatDateLocal(dateObj), hour);
       });
     });
     $$('.all-day-event-badge').forEach(el => {
-      el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        openDetailModal(parseInt(this.dataset.id));
-      });
+      el.addEventListener('click', function(e) { e.stopPropagation(); openDetailModal(parseInt(this.dataset.id)); });
     });
     $$('.day-event-block').forEach(el => {
-      el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        openDetailModal(parseInt(this.dataset.id));
-      });
+      el.addEventListener('click', function(e) { e.stopPropagation(); openDetailModal(parseInt(this.dataset.id)); });
     });
   }
+
   // ========== VISTA SEMANA ==========
+  // Asigna columnas a eventos solapados por clusters. Cada cluster comparte el ancho.
+  function computeEventColumns(dayEvents) {
+    const eventMap = new Map();
+    if (dayEvents.length === 0) return { eventMap };
+
+    const startOf = (e) => { const d = new Date(e.start); return d.getHours() * 60 + d.getMinutes(); };
+    const endOf = (e) => {
+      const s = new Date(e.start), en = new Date(e.end);
+      const sMin = s.getHours() * 60 + s.getMinutes();
+      let eMin = en.getHours() * 60 + en.getMinutes();
+      if (eMin <= sMin) eMin = 24 * 60;
+      return eMin;
+    };
+
+    const sorted = [...dayEvents].sort((a, b) => startOf(a) - startOf(b));
+
+    // Construir clusters de eventos que se solapan de forma transitiva
+    const clusters = [];
+    let current = [sorted[0]];
+    let clusterEnd = endOf(sorted[0]);
+    for (let i = 1; i < sorted.length; i++) {
+      const e = sorted[i];
+      if (startOf(e) < clusterEnd) {
+        current.push(e);
+        clusterEnd = Math.max(clusterEnd, endOf(e));
+      } else {
+        clusters.push(current);
+        current = [e];
+        clusterEnd = endOf(e);
+      }
+    }
+    clusters.push(current);
+
+    // Asignar columna dentro de cada cluster (greedy)
+    for (const cluster of clusters) {
+      const colEnds = [];
+      for (const e of cluster) {
+        const s = startOf(e);
+        let col = 0;
+        while (col < colEnds.length && colEnds[col] > s) col++;
+        colEnds[col] = endOf(e);
+        eventMap.set(e.id, { col, clusterSize: 0 });
+      }
+      const total = colEnds.length;
+      for (const e of cluster) eventMap.get(e.id).clusterSize = total;
+    }
+
+    return { eventMap };
+  }
+
   function renderWeekView() {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -622,17 +631,31 @@ const endTimeSelect = $('#endTime');
 
     viewTitle.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
+    const todayStr = formatDateLocal(new Date());
+
+    // Precalcular columnas por día
+    const dayColumns = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const dateStr = formatDateLocal(d);
+      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+      const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
+      dayColumns.push(computeEventColumns(timedEvents));
+    }
+
     let html = `<div class="week-container">`;
     html += `<div class="week-table-scroll">`;
     html += `<table class="week-table">`;
-    
+
+    // thead
     html += `<thead>`;
     html += `<tr>`;
     html += `<th class="week-header-empty"></th>`;
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
-      const isToday = d.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+      const isToday = formatDateLocal(d) === todayStr;
       html += `<th class="week-header-day ${isToday ? 'today' : ''}">${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</th>`;
     }
     html += `</tr>`;
@@ -641,24 +664,19 @@ const endTimeSelect = $('#endTime');
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = formatDateLocal(d);
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
       const allDayEvents = dayEvents.filter(e => e.all_day === 1 || e.all_day === true);
       html += `<td class="week-all-day-cell">`;
-      if (allDayEvents.length > 0) {
-        allDayEvents.forEach(e => {
-          html += `
-            <div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'};" data-id="${e.id}">
-              ${e.title}
-            </div>
-          `;
-        });
-      }
+      allDayEvents.forEach(e => {
+        html += `<div class="all-day-event-badge" style="background-color: ${e.color || '#3788d8'};" data-id="${e.id}">${e.title}</div>`;
+      });
       html += `</td>`;
     }
     html += `</tr>`;
     html += `</thead>`;
-    
+
+    // tbody
     html += `<tbody>`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<tr>`;
@@ -666,66 +684,71 @@ const endTimeSelect = $('#endTime');
       if (timeFormat === '12') {
         const hour12 = hour % 12 || 12;
         const ampm = hour >= 12 ? 'PM' : 'AM';
-        label = `${String(hour12).padStart(2, '0')}:00 ${ampm}`;
+        label = `${pad2(hour12)}:00 ${ampm}`;
       } else {
-        label = `${String(hour).padStart(2, '0')}:00`;
+        label = `${pad2(hour)}:00`;
       }
       html += `<td class="week-hour-label" data-hour="${hour}">${label}</td>`;
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(startOfWeek);
         d.setDate(d.getDate() + i);
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = formatDateLocal(d);
         const dayEvents = events.filter(e => e.start.startsWith(dateStr));
         const timedEvents = dayEvents.filter(e => e.all_day !== 1 && e.all_day !== true);
-        const eventsAtThisHour = timedEvents.filter(e => new Date(e.start).getHours() === hour);
+        const startingThisHour = timedEvents.filter(e => new Date(e.start).getHours() === hour);
+        const hasEvents = startingThisHour.length > 0;
 
-        html += `<td class="week-day-cell" data-date="${dateStr}" data-hour="${hour}">`;
-        
-        const todayStr = new Date().toISOString().split('T')[0];
+        html += `<td class="week-day-cell${hasEvents ? ' has-event' : ''}" data-date="${dateStr}" data-hour="${hour}">`;
+
+        // Línea roja de "ahora"
         if (dateStr === todayStr) {
           const now = new Date();
-          const currentHour = now.getHours();
-          const currentMinute = now.getMinutes();
-          if (hour === currentHour) {
-            const topPercent = (currentMinute / 60) * 100;
-            html += `
-              <div class="current-time-line" style="position: absolute; top: ${Math.min(100, topPercent)}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 10; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>
-            `;
+          if (hour === now.getHours()) {
+            const topPercent = (now.getMinutes() / 60) * 100;
+            html += `<div class="current-time-line" style="position: absolute; top: ${topPercent}%; left: 0; right: 0; height: 2px; background-color: red; z-index: 30; pointer-events: none; box-shadow: 0 0 4px rgba(255,0,0,0.5);"></div>`;
           }
         }
 
-        if (eventsAtThisHour.length > 0) {
-          const sorted = eventsAtThisHour.sort((a, b) => new Date(a.start) - new Date(b.start));
-          const total = sorted.length;
-          sorted.forEach((e, index) => {
-            const start = new Date(e.start);
-            const end = new Date(e.end);
-            const startMin = start.getMinutes();
-            const endMin = end.getMinutes();
-            const duration = endMin - startMin;
-            const top = (startMin / 60) * 100;
-            const height = (duration / 60) * 100;
-            const width = total > 1 ? 80 / total : 100;
-            const left = index * (80 / total);
-            const timeStr = formatTimeRange(start, end);
+        // Eventos que empiezan en esta hora, posicionados con su duración real
+        const colInfo = dayColumns[i];
+        startingThisHour.forEach(e => {
+          const info = colInfo.eventMap.get(e.id);
+          if (!info) return;
 
-            html += `
-              <div class="week-event-block" 
-                   style="position: absolute; top: ${Math.max(0, top)}%; height: ${Math.max(2, height)}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
-                   data-id="${e.id}"
-                   title="${e.title} (${timeStr})">
-                <span class="event-title-inline">${e.title}</span>
-              </div>
-            `;
-          });
-        }
+          const start = new Date(e.start);
+          const end = new Date(e.end);
+          const startTotal = start.getHours() * 60 + start.getMinutes();
+          let endTotal = end.getHours() * 60 + end.getMinutes();
+          if (endTotal <= startTotal) endTotal = 24 * 60;
+
+          const hourStart = hour * 60;
+          const relStart = startTotal - hourStart;
+          const relEnd = endTotal - hourStart;
+          const top = (relStart / 60) * 100;
+          const height = ((relEnd - relStart) / 60) * 100;
+
+          const total = info.clusterSize;
+          const width = total > 1 ? (100 / total) : 100;
+          const left = info.col * width;
+
+          const timeStr = formatTimeRange(start, end);
+          html += `
+            <div class="week-event-block"
+                 style="top: ${top}%; height: ${height}%; left: ${left}%; width: ${width}%; background-color: ${e.color || '#3788d8'};"
+                 data-id="${e.id}"
+                 title="${e.title} (${timeStr})">
+              <span class="event-title-inline">${e.title}</span>
+            </div>
+          `;
+        });
+
         html += `</td>`;
       }
       html += `</tr>`;
     }
     html += `</tbody>`;
-    
+
     html += `</table>`;
     html += `</div>`;
     html += `</div>`;
@@ -741,18 +764,13 @@ const endTimeSelect = $('#endTime');
       });
     });
     $$('.week-event-block').forEach(el => {
-      el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        openDetailModal(parseInt(this.dataset.id));
-      });
+      el.addEventListener('click', function(e) { e.stopPropagation(); openDetailModal(parseInt(this.dataset.id)); });
     });
     $$('.all-day-event-badge').forEach(el => {
-      el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        openDetailModal(parseInt(this.dataset.id));
-      });
+      el.addEventListener('click', function(e) { e.stopPropagation(); openDetailModal(parseInt(this.dataset.id)); });
     });
   }
+
   // ========== VISTA MES ==========
   function renderMonthView() {
     const year = currentDate.getFullYear();
@@ -770,11 +788,12 @@ const endTimeSelect = $('#endTime');
 
     for (let i = 0; i < startDayOfWeek; i++) html += '<div class="day empty"></div>';
 
+    const todayStr = formatDateLocal(new Date());
     for (let day = 1; day <= daysInMonth; day++) {
       const dateObj = new Date(year, month, day);
-      const dateStr = dateObj.toISOString().split('T')[0];
+      const dateStr = formatDateLocal(dateObj);
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
-      const isToday = new Date().toISOString().split('T')[0] === dateStr;
+      const isToday = todayStr === dateStr;
 
       html += `<div class="day ${isToday ? 'today' : ''}" data-year="${year}" data-month="${month}" data-day="${day}" data-date="${dateStr}">`;
       html += `<span class="day-number">${day}</span>`;
@@ -825,12 +844,10 @@ const endTimeSelect = $('#endTime');
       html += `<div class="year-month" data-month="${m}">`;
       html += `<div class="year-month-title">${monthName}</div>`;
       html += `<div class="year-month-days">`;
-      for (let i = 0; i < firstDayOfMonth; i++) {
-        html += `<div class="year-day empty"></div>`;
-      }
+      for (let i = 0; i < firstDayOfMonth; i++) html += `<div class="year-day empty"></div>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(year, m, d);
-        const dateStr = dateObj.toISOString().split('T')[0];
+        const dateStr = formatDateLocal(dateObj);
         const dayEvents = events.filter(e => e.start.startsWith(dateStr));
         const hasEvent = dayEvents.length > 0;
 
@@ -878,10 +895,7 @@ const endTimeSelect = $('#endTime');
   // ========== MODAL DE DETALLE ==========
   function openDetailModal(id) {
     const ev = [...events, ...finishedEvents].find(e => e.id === id);
-    if (!ev) {
-      alert('Evento no encontrado');
-      return;
-    }
+    if (!ev) { alert('Evento no encontrado'); return; }
     currentDetailEventId = id;
 
     detailTitle.textContent = ev.title || '(sin título)';
@@ -909,9 +923,7 @@ const endTimeSelect = $('#endTime');
     detailAllDay.textContent = ev.all_day ? 'Sí' : 'No';
 
     detailLink.textContent = ev.link || 'No disponible';
-    if (ev.link) {
-      detailLink.innerHTML = `<a href="${ev.link}" target="_blank">${ev.link}</a>`;
-    }
+    if (ev.link) detailLink.innerHTML = `<a href="${ev.link}" target="_blank">${ev.link}</a>`;
     detailAddress.textContent = ev.address || 'No disponible';
 
     modalDetail.show();
@@ -920,16 +932,11 @@ const endTimeSelect = $('#endTime');
   editFromDetailBtn.addEventListener('click', function() {
     if (currentDetailEventId) {
       modalDetail.hide();
-      setTimeout(() => {
-        openEditModal(currentDetailEventId);
-      }, 300);
+      setTimeout(() => openEditModal(currentDetailEventId), 300);
     }
   });
 
-    // ========== MODAL DE EDICIÓN/CREACIÓN ==========
-  // Helpers para el selector de fecha + hora
-  function pad2(n) { return String(n).padStart(2, '0'); }
-
+  // ========== MODAL DE EDICIÓN/CREACIÓN ==========
   function buildTimeOptions() {
     let html = '';
     for (let m = 0; m < 24 * 60; m += 15) {
@@ -985,7 +992,6 @@ const endTimeSelect = $('#endTime');
       else startObj.setHours(0, 0, 0, 0);
     } else {
       startObj = new Date();
-      // Redondear a 15 minutos hacia arriba para que coincida con los slots del select
       startObj.setMinutes(Math.ceil(startObj.getMinutes() / 15) * 15, 0, 0);
     }
     const endObj = new Date(startObj);
@@ -1004,10 +1010,7 @@ const endTimeSelect = $('#endTime');
   async function openEditModal(id) {
     try {
       const ev = [...events, ...finishedEvents].find(e => e.id === id);
-      if (!ev) {
-        alert('Evento no encontrado');
-        return;
-      }
+      if (!ev) { alert('Evento no encontrado'); return; }
       initTimeSelectsOnce();
       modalTitle.textContent = 'Editar evento';
       eventIdInput.value = ev.id;
@@ -1030,8 +1033,6 @@ const endTimeSelect = $('#endTime');
     }
   }
 
-  // Sincronización automática: al cambiar la fecha u hora de inicio, se ajusta el fin a +1h
-  // (solo si el usuario no ha tocado el fin manualmente)
   function syncEndWithStart() {
     if (endManuallyChanged) return;
     const startVal = getDateAndTime(startDateInput, startTimeSelect);
@@ -1048,7 +1049,6 @@ const endTimeSelect = $('#endTime');
   endDateInput.addEventListener('change', () => { endManuallyChanged = true; });
   endTimeSelect.addEventListener('change', () => { endManuallyChanged = true; });
 
-  // Botones de duración rápida: fijan el fin a partir del inicio
   document.querySelectorAll('.quick-duration').forEach(btn => {
     btn.addEventListener('click', function() {
       const min = parseInt(this.dataset.min);
@@ -1061,7 +1061,6 @@ const endTimeSelect = $('#endTime');
     });
   });
 
-  // Al abrir el modal, reseteamos el flag para que el auto-ajuste funcione
   modalEvent._element.addEventListener('shown.bs.modal', function() {
     endManuallyChanged = false;
   });
@@ -1083,7 +1082,6 @@ const endTimeSelect = $('#endTime');
       alert('Título, fecha y hora son obligatorios');
       return;
     }
-
     if (new Date(end) <= new Date(start)) {
       alert('La fecha/hora de fin debe ser posterior a la de inicio.');
       return;
@@ -1111,7 +1109,23 @@ const endTimeSelect = $('#endTime');
       alert('Error al guardar');
     }
   }
-  
+
+  async function deleteEvent(id) {
+    try {
+      const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        loadEventsFromServer();
+        modalEvent.hide();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'desconocido'));
+      }
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      alert('Error al eliminar');
+    }
+  }
+
   // ========== NAVEGACIÓN ==========
   function prev() {
     switch (currentView) {
@@ -1122,7 +1136,6 @@ const endTimeSelect = $('#endTime');
     }
     renderView();
   }
-
   function next() {
     switch (currentView) {
       case 'day':   currentDate.setDate(currentDate.getDate() + 1); break;
@@ -1132,11 +1145,9 @@ const endTimeSelect = $('#endTime');
     }
     renderView();
   }
-
   function updateViewButtons() {
     viewBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.view === currentView));
   }
-
   function setView(view) {
     currentView = view;
     updateViewButtons();
@@ -1150,31 +1161,27 @@ const endTimeSelect = $('#endTime');
   function toggleMobileSidebar() {
     if (!sidebarDesktop) return;
     sidebarDesktop.classList.toggle('mobile-open');
-    if (menuToggle) {
-      menuToggle.textContent = sidebarDesktop.classList.contains('mobile-open') ? '✕' : '☰';
-    }
+    if (menuToggle) menuToggle.textContent = sidebarDesktop.classList.contains('mobile-open') ? '✕' : '☰';
   }
 
-  if (menuToggle) {
-    menuToggle.addEventListener('click', toggleMobileSidebar);
-  }
+  if (menuToggle) menuToggle.addEventListener('click', toggleMobileSidebar);
 
   if (sidebarDesktop) {
     sidebarDesktop.addEventListener('click', function(e) {
       if (!this.classList.contains('mobile-open')) return;
       const target = e.target.closest('.btn, a');
       if (target) {
-        if (target.id === 'newEventBtnDesktop' || 
-            target.id === 'categoriasBtnDesktop' || 
+        if (target.id === 'newEventBtnDesktop' ||
+            target.id === 'categoriasBtnDesktop' ||
             target.id === 'settingsBtnDesktop' ||
             target.id === 'toggleFinishedBtnDesktop' ||
             target.id === 'generateInviteBtnDesktop' ||
             target.id === 'availabilityBtnDesktop' ||
-            target.classList.contains('edit-event') || 
-            target.classList.contains('delete-event') || 
-            target.classList.contains('edit-event-finished') || 
+            target.classList.contains('edit-event') ||
+            target.classList.contains('delete-event') ||
+            target.classList.contains('edit-event-finished') ||
             target.classList.contains('delete-event-finished') ||
-            target.classList.contains('edit-categoria') || 
+            target.classList.contains('edit-categoria') ||
             target.classList.contains('delete-categoria')) {
           return;
         }
@@ -1189,9 +1196,7 @@ const endTimeSelect = $('#endTime');
   // ========== EVENT LISTENERS ==========
   function toggleFinishedEvents() {
     finishedVisible = !finishedVisible;
-    if (finishedListEl) {
-      finishedListEl.style.display = finishedVisible ? 'block' : 'none';
-    }
+    if (finishedListEl) finishedListEl.style.display = finishedVisible ? 'block' : 'none';
     const text = finishedVisible ? '📋 Ocultar terminados' : '📋 Eventos terminados';
     const toggleBtn = document.getElementById('toggleFinishedBtn');
     if (toggleBtn) toggleBtn.textContent = text;
@@ -1201,18 +1206,11 @@ const endTimeSelect = $('#endTime');
 
   const toggleFinishedBtnMobile = document.getElementById('toggleFinishedBtn');
   if (toggleFinishedBtnMobile) {
-    toggleFinishedBtnMobile.addEventListener('click', function(e) {
-      e.stopPropagation();
-      toggleFinishedEvents();
-    });
+    toggleFinishedBtnMobile.addEventListener('click', function(e) { e.stopPropagation(); toggleFinishedEvents(); });
   }
-
   const toggleFinishedBtnDesktop = document.getElementById('toggleFinishedBtnDesktop');
   if (toggleFinishedBtnDesktop) {
-    toggleFinishedBtnDesktop.addEventListener('click', function(e) {
-      e.stopPropagation();
-      toggleFinishedEvents();
-    });
+    toggleFinishedBtnDesktop.addEventListener('click', function(e) { e.stopPropagation(); toggleFinishedEvents(); });
   }
 
   if (prevBtn) prevBtn.addEventListener('click', prev);
@@ -1220,9 +1218,7 @@ const endTimeSelect = $('#endTime');
   viewBtns.forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
 
   const newEventBtnDesktop = document.getElementById('newEventBtnDesktop');
-  if (newEventBtnDesktop) {
-    newEventBtnDesktop.addEventListener('click', () => openCreateModal(null));
-  }
+  if (newEventBtnDesktop) newEventBtnDesktop.addEventListener('click', () => openCreateModal(null));
 
   const settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {
@@ -1232,7 +1228,6 @@ const endTimeSelect = $('#endTime');
       settingsModal.show();
     });
   }
-
   const settingsBtnDesktop = document.getElementById('settingsBtnDesktop');
   if (settingsBtnDesktop) {
     settingsBtnDesktop.addEventListener('click', function() {
@@ -1255,7 +1250,6 @@ const endTimeSelect = $('#endTime');
       });
     });
   }
-
   const categoriasBtnDesktop = document.getElementById('categoriasBtnDesktop');
   if (categoriasBtnDesktop) {
     categoriasBtnDesktop.addEventListener('click', function() {
@@ -1287,22 +1281,16 @@ const endTimeSelect = $('#endTime');
     });
   }
 
-  // ========== GENERAR ENLACE DE INVITACIÓN ==========
+  // ========== GENERAR ENLACE ==========
   const generateInviteBtn = document.getElementById('generateInviteBtnDesktop');
   const inviteModalElement = document.getElementById('inviteModal');
   let modalInvite = null;
-
-  if (inviteModalElement) {
-    modalInvite = new bootstrap.Modal(inviteModalElement);
-  }
+  if (inviteModalElement) modalInvite = new bootstrap.Modal(inviteModalElement);
 
   if (generateInviteBtn) {
     generateInviteBtn.addEventListener('click', async function() {
       try {
-        const res = await fetch('/api/generate-invite', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
+        const res = await fetch('/api/generate-invite', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         if (!res.ok) {
           const err = await res.json();
           alert('Error: ' + (err.error || 'desconocido'));
@@ -1310,14 +1298,9 @@ const endTimeSelect = $('#endTime');
         }
         const data = await res.json();
         const linkInput = document.getElementById('inviteLinkInput');
-        if (linkInput) {
-          linkInput.value = data.link;
-        }
-        if (modalInvite) {
-          modalInvite.show();
-        } else {
-          alert('Enlace generado: ' + data.link + '\n(Copia manualmente)');
-        }
+        if (linkInput) linkInput.value = data.link;
+        if (modalInvite) modalInvite.show();
+        else alert('Enlace generado: ' + data.link + '\n(Copia manualmente)');
       } catch (error) {
         console.error('Error generando enlace:', error);
         alert('Error al generar enlace');
@@ -1341,7 +1324,7 @@ const endTimeSelect = $('#endTime');
     });
   }
 
-    // ========== DISPONIBILIDAD HORARIA ==========
+  // ========== DISPONIBILIDAD HORARIA ==========
   const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   let availabilityBlocks = [];
 
@@ -1356,8 +1339,6 @@ const endTimeSelect = $('#endTime');
     }
   }
 
-  // Genera las <option> para un select de hora (incrementos de 15 min)
-  // Si isEnd es true, incluye la opción 24:00 (útil para el fin de bloque)
   function renderTimeOptions(selectedMinutes, isEnd = false) {
     const maxMinutes = isEnd ? 24 * 60 : 24 * 60 - 15;
     let html = '';
@@ -1369,7 +1350,6 @@ const endTimeSelect = $('#endTime');
     return html;
   }
 
-  // Fila de un bloque individual (2 selects + botón eliminar)
   function renderBlockRow(block) {
     return `
       <div class="row g-2 mb-2 align-items-center block-row" data-block-id="${block.id}">
@@ -1395,12 +1375,12 @@ const endTimeSelect = $('#endTime');
     let html = '';
     for (let i = 1; i <= 7; i++) {
       const dayBlocks = availabilityBlocks.filter(b => b.day_of_week === i);
-      const otherDays = [1,2,3,4,5,6,7].filter(d => d !== i);
+      const otherDays = [1, 2, 3, 4, 5, 6, 7].filter(d => d !== i);
 
       html += `
         <div class="card mb-2 availability-day-card" data-day="${i}">
           <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
-            <strong>${dayNames[i-1]}</strong>
+            <strong>${dayNames[i - 1]}</strong>
             <div class="d-flex gap-2 flex-wrap">
               <button class="btn btn-sm btn-outline-secondary copy-day-btn" data-day="${i}" title="Copiar los bloques de este día a otros días">
                 📋 Copiar a...
@@ -1414,13 +1394,13 @@ const endTimeSelect = $('#endTime');
               <div class="small text-muted mb-2">
                 ${dayBlocks.length === 0
                   ? 'Este día no tiene bloques para copiar.'
-                  : `Copiar <strong>${dayBlocks.length}</strong> bloque(s) de <strong>${dayNames[i-1]}</strong> a:`}
+                  : `Copiar <strong>${dayBlocks.length}</strong> bloque(s) de <strong>${dayNames[i - 1]}</strong> a:`}
               </div>
               <div class="copy-days-grid">
                 ${otherDays.map(d => `
                   <label class="copy-day-option">
                     <input type="checkbox" class="copy-target-checkbox" data-source="${i}" value="${d}">
-                    <span>${dayNames[d-1]}</span>
+                    <span>${dayNames[d - 1]}</span>
                   </label>
                 `).join('')}
               </div>
@@ -1446,7 +1426,6 @@ const endTimeSelect = $('#endTime');
   }
 
   function attachAvailabilityListeners() {
-    // Agregar bloque
     document.querySelectorAll('.add-block-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -1454,7 +1433,6 @@ const endTimeSelect = $('#endTime');
       });
     });
 
-    // Eliminar bloque
     document.querySelectorAll('.delete-block-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -1463,7 +1441,6 @@ const endTimeSelect = $('#endTime');
       });
     });
 
-    // Cambiar hora (selects)
     document.querySelectorAll('.block-start, .block-end').forEach(select => {
       select.addEventListener('change', function() {
         const row = this.closest('.block-row');
@@ -1473,14 +1450,13 @@ const endTimeSelect = $('#endTime');
 
         if (startMinutes >= endMinutes) {
           alert('La hora de inicio debe ser anterior a la de fin.');
-          loadAvailability(); // revertir
+          loadAvailability();
           return;
         }
         updateBlock(id, startMinutes, endMinutes);
       });
     });
 
-    // Abrir/cerrar panel de copiar
     document.querySelectorAll('.copy-day-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -1495,7 +1471,6 @@ const endTimeSelect = $('#endTime');
       });
     });
 
-    // Cancelar copia
     document.querySelectorAll('.copy-cancel-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -1508,34 +1483,22 @@ const endTimeSelect = $('#endTime');
       });
     });
 
-    // Confirmar copia
     document.querySelectorAll('.copy-confirm-btn').forEach(btn => {
       btn.addEventListener('click', async function(e) {
         e.stopPropagation();
         const fromDay = parseInt(this.dataset.day);
         const panel = document.querySelector(`.copy-panel[data-day="${fromDay}"]`);
-        const targets = [...panel.querySelectorAll('.copy-target-checkbox:checked')]
-          .map(cb => parseInt(cb.value));
+        const targets = [...panel.querySelectorAll('.copy-target-checkbox:checked')].map(cb => parseInt(cb.value));
 
-        if (targets.length === 0) {
-          alert('Selecciona al menos un día destino.');
-          return;
-        }
+        if (targets.length === 0) { alert('Selecciona al menos un día destino.'); return; }
 
         const sourceCount = availabilityBlocks.filter(b => b.day_of_week === fromDay).length;
-        if (sourceCount === 0) {
-          alert('Este día no tiene bloques para copiar.');
-          return;
-        }
+        if (sourceCount === 0) { alert('Este día no tiene bloques para copiar.'); return; }
 
-        const daysWithBlocks = targets.filter(d =>
-          availabilityBlocks.some(b => b.day_of_week === d)
-        );
+        const daysWithBlocks = targets.filter(d => availabilityBlocks.some(b => b.day_of_week === d));
         if (daysWithBlocks.length > 0) {
-          const names = daysWithBlocks.map(d => dayNames[d-1]).join(', ');
-          if (!confirm(`Los siguientes días ya tienen bloques y serán reemplazados: ${names}.\n¿Continuar?`)) {
-            return;
-          }
+          const names = daysWithBlocks.map(d => dayNames[d - 1]).join(', ');
+          if (!confirm(`Los siguientes días ya tienen bloques y serán reemplazados: ${names}.\n¿Continuar?`)) return;
         }
 
         try {
@@ -1544,9 +1507,8 @@ const endTimeSelect = $('#endTime');
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fromDay, toDays: targets, replaceExisting: true })
           });
-          if (res.ok) {
-            await loadAvailability();
-          } else {
+          if (res.ok) await loadAvailability();
+          else {
             const err = await res.json();
             alert('Error al copiar: ' + (err.error || 'desconocido'));
           }
@@ -1561,14 +1523,14 @@ const endTimeSelect = $('#endTime');
   function minutesToTime(minutes) {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    return `${pad2(h)}:${pad2(m)}`;
   }
 
   async function addBlock(dayOfWeek) {
     try {
       const dayBlocks = availabilityBlocks.filter(b => b.day_of_week === dayOfWeek);
-      let startMinutes = 480; // 08:00
-      let endMinutes = 540;   // 09:00
+      let startMinutes = 480;
+      let endMinutes = 540;
       if (dayBlocks.length > 0) {
         const last = dayBlocks[dayBlocks.length - 1];
         startMinutes = last.end_minutes;
@@ -1579,9 +1541,8 @@ const endTimeSelect = $('#endTime');
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dayOfWeek, startMinutes, endMinutes })
       });
-      if (res.ok) {
-        await loadAvailability();
-      } else {
+      if (res.ok) await loadAvailability();
+      else {
         const err = await res.json();
         alert('Error al agregar bloque: ' + (err.error || 'desconocido'));
       }
@@ -1598,15 +1559,10 @@ const endTimeSelect = $('#endTime');
       const res = await fetch(`/api/availability/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dayOfWeek: block.day_of_week,
-          startMinutes,
-          endMinutes
-        })
+        body: JSON.stringify({ dayOfWeek: block.day_of_week, startMinutes, endMinutes })
       });
-      if (res.ok) {
-        await loadAvailability();
-      } else {
+      if (res.ok) await loadAvailability();
+      else {
         const err = await res.json();
         alert('Error al actualizar bloque: ' + (err.error || 'desconocido'));
         await loadAvailability();
@@ -1620,9 +1576,8 @@ const endTimeSelect = $('#endTime');
   async function deleteBlock(id) {
     try {
       const res = await fetch(`/api/availability/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        await loadAvailability();
-      } else {
+      if (res.ok) await loadAvailability();
+      else {
         const err = await res.json();
         alert('Error al eliminar bloque: ' + (err.error || 'desconocido'));
       }
@@ -1632,12 +1587,9 @@ const endTimeSelect = $('#endTime');
     }
   }
 
-  // Evento para abrir el modal de disponibilidad
   if (availabilityBtn) {
     availabilityBtn.addEventListener('click', function() {
-      loadAvailability().then(() => {
-        availabilityModal.show();
-      });
+      loadAvailability().then(() => availabilityModal.show());
     });
   }
 
