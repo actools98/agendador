@@ -926,8 +926,48 @@ const endTimeSelect = $('#endTime');
     }
   });
 
-  // ========== MODAL DE EDICIÓN/CREACIÓN ==========
+    // ========== MODAL DE EDICIÓN/CREACIÓN ==========
+  // Helpers para el selector de fecha + hora
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function buildTimeOptions() {
+    let html = '';
+    for (let m = 0; m < 24 * 60; m += 15) {
+      html += `<option value="${m}">${pad2(Math.floor(m / 60))}:${pad2(m % 60)}</option>`;
+    }
+    return html;
+  }
+
+  function initTimeSelectsOnce() {
+    if (startTimeSelect.options.length > 0) return;
+    const opts = buildTimeOptions();
+    startTimeSelect.innerHTML = opts;
+    endTimeSelect.innerHTML = opts;
+  }
+
+  function setDateAndTime(dateInput, timeSelect, dateObj) {
+    const offset = dateObj.getTimezoneOffset();
+    const local = new Date(dateObj.getTime() - offset * 60000);
+    dateInput.value = local.toISOString().slice(0, 10);
+    const totalMin = dateObj.getHours() * 60 + dateObj.getMinutes();
+    const rounded = Math.round(totalMin / 15) * 15;
+    const clamped = Math.max(0, Math.min(rounded, 23 * 60 + 45));
+    timeSelect.value = String(clamped);
+  }
+
+  function getDateAndTime(dateInput, timeSelect) {
+    const dateStr = dateInput.value;
+    const minutes = parseInt(timeSelect.value);
+    if (!dateStr || isNaN(minutes)) return '';
+    const [y, mo, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, mo - 1, d, Math.floor(minutes / 60), minutes % 60, 0, 0);
+    const offset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 16);
+  }
+
   function openCreateModal(dateStr, hour) {
+    initTimeSelectsOnce();
     modalTitle.textContent = 'Nuevo evento';
     eventIdInput.value = '';
     form.reset();
@@ -937,28 +977,23 @@ const endTimeSelect = $('#endTime');
     currentEventId = null;
     endManuallyChanged = false;
 
-    const formatLocal = (d) => {
-      const offset = d.getTimezoneOffset();
-      const local = new Date(d.getTime() - offset * 60000);
-      return local.toISOString().slice(0, 16);
-    };
-
+    let startObj;
     if (dateStr) {
       const parts = dateStr.split('-').map(Number);
-      const date = new Date(parts[0], parts[1] - 1, parts[2]);
-      if (hour !== undefined) date.setHours(hour, 0, 0, 0);
-      else date.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(end.getHours() + 1);
-      startInput.value = formatLocal(date);
-      endInput.value = formatLocal(end);
+      startObj = new Date(parts[0], parts[1] - 1, parts[2]);
+      if (hour !== undefined) startObj.setHours(hour, 0, 0, 0);
+      else startObj.setHours(0, 0, 0, 0);
     } else {
-      const now = new Date();
-      const later = new Date(now);
-      later.setHours(later.getHours() + 1);
-      startInput.value = formatLocal(now);
-      endInput.value = formatLocal(later);
+      startObj = new Date();
+      // Redondear a 15 minutos hacia arriba para que coincida con los slots del select
+      startObj.setMinutes(Math.ceil(startObj.getMinutes() / 15) * 15, 0, 0);
     }
+    const endObj = new Date(startObj);
+    endObj.setHours(endObj.getHours() + 1);
+
+    setDateAndTime(startDateInput, startTimeSelect, startObj);
+    setDateAndTime(endDateInput, endTimeSelect, endObj);
+
     allDayInput.checked = false;
     eventCategoria.value = '';
     eventLinkInput.value = '';
@@ -973,18 +1008,13 @@ const endTimeSelect = $('#endTime');
         alert('Evento no encontrado');
         return;
       }
+      initTimeSelectsOnce();
       modalTitle.textContent = 'Editar evento';
       eventIdInput.value = ev.id;
       titleInput.value = ev.title;
       descriptionInput.value = ev.description || '';
-      const formatLocal = (dateStr) => {
-        const d = new Date(dateStr);
-        const offset = d.getTimezoneOffset();
-        const local = new Date(d.getTime() - offset * 60000);
-        return local.toISOString().slice(0, 16);
-      };
-      startInput.value = formatLocal(ev.start);
-      endInput.value = formatLocal(ev.end);
+      setDateAndTime(startDateInput, startTimeSelect, new Date(ev.start));
+      setDateAndTime(endDateInput, endTimeSelect, new Date(ev.end));
       allDayInput.checked = ev.all_day === 1;
       colorInput.value = ev.color || '#3788d8';
       statusSelect.value = ev.status || 'active';
@@ -1000,16 +1030,38 @@ const endTimeSelect = $('#endTime');
     }
   }
 
-  startInput.addEventListener('change', function() {
-    if (!endManuallyChanged) {
-      endInput.value = this.value;
-    }
+  // Sincronización automática: al cambiar la fecha u hora de inicio, se ajusta el fin a +1h
+  // (solo si el usuario no ha tocado el fin manualmente)
+  function syncEndWithStart() {
+    if (endManuallyChanged) return;
+    const startVal = getDateAndTime(startDateInput, startTimeSelect);
+    if (!startVal) return;
+    const startDate = new Date(startVal);
+    const end = new Date(startDate);
+    end.setHours(end.getHours() + 1);
+    setDateAndTime(endDateInput, endTimeSelect, end);
+  }
+
+  startDateInput.addEventListener('change', syncEndWithStart);
+  startTimeSelect.addEventListener('change', syncEndWithStart);
+
+  endDateInput.addEventListener('change', () => { endManuallyChanged = true; });
+  endTimeSelect.addEventListener('change', () => { endManuallyChanged = true; });
+
+  // Botones de duración rápida: fijan el fin a partir del inicio
+  document.querySelectorAll('.quick-duration').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const min = parseInt(this.dataset.min);
+      const startVal = getDateAndTime(startDateInput, startTimeSelect);
+      if (!startVal) return;
+      const startDate = new Date(startVal);
+      const end = new Date(startDate.getTime() + min * 60000);
+      setDateAndTime(endDateInput, endTimeSelect, end);
+      endManuallyChanged = true;
+    });
   });
 
-  endInput.addEventListener('change', function() {
-    endManuallyChanged = true;
-  });
-
+  // Al abrir el modal, reseteamos el flag para que el auto-ajuste funcione
   modalEvent._element.addEventListener('shown.bs.modal', function() {
     endManuallyChanged = false;
   });
@@ -1018,8 +1070,8 @@ const endTimeSelect = $('#endTime');
     const id = eventIdInput.value;
     const title = titleInput.value.trim();
     const description = descriptionInput.value.trim();
-    const start = startInput.value;
-    const end = endInput.value;
+    const start = getDateAndTime(startDateInput, startTimeSelect);
+    const end = getDateAndTime(endDateInput, endTimeSelect);
     const allDay = allDayInput.checked;
     const color = colorInput.value;
     const status = statusSelect.value;
@@ -1028,7 +1080,12 @@ const endTimeSelect = $('#endTime');
     const address = eventAddressInput.value.trim() || null;
 
     if (!title || !start || !end) {
-      alert('Título, inicio y fin son obligatorios');
+      alert('Título, fecha y hora son obligatorios');
+      return;
+    }
+
+    if (new Date(end) <= new Date(start)) {
+      alert('La fecha/hora de fin debe ser posterior a la de inicio.');
       return;
     }
 
@@ -1054,23 +1111,7 @@ const endTimeSelect = $('#endTime');
       alert('Error al guardar');
     }
   }
-
-  async function deleteEvent(id) {
-    try {
-      const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        loadEventsFromServer();
-        modalEvent.hide();
-      } else {
-        const err = await res.json();
-        alert('Error: ' + (err.error || 'desconocido'));
-      }
-    } catch (error) {
-      console.error('Error al eliminar:', error);
-      alert('Error al eliminar');
-    }
-  }
-
+  
   // ========== NAVEGACIÓN ==========
   function prev() {
     switch (currentView) {
