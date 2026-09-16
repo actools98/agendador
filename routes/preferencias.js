@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/', (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json({ error: 'No autenticado' });
-  
+
   const pref = Preferencia.getByUser(userId);
   if (!pref) {
     return res.json({
@@ -14,7 +14,8 @@ router.get('/', (req, res) => {
       formato_hora: '24',
       meeting_duration: 60,
       contact_phone: '',
-      meeting_address: ''
+      meeting_address: '',
+      notification_email: ''
     });
   }
   res.json(pref);
@@ -25,9 +26,8 @@ router.put('/', (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json({ error: 'No autenticado' });
 
-  const { tema, formato_hora, meeting_duration, contact_phone, meeting_address } = req.body;
-  
-  // Validar campos
+  const { tema, formato_hora, meeting_duration, contact_phone, meeting_address, notification_email } = req.body;
+
   if (tema !== undefined && !['claro', 'oscuro'].includes(tema)) {
     return res.status(400).json({ error: 'Tema inválido' });
   }
@@ -45,7 +45,8 @@ router.put('/', (req, res) => {
       formato_hora: formato_hora || current.formato_hora || '24',
       meeting_duration: meeting_duration !== undefined ? meeting_duration : current.meeting_duration || 60,
       contact_phone: contact_phone !== undefined ? contact_phone : current.contact_phone || '',
-      meeting_address: meeting_address !== undefined ? meeting_address : current.meeting_address || ''
+      meeting_address: meeting_address !== undefined ? meeting_address : current.meeting_address || '',
+      notification_email: notification_email !== undefined ? notification_email : current.notification_email || ''
     });
     res.json({ success: true });
   } catch (err) {
