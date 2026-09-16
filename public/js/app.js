@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ========== PREFERENCIAS ==========
+  // ========== PREFERENCIAS ==========
   async function loadPreferences() {
     try {
       const res = await fetch('/api/preferencias');
@@ -142,6 +143,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const addressInput = document.getElementById('meetingAddress');
       if (addressInput) addressInput.value = data.meeting_address || '';
+
+      const notificationEmailInput = document.getElementById('notificationEmail');
+      if (notificationEmailInput) notificationEmailInput.value = data.notification_email || '';
     } catch (error) {
       console.error('Error cargando preferencias:', error);
       timeFormat = '24';
@@ -154,12 +158,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const addressInput = document.getElementById('meetingAddress');
     const meetingAddress = addressInput ? addressInput.value.trim() : '';
 
+    const notificationEmailInput = document.getElementById('notificationEmail');
+    const notificationEmail = notificationEmailInput ? notificationEmailInput.value.trim() : '';
+
     const payload = {
       tema: themeSelect.value,
       formato_hora: timeFormatSelect.value,
       meeting_duration: parseInt(meetingDurationSelect.value),
       contact_phone: contactPhoneInput.value.trim(),
-      meeting_address: meetingAddress
+      meeting_address: meetingAddress,
+      notification_email: notificationEmail
     };
 
     try {
