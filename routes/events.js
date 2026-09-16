@@ -80,6 +80,30 @@ router.put('/:id', (req, res) => {
   }
 });
 
+// Actualizar solo el estado de un evento (completar, cancelar, etc.)
+router.patch('/:id/status', (req, res) => {
+  const userId = req.session.userId;
+  const eventId = parseInt(req.params.id);
+  const { status } = req.body;
+
+  const validStatuses = ['active', 'completed', 'cancelled', 'postponed'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Estado inválido' });
+  }
+
+  const existing = Event.findById(eventId, userId);
+  if (!existing) {
+    return res.status(404).json({ error: 'Evento no encontrado' });
+  }
+
+  const success = Event.updateStatus(eventId, userId, status);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Error al actualizar estado' });
+  }
+});
+
 router.delete('/:id', (req, res) => {
   const userId = req.session.userId;
   const eventId = parseInt(req.params.id);
