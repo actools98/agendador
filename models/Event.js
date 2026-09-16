@@ -70,6 +70,11 @@ class Event {
     const info = stmt.run(id, userId);
     return info.changes > 0;
   }
+  static updateStatus(id, userId, status) {
+    const stmt = db.prepare('UPDATE events SET status = ? WHERE id = ? AND user_id = ?');
+    const info = stmt.run(status, id, userId);
+    return info.changes > 0;
+  }
 }
 
 module.exports = Event;
