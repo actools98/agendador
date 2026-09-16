@@ -58,6 +58,7 @@ db.exec(`
     meeting_duration INTEGER DEFAULT 60,
     contact_phone TEXT DEFAULT '',
     meeting_address TEXT DEFAULT '',
+    notification_email TEXT DEFAULT '',
     FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
@@ -136,6 +137,11 @@ const hasMeetingAddress = prefInfo.some(col => col.name === 'meeting_address');
 if (!hasMeetingAddress) {
   db.exec(`ALTER TABLE preferencias ADD COLUMN meeting_address TEXT DEFAULT '';`);
   console.log('✅ Columna "meeting_address" añadida a preferencias');
+}
+const hasNotificationEmail = prefInfo.some(col => col.name === 'notification_email');
+if (!hasNotificationEmail) {
+  db.exec(`ALTER TABLE preferencias ADD COLUMN notification_email TEXT DEFAULT '';`);
+  console.log('✅ Columna "notification_email" añadida a preferencias');
 }
 
 // Crear índice para availability_blocks
