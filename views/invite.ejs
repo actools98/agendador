@@ -127,9 +127,17 @@
                  value="<%= locals.eventData ? eventData.title : '' %>">
         </div>
 
-        <div class="mb-3">
+       <div class="mb-3">
           <label for="description" class="form-label">Descripción</label>
           <textarea class="form-control" id="description" name="description" rows="2"><%= locals.eventData ? eventData.description : '' %></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label for="guestEmail" class="form-label">Tu correo electrónico <span class="text-muted small">(para recibir la confirmación)</span></label>
+          <input type="email" class="form-control" id="guestEmail" name="guestEmail"
+                 placeholder="tu@email.com"
+                 value="<%= locals.eventData && eventData.guestEmail ? eventData.guestEmail : '' %>">
+          <small class="text-muted">Si lo dejas en blanco, no recibirás el correo de confirmación, pero la cita igual quedará agendada.</small>
         </div>
 
         <button type="submit" class="btn btn-primary w-100" id="submitBtn" disabled>Enviar solicitud</button>
