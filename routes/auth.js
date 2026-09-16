@@ -9,17 +9,21 @@ const redirectIfLoggedIn = (req, res, next) => {
   next();
 };
 
+router.get('/login', redirectIfLoggedIn, (req, res) => {
+  res.render('login', { error: null });
+});
+
 router.post('/login', redirectIfLoggedIn, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.render('login', { error: 'Usuario y contraseña son obligatorios' });
   }
 
-  const PASSWORD = process.env.PASSWORD || '';
+  const DEMO_PASSWORD = process.env.DEMO_PASSWORD || '';
 
   // Modo DEMO: si la contraseña coincide con DEMO_PASSWORD,
   // se permite el acceso con cualquier nombre (crea la cuenta si no existe)
-  if (PASSWORD && password === PASSWORD) {
+  if (DEMO_PASSWORD && password === DEMO_PASSWORD) {
     let user = User.findOne(username);
     if (!user) {
       const hash = await bcrypt.hash(password, 10);
