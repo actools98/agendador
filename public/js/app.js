@@ -351,7 +351,8 @@ document.addEventListener('DOMContentLoaded', function() {
           </span>
           <span class="event-actions">
             <button class="edit-event" data-id="${ev.id}" title="Editar">✏️</button>
-            <button class="delete-event" data-id="${ev.id}" title="Eliminar">🗑️</button>
+            <button class="complete-event" data-id="${ev.id}" title="Marcar como completado">✅</button>
+            <button class="cancel-event" data-id="${ev.id}" title="Cancelar evento">❌</button>
           </span>
         </div>
       `;
@@ -371,10 +372,22 @@ document.addEventListener('DOMContentLoaded', function() {
         openEditModal(parseInt(this.dataset.id));
       });
     });
-    $$('.delete-event', eventListEl).forEach(btn => {
+    $$('.complete-event', eventListEl).forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
-        if (confirm('¿Eliminar este evento?')) deleteEvent(parseInt(this.dataset.id));
+        const id = parseInt(this.dataset.id);
+        if (confirm('¿Marcar este evento como completado?')) {
+          updateEventStatus(id, 'completed');
+        }
+      });
+    });
+    $$('.cancel-event', eventListEl).forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const id = parseInt(this.dataset.id);
+        if (confirm('¿Cancelar este evento? Podrás verlo en "Eventos terminados".')) {
+          updateEventStatus(id, 'cancelled');
+        }
       });
     });
   }
@@ -589,7 +602,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const sorted = [...dayEvents].sort((a, b) => startOf(a) - startOf(b));
 
-    // Construir clusters de eventos que se solapan de forma transitiva
     const clusters = [];
     let current = [sorted[0]];
     let clusterEnd = endOf(sorted[0]);
@@ -606,7 +618,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     clusters.push(current);
 
-    // Asignar columna dentro de cada cluster (greedy)
     for (const cluster of clusters) {
       const colEnds = [];
       for (const e of cluster) {
@@ -633,7 +644,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const todayStr = formatDateLocal(new Date());
 
-    // Precalcular columnas por día
     const dayColumns = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
@@ -648,7 +658,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `<div class="week-table-scroll">`;
     html += `<table class="week-table">`;
 
-    // thead
     html += `<thead>`;
     html += `<tr>`;
     html += `<th class="week-header-empty"></th>`;
@@ -676,7 +685,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += `</tr>`;
     html += `</thead>`;
 
-    // tbody
     html += `<tbody>`;
     for (let hour = 0; hour < 24; hour++) {
       html += `<tr>`;
@@ -701,7 +709,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         html += `<td class="week-day-cell${hasEvents ? ' has-event' : ''}" data-date="${dateStr}" data-hour="${hour}">`;
 
-        // Línea roja de "ahora"
         if (dateStr === todayStr) {
           const now = new Date();
           if (hour === now.getHours()) {
@@ -710,7 +717,6 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }
 
-        // Eventos que empiezan en esta hora, posicionados con su duración real
         const colInfo = dayColumns[i];
         startingThisHour.forEach(e => {
           const info = colInfo.eventMap.get(e.id);
@@ -1126,6 +1132,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  async function updateEventStatus(id, status) {
+    try {
+      const res = await fetch(`/api/events/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        loadEventsFromServer();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'desconocido'));
+      }
+    } catch (error) {
+      console.error('Error actualizando estado:', error);
+      alert('Error al actualizar');
+    }
+  }
+
   // ========== NAVEGACIÓN ==========
   function prev() {
     switch (currentView) {
@@ -1178,7 +1203,8 @@ document.addEventListener('DOMContentLoaded', function() {
             target.id === 'generateInviteBtnDesktop' ||
             target.id === 'availabilityBtnDesktop' ||
             target.classList.contains('edit-event') ||
-            target.classList.contains('delete-event') ||
+            target.classList.contains('complete-event') ||
+            target.classList.contains('cancel-event') ||
             target.classList.contains('edit-event-finished') ||
             target.classList.contains('delete-event-finished') ||
             target.classList.contains('edit-categoria') ||
