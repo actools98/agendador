@@ -4,6 +4,7 @@ const InvitationLink = require('../models/InvitationLink');
 const Event = require('../models/Event');
 const Preferencia = require('../models/Preferencia');
 const AvailabilityBlock = require('../models/AvailabilityBlock');
+const emailService = require('../services/email');
 const db = require('../db');
 
 // ========================================
@@ -48,29 +49,25 @@ router.get('/availability/:token/:date', (req, res) => {
   const pref = Preferencia.getByUser(userId) || { meeting_duration: 60 };
   const meetingDuration = pref.meeting_duration;
 
-  // Calcular el día de la semana de la fecha solicitada (1=lunes ... 7=domingo)
   const selectedDate = new Date(date + 'T00:00:00');
   if (isNaN(selectedDate.getTime())) {
     return res.status(400).json({ error: 'Fecha inválida' });
   }
-  const jsDay = selectedDate.getDay(); // 0=domingo, 1=lunes...
+  const jsDay = selectedDate.getDay();
   const ourDay = jsDay === 0 ? 7 : jsDay;
 
-  // Obtener SOLO los bloques del día de la semana correspondiente
   const allBlocks = AvailabilityBlock.findByUserAndDay(userId, ourDay);
 
-  // Obtener los eventos activos para esa fecha
   const startOfDay = date + ' 00:00:00';
   const endOfDay = date + ' 23:59:59';
   const eventsStmt = db.prepare(`
-    SELECT * FROM events 
-    WHERE user_id = ? 
+    SELECT * FROM events
+    WHERE user_id = ?
       AND status = 'active'
       AND start >= ? AND start <= ?
   `);
   const events = eventsStmt.all(userId, startOfDay, endOfDay);
 
-  // Verificar si un bloque está ocupado por algún evento
   const isBlockOccupied = (block) => {
     return events.some(event => {
       const eventStart = new Date(event.start.replace(' ', 'T'));
@@ -88,20 +85,16 @@ router.get('/availability/:token/:date', (req, res) => {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const availableBlocks = allBlocks.filter(block => {
-    // Debe durar al menos meeting_duration
     const blockDuration = block.end_minutes - block.start_minutes;
     if (blockDuration < meetingDuration) return false;
 
-    // Si es hoy, que aún no haya pasado y quede tiempo suficiente
     if (date === todayStr) {
       if (block.end_minutes <= currentMinutes) return false;
       const remaining = block.end_minutes - currentMinutes;
       if (remaining < meetingDuration) return false;
     }
 
-    // No debe solaparse con un evento existente
     if (isBlockOccupied(block)) return false;
-
     return true;
   });
 
@@ -110,12 +103,11 @@ router.get('/availability/:token/:date', (req, res) => {
 
 // ========================================
 // Ruta pública: disponibilidad del mes completo (una sola petición)
-// Devuelve { availableDates: { "YYYY-MM-DD": cantidadBloques } }
 // ========================================
 router.get('/availability-month/:token/:year/:month', (req, res) => {
   const { token } = req.params;
   const year = parseInt(req.params.year);
-  const month = parseInt(req.params.month); // 0-11
+  const month = parseInt(req.params.month);
 
   if (isNaN(year) || isNaN(month) || month < 0 || month > 11) {
     return res.status(400).json({ error: 'Año o mes inválido' });
@@ -130,7 +122,6 @@ router.get('/availability-month/:token/:year/:month', (req, res) => {
   const pref = Preferencia.getByUser(userId) || { meeting_duration: 60 };
   const meetingDuration = pref.meeting_duration;
 
-  // Bloques agrupados por día de la semana
   const allBlocks = AvailabilityBlock.findByUser(userId);
   const blocksByDay = {};
   for (const b of allBlocks) {
@@ -143,7 +134,6 @@ router.get('/availability-month/:token/:year/:month', (req, res) => {
   const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // Eventos activos del mes completo (una sola consulta)
   const monthStartStr = `${year}-${String(month + 1).padStart(2, '0')}-01 00:00:00`;
   const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
   const monthEndStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDayOfMonth).padStart(2, '0')} 23:59:59`;
@@ -168,7 +158,6 @@ router.get('/availability-month/:token/:year/:month', (req, res) => {
     const dayBlocks = blocksByDay[ourDay] || [];
     if (dayBlocks.length === 0) continue;
 
-    // Eventos que tocan ese día
     const dayStart = new Date(year, month, day, 0, 0, 0);
     const dayEnd = new Date(year, month, day, 23, 59, 59);
     const dayEvents = monthEvents.filter(ev => {
@@ -210,7 +199,7 @@ router.get('/availability-month/:token/:year/:month', (req, res) => {
 // ========================================
 router.post('/:token', (req, res) => {
   const { token } = req.params;
-  const { title, description, date, blockId } = req.body;
+  const { title, description, date, blockId, guestEmail } = req.body;
 
   const link = InvitationLink.findByToken(token);
   if (!link) {
@@ -224,7 +213,6 @@ router.post('/:token', (req, res) => {
     meeting_address: ''
   };
 
-  // Helper local para re-renderizar el formulario con error
   const renderError = (errorMsg, eventData) => {
     const blocks = AvailabilityBlock.findByUser(userId);
     const blocksByDay = {};
@@ -242,26 +230,22 @@ router.post('/:token', (req, res) => {
     });
   };
 
-  // Validaciones básicas
   if (!title || !date || !blockId) {
-    return renderError('Título, fecha y bloque son obligatorios.', { title, description, date, blockId });
+    return renderError('Título, fecha y bloque son obligatorios.', { title, description, date, blockId, guestEmail });
   }
 
-  // Obtener el bloque seleccionado
   const block = AvailabilityBlock.findByUser(userId).find(b => b.id === parseInt(blockId));
   if (!block) {
-    return renderError('El bloque seleccionado no es válido.', { title, description, date, blockId });
+    return renderError('El bloque seleccionado no es válido.', { title, description, date, blockId, guestEmail });
   }
 
-  // Validar que la fecha seleccionada corresponda al día de la semana del bloque
   const selectedDate = new Date(date + 'T00:00:00');
-  const dayOfWeek = selectedDate.getDay(); // 0=domingo, 1=lunes...
+  const dayOfWeek = selectedDate.getDay();
   const ourDay = dayOfWeek === 0 ? 7 : dayOfWeek;
   if (block.day_of_week !== ourDay) {
-    return renderError('El bloque seleccionado no corresponde al día de la fecha elegida.', { title, description, date, blockId });
+    return renderError('El bloque seleccionado no corresponde al día de la fecha elegida.', { title, description, date, blockId, guestEmail });
   }
 
-  // Validar que el bloque no haya pasado y que quepa la reunión
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   if (date === todayStr) {
@@ -269,19 +253,18 @@ router.post('/:token', (req, res) => {
     if (block.end_minutes <= currentMinutes) {
       return renderError(
         'Este bloque ya ha terminado para hoy. Por favor, selecciona otro día o bloque.',
-        { title, description, date, blockId }
+        { title, description, date, blockId, guestEmail }
       );
     }
     const remainingMinutes = block.end_minutes - currentMinutes;
     if (remainingMinutes < pref.meeting_duration) {
       return renderError(
-        `El tiempo restante del bloque (${Math.floor(remainingMinutes / 60)}h ${remainingMinutes % 60}min) es insuficiente para la duración de la reunión (${Math.floor(pref.meeting_duration / 60)}h ${pref.meeting_duration % 60}min). Por favor, selecciona otro bloque.`,
-        { title, description, date, blockId }
+        `El tiempo restante del bloque (${Math.floor(remainingMinutes / 60)}h ${remainingMinutes % 60}min) es insuficiente para la duración de la reunión. Por favor, selecciona otro bloque.`,
+        { title, description, date, blockId, guestEmail }
       );
     }
   }
 
-  // Calcular inicio y fin del evento
   const startDate = new Date(date + 'T00:00:00');
   startDate.setHours(Math.floor(block.start_minutes / 60), block.start_minutes % 60, 0, 0);
   const endDate = new Date(startDate);
@@ -291,7 +274,7 @@ router.post('/:token', (req, res) => {
   if (endMinutes > block.end_minutes) {
     return renderError(
       'La duración de la reunión excede el bloque de disponibilidad. Por favor, elige otro bloque o reduce la duración.',
-      { title, description, date, blockId }
+      { title, description, date, blockId, guestEmail }
     );
   }
 
@@ -299,7 +282,6 @@ router.post('/:token', (req, res) => {
   const startStr = `${date} ${pad(startDate.getHours())}:${pad(startDate.getMinutes())}:00`;
   const endStr = `${date} ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}:00`;
 
-  // Validar solapamiento con eventos existentes
   const conflictStmt = db.prepare(`
     SELECT COUNT(*) as count FROM events
     WHERE user_id = ?
@@ -315,11 +297,10 @@ router.post('/:token', (req, res) => {
   if (result.count > 0) {
     return renderError(
       'La franja horaria seleccionada coincide con otro evento existente. Por favor, elige otro bloque.',
-      { title, description, date, blockId }
+      { title, description, date, blockId, guestEmail }
     );
   }
 
-  // Crear evento
   try {
     Event.create({
       userId,
@@ -337,12 +318,48 @@ router.post('/:token', (req, res) => {
 
     const contactPhone = pref.contact_phone || '';
     const meetingAddress = pref.meeting_address || '';
+    const hostEmail = pref.notification_email || '';
+    const hostUsername = req.session.username || 'Anfitrión';
 
+    // Obtener el username real del host desde la BD (porque el invitado no está logueado)
+    const hostUser = db.prepare('SELECT username FROM users WHERE id = ?').get(userId);
+    const hostDisplayName = hostUser ? hostUser.username : 'Anfitrión';
+
+    // Enviar correos (no bloqueantes)
+    if (hostEmail) {
+      emailService.sendBookingToHost({
+        hostEmail,
+        hostUsername: hostDisplayName,
+        guestEmail: guestEmail || '',
+        eventTitle: title,
+        eventDescription: description,
+        startDate,
+        endDate
+      }).catch(err => console.error('Error email host:', err));
+    }
+
+    if (guestEmail && guestEmail.trim()) {
+      emailService.sendBookingToGuest({
+        guestEmail: guestEmail.trim(),
+        hostUsername: hostDisplayName,
+        eventTitle: title,
+        eventDescription: description,
+        startDate,
+        endDate,
+        meetingAddress,
+        contactPhone
+      }).catch(err => console.error('Error email guest:', err));
+    }
+
+    // HTML de éxito
     let successHTML = `
       <!DOCTYPE html>
       <html>
-      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Evento creado</title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Evento creado</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       </head>
       <body class="bg-light d-flex align-items-center justify-content-center vh-100">
         <div class="card text-center p-5 shadow" style="max-width:550px;">
@@ -350,6 +367,14 @@ router.post('/:token', (req, res) => {
           <p>Tu evento "<strong>${title}</strong>" ha sido agendado exitosamente.</p>
           <p class="text-muted">El anfitrión recibirá la notificación.</p>
     `;
+
+    if (guestEmail && guestEmail.trim()) {
+      successHTML += `
+        <div class="alert alert-info mt-3 mb-0 text-start small">
+          ✉️ Hemos enviado una confirmación a <strong>${guestEmail}</strong> con todos los detalles de tu cita.
+        </div>
+      `;
+    }
 
     if (meetingAddress) {
       successHTML += `
