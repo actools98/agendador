@@ -6,18 +6,19 @@ class Preferencia {
     return stmt.get(userId);
   }
 
-  static upsert(userId, { tema, formato_hora, meeting_duration, contact_phone, meeting_address }) {
+  static upsert(userId, { tema, formato_hora, meeting_duration, contact_phone, meeting_address, notification_email }) {
     const stmt = db.prepare(`
-      INSERT INTO preferencias (usuario_id, tema, formato_hora, meeting_duration, contact_phone, meeting_address)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO preferencias (usuario_id, tema, formato_hora, meeting_duration, contact_phone, meeting_address, notification_email)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(usuario_id) DO UPDATE SET
         tema = excluded.tema,
         formato_hora = excluded.formato_hora,
         meeting_duration = excluded.meeting_duration,
         contact_phone = excluded.contact_phone,
-        meeting_address = excluded.meeting_address
+        meeting_address = excluded.meeting_address,
+        notification_email = excluded.notification_email
     `);
-    return stmt.run(userId, tema, formato_hora, meeting_duration, contact_phone, meeting_address);
+    return stmt.run(userId, tema, formato_hora, meeting_duration, contact_phone, meeting_address, notification_email);
   }
 }
 
